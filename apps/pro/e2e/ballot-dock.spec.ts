@@ -46,6 +46,8 @@ async function expectClear(page: Page): Promise<Box> {
     .getByRole("button", { name: /^Review and sign/ })
     .filter({ visible: true })
   await expect(review).toBeVisible()
+  // Measure in the real font: a fallback face is wider and can cut a label.
+  await page.evaluate(() => document.fonts.ready)
   const viewport = page.viewportSize()
   if (viewport === null) throw new Error("no viewport")
   const tabBox = await box(tabs)
