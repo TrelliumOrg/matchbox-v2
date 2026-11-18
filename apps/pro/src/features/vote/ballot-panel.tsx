@@ -123,7 +123,9 @@ export function shortPrimary(primary: string): string {
  *
  * At 360px there is room for little else beside Review and sign: a phone
  * drops the epoch beside "2 locks", and Projected gives way first, cut
- * short, so the button always fits whole.
+ * short, so the button always fits whole. With one lock ("Epoch 47") the
+ * label must still show whole, with a few pixels to spare: text runs a
+ * pixel wider on some systems, and a fit with none to spare cut it there.
  */
 export function BallotBar(props: BallotPanelProps): ReactNode {
   const { ballot, gauges, epoch } = props
@@ -135,7 +137,7 @@ export function BallotBar(props: BallotPanelProps): ReactNode {
       className="fixed inset-x-3 bottom-(--dock) z-30 flex h-[76px] items-center overflow-hidden rounded-[24px] bg-soft tabular-nums shadow-[inset_0_0_0_1px_var(--edge),var(--lift)] md:right-[100px] md:left-[112px] lg:left-[120px] xl:left-[340px] min-[100rem]:hidden"
     >
       <div
-        className={`flex h-full flex-none flex-col justify-center px-3.5 sm:px-4 md:px-[18px] ${props.escrow === "vemezo" ? "bg-mezo text-on-mezo" : "bg-acc text-on-acc"}`}
+        className={`flex h-full flex-none flex-col justify-center px-3 sm:px-4 md:px-[18px] ${props.escrow === "vemezo" ? "bg-mezo text-on-mezo" : "bg-acc text-on-acc"}`}
       >
         <span className="text-[15px] font-[650]">
           {props.locks.length > 1 ? (
@@ -151,7 +153,7 @@ export function BallotBar(props: BallotPanelProps): ReactNode {
         </span>
         <span className="text-[13.5px] opacity-90">{ballot.size} picked</span>
       </div>
-      <div className="min-w-0 px-3 sm:px-4">
+      <div className="min-w-0 px-2.5 sm:px-4">
         <p className="truncate text-[13.5px] text-sec">Projected</p>
         <p className="truncate text-[18px] leading-tight font-[650] sm:text-[20px]">
           <Usd
