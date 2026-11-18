@@ -1,0 +1,91 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Same Worker name, route, bindings and vars as Classic's
+  // apps/developer-console Worker, which this replaced on 13 Nov 2026.
+  "name": "matchbox-developer-console",
+  // TanStack Start serves the pages; /api goes to the Hono console server
+  // first (see src/server.ts).
+  "main": "./src/server.ts",
+  "compatibility_date": "2026-09-01",
+  // global_fetch_strictly_public: fetch() to a hostname on our own zone goes
+  // through the public front door, never straight to an origin. The logo pin
+  // fetches developer-chosen URLs; the other outbound calls (Supabase, Google
+  // JWKS, Cloudflare analytics) are public hosts either way.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "developer.matchbox.markets", "custom_domain": true }
+  ],
+  "assets": { "binding": "ASSETS" },
+  // API_RATE_LIMITER reads the API Worker's buckets (quota status); the
+  // console never consumes from it. apps/api keeps the live script name.
+  "durable_objects": {
+    "bindings": [
+      { "name": "RATE_LIMITER", "class_name": "RateLimiter" },
+      {
+        "name": "API_RATE_LIMITER",
+        "class_name": "RateLimiter",
+        "script_name": "matchbox-developer-api"
+      }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }],
+  // Cloudflare Email Service (sign-up/recovery codes, invitations, reviews).
+  "send_email": [{ "name": "EMAIL" }],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": { "enabled": true, "invocation_logs": true }
+  },
+  // Secrets (wrangler secret put): SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+  // API_KEY_PEPPER, CLIENT_SECRET_PEPPER, SESSION_PEPPER, CF_ACCOUNT_ID,
+  // CF_ANALYTICS_TOKEN.
+  "vars": {
+    "ENVIRONMENT": "production",
+    "DEVELOPER_CONSOLE_ENABLED": "true",
+    "CONSOLE_ORIGIN": "https://developer.matchbox.markets",
+    // Google OAuth client id (public; the GIS button audience). Google Cloud
+    // project "Matchbox Developer" (matchbox-developers). Required in
+    // production: an empty value makes /api/* answer 500 internal_error.
+    "GOOGLE_CLIENT_ID": "567898478426-iq0aisolqm4tsp8cpr03ei8h1j313lqn.apps.googleusercontent.com",
+    // Google Workspace domains whose accounts become staff operators.
+    "STAFF_EMAIL_DOMAINS": "supernormal.foundation,thesis.co",
+    "PUBLIC_API_ORIGIN": "https://api.matchbox.markets",
+    "ID_ORIGIN": "https://id.matchbox.markets",
+    // Classic's /docs URLs redirect here under /developer until the unified
+    // Matchbox docs exist (src/lib/docs-redirect.ts).
+    "DOCS_ORIGIN": "https://docs.matchbox.markets"
+  },
+  // Staging on workers.dev (no custom domain). Non-inheritable keys are
+  // repeated; secrets are set per environment.
+  "env": {
+    "staging": {
+      "workers_dev": true,
+      "routes": [],
+      "durable_objects": {
+        "bindings": [
+          { "name": "RATE_LIMITER", "class_name": "RateLimiter" },
+          {
+            "name": "API_RATE_LIMITER",
+            "class_name": "RateLimiter",
+            "script_name": "matchbox-developer-api-staging"
+          }
+        ]
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }],
+      "send_email": [{ "name": "EMAIL" }],
+      "vars": {
+        "ENVIRONMENT": "preview",
+        "DEVELOPER_CONSOLE_ENABLED": "true",
+        "CONSOLE_ORIGIN": "https://matchbox-developer-console-staging.mallard.workers.dev",
+        "GOOGLE_CLIENT_ID": "567898478426-iq0aisolqm4tsp8cpr03ei8h1j313lqn.apps.googleusercontent.com",
+        "STAFF_EMAIL_DOMAINS": "supernormal.foundation,thesis.co",
+        "PUBLIC_API_ORIGIN": "https://matchbox-developer-api-staging.mallard.workers.dev",
+        "ID_ORIGIN": "https://matchbox-id-staging.mallard.workers.dev",
+        // Vars are not inherited: without this, /docs/* would redirect
+        // to docs.matchbox.markets, which is still Classic on Netlify.
+        "DOCS_ORIGIN": "https://matchbox-docs-preview.mallard.workers.dev"
+      }
+    }
+  }
+}

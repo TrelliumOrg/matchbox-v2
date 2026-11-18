@@ -1,0 +1,49 @@
+{
+  "name": "@matchbox/indexer",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./hook": {
+      "types": "./src/hook.ts",
+      "default": "./src/hook.ts"
+    }
+  },
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "dev": "wrangler dev --test-scheduled",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "backfill": "tsx scripts/backfill.ts",
+    "backfill:borrow": "tsx scripts/backfill-borrow.ts",
+    "backfill:row-seq": "tsx scripts/backfill-row-seq.ts",
+    "backfill:scan": "tsx scripts/backfill-scan.ts",
+    "migrate": "tsx scripts/migrate.ts",
+    "project": "tsx scripts/project.ts",
+    "rebuild:history": "tsx scripts/rebuild.ts",
+    "reproject:legacy-rewards": "tsx scripts/reproject-legacy-rewards.ts",
+    "refetch:claims": "tsx scripts/refetch-claim-calldata.ts",
+    "roles": "tsx scripts/create-roles.ts",
+    "vacuum:raw": "tsx scripts/vacuum-raw.ts",
+    "verify:warehouse": "tsx scripts/verify-warehouse.ts"
+  },
+  "dependencies": {
+    "@matchbox/chain": "workspace:*",
+    "@matchbox/domain": "workspace:*",
+    "@matchbox/logger": "workspace:*",
+    "pg": "8.23.1",
+    "viem": "2.57.17",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261108.1",
+    "@electric-sql/pglite": "0.5.11",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "4.1.12",
+    "wrangler": "4.158.0"
+  }
+}

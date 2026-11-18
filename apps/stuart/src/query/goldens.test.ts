@@ -1,0 +1,221 @@
+import {
+  stuartRequestSchema,
+  stuartResponseSchema,
+} from "@matchbox/stuart-ui/contract"
+import { describe, expect, it } from "vitest"
+import { fakeProviders, fakeTrove, NOW, WALLET } from "./fakes"
+import { runStuartQuery } from "./orchestrator"
+
+const CASES: Array<{ query: string; intent: string; text: RegExp }> = [
+  {
+    query: "wormhole transactions",
+    intent: "bridge_search",
+    text: /Wormhole transfers/,
+  },
+  {
+    query: "optimize my votes",
+    intent: "optimize_votes",
+    text: /^Projected this epoch: /,
+  },
+  {
+    query: "vote 30% to Stackbridge and 70% to Lombard",
+    intent: "custom_vote",
+    text: /if you allocate 70% Lombard and 30% Stackbridge on veMEZO #4821 and #4966\.$/,
+  },
+  {
+    query: "which gauges have the most incentives",
+    intent: "rank_gauges",
+    text: /most incentives deposited this epoch, \$[\d,.]+\. \d+ of \d+ carry incentives this epoch\.$/,
+  },
+  {
+    query: "which gauges are consistently funded",
+    intent: "rank_gauges",
+    text: /was funded in \d+ of the last 8 epochs\./,
+  },
+  {
+    query: "show my claimable rewards",
+    intent: "claim_rewards",
+    text: /^\$[\d,.]+ claimable from veMEZO #\d+/,
+  },
+  {
+    query: "claim all my rewards",
+    intent: "claim_rewards",
+    text: /^\$[\d,.]+ to claim from veMEZO #\d+\. (One signature|\d+ signatures)\./,
+  },
+  {
+    query: "how healthy is my mUSD trove?",
+    intent: "loan_position",
+    text: /^Healthy at 294\.77% collateral ratio \(min 110\.00%\)\. Liquidation below \$22,091\.67 per BTC\.$/,
+  },
+  {
+    query: "If BTC falls 35%, do I get liquidated?",
+    intent: "liquidation_scenario",
+    text: /^At BTC −35%, collateral ratio is 191\.60%: not liquidated\./,
+  },
+  {
+    query: "repay 5,000 mUSD on my trove",
+    intent: "repay",
+    text: /^Repay 5,000\.00 mUSD: debt goes to 43,200\.00 mUSD and collateral ratio to 328\.89%\.$/,
+  },
+  {
+    query: "repay max on my loan",
+    intent: "repay",
+    text: /^Wallet holds 10,000\.00 mUSD, less than 46,200\.00 mUSD\.$/,
+  },
+  {
+    query: "Zap $50 MEZO into the mUSD vault",
+    intent: "zap",
+    text: /^Zap 17,399\.77 MEZO \(\$50\.00\) into MUSD Savings \(sMUSD\): min received [\d,.]+ mUSD, price impact [\d.]+%\.$/,
+  },
+  {
+    query: "deposit 50 MUSD into Savings",
+    intent: "earn_deposit",
+    text: /^Deposit 50\.00 mUSD into MUSD Savings/,
+  },
+  {
+    query: "zap $100 BTC into the BTC/MUSD LP pool",
+    intent: "zap",
+    text: /No approved dual-deposit zap router/,
+  },
+  {
+    query: "report a problem: my claim reverts",
+    intent: "support_report",
+    text: /^Nothing has been sent\. Preview is the report\.$/,
+  },
+  {
+    query: "show my locks",
+    intent: "navigate",
+    text: /^2 locks: 2 veMEZO with [\d,.]+ MEZO locked \(12,888\.00 veMEZO voting power\)\.$/,
+  },
+  // Protocol totals are protocol questions even with a wallet selected.
+  {
+    query: "How much MEZO is locked as veMEZO?",
+    intent: "protocol_stats",
+    text: /^282,928,843\.50 MEZO is locked in veMEZO by 1,353 lockers, and 804\.3000 BTC in veBTC\.$/,
+  },
+  {
+    query: "What are total voting incentives this epoch?",
+    intent: "protocol_stats",
+    text: /^Epoch 7 carries \$1,389\.03 in voting incentives across 17 funded gauges, against \$987\.98 last epoch\.$/,
+  },
+  {
+    query: "What epoch is it?",
+    intent: "protocol_stats",
+    text: /^Epoch 7 ends Thu 29 Oct 2026 00:00 UTC\.$/,
+  },
+  {
+    query: "What is the MEZO price?",
+    intent: "protocol_stats",
+    text: /^MEZO \$0\.\d+, BTC \$[\d,]+\.\d{2}\.$/,
+  },
+  // Mezo support questions answer from the reviewed knowledge notes.
+  {
+    query: "Why does my vote transaction revert on Thursday after midnight?",
+    intent: "mezo_help",
+    text: /^Votes revert from Thursday 00:00 to 01:00 UTC/,
+  },
+  {
+    query: "Is it safe to approve my veBTC NFT to a site that votes for me?",
+    intent: "mezo_help",
+    text: /^Do not approve your veBTC or veMEZO NFT/,
+  },
+  {
+    query: "Can I use a relayer to vote without paying gas?",
+    intent: "mezo_help",
+    text: /disabled meta-transactions on 5 Oct 2026/,
+  },
+  {
+    query: "How do I vote for a MEZO gauge?",
+    intent: "mezo_help",
+    text: /ThirdPartyVoter/,
+  },
+]
+
+describe("every deterministic tool answer is sourced", () => {
+  for (const testCase of CASES) {
+    it(testCase.query, async () => {
+      const logs: Array<Record<string, unknown>> = []
+      const response = await runStuartQuery(
+        stuartRequestSchema.parse({
+          version: 1,
+          query: testCase.query,
+          sessionId: "6f1c1b8e-3c55-4a3f-9b8a-1d2e3f4a5b6c",
+          turn: 0,
+          surface: "canvas",
+          chainId: 31_612,
+          wallet: { address: WALLET, mode: "connected" },
+        }),
+        {
+          providers: fakeProviders(),
+          secret: "test-secret",
+          now: () => NOW,
+          claude: null,
+          log: (event) => logs.push(event),
+        },
+      )
+      expect(logs.filter((event) => event.message !== "stuart.query")).toEqual(
+        [],
+      )
+      expect(stuartResponseSchema.safeParse(response).success).toBe(true)
+      expect(response.intent).toBe(testCase.intent)
+      expect(response.answer.text).toMatch(testCase.text)
+      expect(response.answer.text).not.toMatch(/submitted|signed|sent your/i)
+      for (const block of response.uiBlocks) {
+        for (const ref of block.evidenceRefs) {
+          expect(response.evidence.some((item) => item.id === ref)).toBe(true)
+        }
+      }
+    })
+  }
+
+  it("offers the collateral surplus a redemption left behind", async () => {
+    const response = await runStuartQuery(
+      stuartRequestSchema.parse({
+        version: 1,
+        query: "how is my trove?",
+        sessionId: "6f1c1b8e-3c55-4a3f-9b8a-1d2e3f4a5b6c",
+        turn: 0,
+        surface: "rail",
+        chainId: 31_612,
+        wallet: { address: WALLET, mode: "connected" },
+      }),
+      {
+        providers: fakeProviders({
+          trove: async () =>
+            fakeTrove({
+              status: "closed_by_redemption",
+              coll: 0n,
+              principal: 0n,
+              interest: 0n,
+              surplusCollateral: 663_000_000_000_000_000n,
+            }),
+        }),
+        secret: "test-secret",
+        now: () => NOW,
+        claude: null,
+        log: () => undefined,
+      },
+    )
+    expect(response.answer.text).toBe(
+      "This trove is closed by redemption. 0.6630 BTC collateral surplus is claimable.",
+    )
+    expect(response.uiBlocks[0]).toMatchObject({
+      type: "loan_position",
+      status: "closed_by_redemption",
+      actions: ["claim_collateral_surplus"],
+    })
+    // The claimCollateral() proposal rides along with the position.
+    expect(response.uiBlocks[1]).toMatchObject({
+      type: "claim_review",
+      rows: [expect.objectContaining({ source: "collateral_surplus" })],
+    })
+    expect(response.proposedActions).toEqual([
+      expect.objectContaining({
+        kind: "claim_surplus",
+        canSign: true,
+        approvals: [],
+        calls: [expect.objectContaining({ data: "0x6f0b0c1c" })],
+      }),
+    ])
+  })
+})

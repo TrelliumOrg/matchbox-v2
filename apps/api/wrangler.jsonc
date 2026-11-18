@@ -1,0 +1,211 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "matchbox-developer-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  // global_fetch_strictly_public: the health cron fetches this Worker's own
+  // custom domain (/v1/health) through the public front door; without it a
+  // Custom Domain Worker fetching its own hostname gets a 522.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "routes": [{ "pattern": "api.matchbox.markets", "custom_domain": true }],
+  "durable_objects": {
+    "bindings": [
+      { "name": "RATE_LIMITER", "class_name": "RateLimiter" },
+      // One BlockHub per network: polls the Mezo head and fans it out over
+      // hibernating WebSockets (/internal/heads).
+      { "name": "BLOCK_HUB", "class_name": "BlockHub" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["ApiQuotaLimiter"] },
+    {
+      "tag": "v2",
+      "deleted_classes": ["ApiQuotaLimiter"],
+      "new_sqlite_classes": ["RateLimiter"]
+    },
+    { "tag": "v3", "new_sqlite_classes": ["BlockHub"] }
+  ],
+  // REQUEST_LOG: one data point per request (layout in
+  // @matchbox/contracts/api-request-log). HEALTH_LOG: one data point per
+  // health probe (layout in @matchbox/contracts/platform-health).
+  "analytics_engine_datasets": [
+    { "binding": "REQUEST_LOG", "dataset": "mbx_api_requests" },
+    { "binding": "HEALTH_LOG", "dataset": "mbx_platform_health" }
+  ],
+  // MARKET_DB: gauge and incentive snapshots (src/market/store.ts), written by
+  // the */5 cron only. Schema: migrations/ (`wrangler d1 migrations apply
+  // matchbox-api-market --remote`).
+  "d1_databases": [
+    {
+      "binding": "MARKET_DB",
+      "database_name": "matchbox-api-market",
+      "database_id": "a8fbeb40-2ec0-4de3-8983-e09145ed11ba",
+      "migrations_dir": "migrations"
+    },
+    // READ_DB: Pro read models and live chain state, shared with
+    // matchbox-jobs. Its schema lives in apps/jobs/migrations. Not created
+    // yet: `wrangler d1 create matchbox-read-models`, then set the id here
+    // and in apps/jobs/wrangler.jsonc.
+    {
+      "binding": "READ_DB",
+      "database_name": "matchbox-read-models",
+      "database_id": "abe98edf-ff3c-4ac6-b974-6edf4294089a",
+      "migrations_dir": "../jobs/migrations"
+    },
+    // SCAN_DB: matchbox-scan, Matchscan's explorer rows, written by
+    // matchbox-jobs and read by /internal/scan (created 10 Nov 2026).
+    // Bound wherever READ_DB is: here and env.v2preview, not env.staging,
+    // which has no read models either.
+    {
+      "binding": "SCAN_DB",
+      "database_name": "matchbox-scan",
+      "database_id": "ace6a0e7-ddf9-4e29-9b75-c80df48c3ab2",
+      "migrations_dir": "../jobs/scan-migrations"
+    }
+  ],
+  // PRICES: BTC and MEZO prices written by matchbox-jobs. Not created yet:
+  // `wrangler kv namespace create matchbox-prices`.
+  "kv_namespaces": [
+    { "binding": "PRICES", "id": "bc89cdb653554c42af1b04d91d2b23d0" }
+  ],
+  // "* * * * *": health probes (src/health/probes.ts) and gauge votes from
+  // the chain into the gauge directory, written only when they changed
+  // (src/read-models/gauge-votes.ts).
+  // "*/10 * * * *": chain-state reconciliation (mbx_api_gauge_chain_state).
+  // "*/5 * * * *": market snapshot (src/market/sync.ts).
+  "triggers": { "crons": ["* * * * *", "*/10 * * * *", "*/5 * * * *"] },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": { "enabled": true, "invocation_logs": true },
+    "traces": { "enabled": true, "head_sampling_rate": 1 }
+  },
+  // Secrets (wrangler secret put): SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+  // API_KEY_PEPPER, MEZO_MAINNET_RPC_URL, MEZO_TESTNET_RPC_URL; optional
+  // BASE_RPC_URL (MEZO/USD fallback pool; public Base RPCs follow it),
+  // COINGECKO_API_KEY (MEZO/USD; unset: keyless; optional var
+  // COINGECKO_API_PLAN demo or pro) and
+  // INTERNAL_TOKEN (opens /internal/* to a public bearer; unset in
+  // production, so only service bindings reach it) and BLOCKSCOUT_API_KEY
+  // (the Blockscout proxy's upstream key). Optional var
+  // BLOCKSCOUT_FINALITY_DEPTH (default 30): blocks behind the head before
+  // the proxy caches a block or transaction as final;
+  // BLOCKSCOUT_REVALIDATE_BLOCKS (default 4): N blocks between background
+  // refreshes of an address view.
+  "vars": {
+    "ENVIRONMENT": "production",
+    "GAUGE_PROFILE_API_ENABLED": "true",
+    "API_VERSION": "2.1.0",
+    // Publishable keys' share of each environment's quota (0, 1].
+    "PUBLISHABLE_QUOTA_SHARE": "0.5",
+    // BlockHub polls at block cadence while a socket is open (Mezo's
+    // 3.8 s blocks; a poll that finds the same block retries after 1 s).
+    "HEADS_POLL_MS": "3800",
+    // Health cron targets (blank = skip that probe).
+    "HEALTH_API_URL": "https://api.matchbox.markets/v1/health",
+    "HEALTH_ID_URL": "https://id.matchbox.markets/.well-known/openid-configuration"
+  },
+  // Staging on workers.dev (no custom domain):
+  // `pnpm --filter @matchbox/api exec wrangler deploy --env staging`.
+  // A new Worker, so it starts from its own migration history. It shares
+  // the mbx_api_requests dataset; rows are keyed by staging environment ids.
+  "env": {
+    "staging": {
+      "workers_dev": true,
+      "routes": [],
+      "durable_objects": {
+        "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }],
+      "analytics_engine_datasets": [
+        { "binding": "REQUEST_LOG", "dataset": "mbx_api_requests" },
+        { "binding": "HEALTH_LOG", "dataset": "mbx_platform_health" }
+      ],
+      "d1_databases": [
+        {
+          "binding": "MARKET_DB",
+          "database_name": "matchbox-api-market-staging",
+          "database_id": "e8f8494a-daca-4863-a488-42fdb8d5b321",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "triggers": { "crons": ["* * * * *", "*/10 * * * *", "*/5 * * * *"] },
+      "vars": {
+        "ENVIRONMENT": "preview",
+        "GAUGE_PROFILE_API_ENABLED": "true",
+        "API_VERSION": "2.1.0",
+        "PUBLISHABLE_QUOTA_SHARE": "0.5",
+        "HEALTH_API_URL": "https://matchbox-developer-api-staging.mallard.workers.dev/v1/health",
+        "HEALTH_ID_URL": "https://matchbox-id-staging.mallard.workers.dev/.well-known/openid-configuration"
+      }
+    },
+    // v2 preview on workers.dev: the new API with the Pro read routes and
+    // BlockHub, separate from live and from the old staging Worker.
+    // `pnpm --filter @matchbox/api exec wrangler deploy --env v2preview`.
+    "v2preview": {
+      "name": "matchbox-api-v2-preview",
+      "workers_dev": true,
+      "routes": [],
+      "durable_objects": {
+        "bindings": [
+          { "name": "RATE_LIMITER", "class_name": "RateLimiter" },
+          { "name": "BLOCK_HUB", "class_name": "BlockHub" }
+        ]
+      },
+      "migrations": [
+        { "tag": "v1", "new_sqlite_classes": ["RateLimiter", "BlockHub"] }
+      ],
+      "analytics_engine_datasets": [
+        { "binding": "REQUEST_LOG", "dataset": "mbx_api_requests" },
+        { "binding": "HEALTH_LOG", "dataset": "mbx_platform_health" }
+      ],
+      "d1_databases": [
+        {
+          "binding": "MARKET_DB",
+          "database_name": "matchbox-api-market-v2",
+          "database_id": "6cae6e6b-22d9-487c-8fdc-00faaaedf12c",
+          "migrations_dir": "migrations"
+        },
+        // The same database as the default env; the API's own tables
+        // (avatar_colors) migrate from read-db-migrations:
+        // `wrangler d1 migrations apply matchbox-read-models --remote --env v2preview`.
+        {
+          "binding": "READ_DB",
+          "database_name": "matchbox-read-models",
+          "database_id": "abe98edf-ff3c-4ac6-b974-6edf4294089a",
+          "migrations_dir": "read-db-migrations"
+        },
+        // SCAN_DB: the same database as the default env.
+        {
+          "binding": "SCAN_DB",
+          "database_name": "matchbox-scan",
+          "database_id": "ace6a0e7-ddf9-4e29-9b75-c80df48c3ab2",
+          "migrations_dir": "../jobs/scan-migrations"
+        }
+      ],
+      "kv_namespaces": [
+        { "binding": "PRICES", "id": "bc89cdb653554c42af1b04d91d2b23d0" }
+      ],
+      // "* * * * *": gauge votes from the chain into the gauge directory
+      // (src/read-models/gauge-votes.ts). Pro and Matchscan read this
+      // Worker, so the refresh has to run here. No health probes: this env
+      // sets no HEALTH_API_URL or HEALTH_ID_URL.
+      // "*/5 * * * *": market snapshot and the gauge publish.
+      "triggers": { "crons": ["* * * * *", "*/5 * * * *"] },
+      "vars": {
+        "ENVIRONMENT": "preview",
+        "GAUGE_PROFILE_API_ENABLED": "true",
+        "API_VERSION": "2.1.0",
+        "MEZO_MAINNET_RPC_URL": "https://mainnet.mezo.public.validationcloud.io",
+        "BASE_RPC_URL": "https://base-mainnet.public.blastapi.io",
+        "PLATFORM_STORE": "memory",
+        "PUBLISHABLE_QUOTA_SHARE": "0.5",
+        // Curated gauge profiles from Supabase's public tables. The
+        // publishable key is a secret here only so scanners never see a key
+        // in the repo: wrangler secret put PROFILES_SUPABASE_KEY --env v2preview
+        "PROFILES_SUPABASE_URL": "https://xyeyuamvydligyjgzqnt.supabase.co"
+      }
+    }
+  }
+}

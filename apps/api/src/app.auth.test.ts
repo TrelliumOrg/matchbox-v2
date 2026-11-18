@@ -1,0 +1,456 @@
+import { errorBodySchema } from "@matchbox/contracts/errors"
+import { describe, expect, it, vi } from "vitest"
+import {
+  createHarness,
+  ids,
+  keyIds,
+  keys,
+  liveOrigin,
+  testOrigin,
+} from "./testing"
+
+async function errorCode(response: Response): Promise<string> {
+  return errorBodySchema.parse(await response.json()).error.code
+}
+
+const testnetList = "/v1/gauge-profiles?network=mezo-testnet"
+const mainnetList = "/v1/gauge-profiles?network=mezo"
+
+describe("API key auth", () => {
+  it("rejects a malformed key with 401 before any store lookup", async () => {
+    const harness = await createHarness()
+    const lookup = vi.spyOn(harness.store, "findApiKeyByPrefix")
+    const response = await harness.get(testnetList, { key: "mbx_sk_nope" })
+    expect(response.status).toBe(401)
+    expect(await errorCode(response)).toBe("unauthorized")
+    expect(lookup).not.toHaveBeenCalled()
+  })
+
+  it("names a client ID or client secret sent as an API key", async () => {
+    const harness = await createHarness()
+    const cases = [
+      [`mbx_test_${"A".repeat(24)}`, "client ID"],
+      [`mbx_cs_${"B".repeat(12)}_${"c".repeat(43)}`, "client secret"],
+    ] as const
+    for (const [key, credential] of cases) {
+      const response = await harness.get(testnetList, { key })
+      expect(response.status).toBe(401)
+      const { error } = errorBodySchema.parse(await response.json())
+      expect(error.code).toBe("unauthorized")
+      expect(error.message).toContain(`That is a ${credential}, not an API key`)
+    }
+  })
+
+  it("rejects a missing Authorization header with 401", async () => {
+    const harness = await createHarness()
+    const response = await harness.get(testnetList, { key: null })
+    expect(response.status).toBe(401)
+    expect(response.headers.get("X-Request-Id")).toMatch(/^req_/)
+  })
+
+  it("rejects an unknown prefix and a wrong secret with 401", async () => {
+    const harness = await createHarness()
+    const unknown = keys.skTest.replace("SkTest000001", "SkTest999999")
+    const wrongSecret = `${keys.skTest.slice(0, -3)}zzz`
+    for (const key of [unknown, wrongSecret]) {
+      const response = await harness.get(testnetList, { key })
+      expect(response.status).toBe(401)
+      expect(await errorCode(response)).toBe("unauthorized")
+    }
+  })
+
+  it("caches the verified key policy for 15 s", async () => {
+    const harness = await createHarness()
+    const lookup = vi.spyOn(harness.store, "findApiKeyByPrefix")
+    await harness.get(testnetList)
+    await harness.get(testnetList)
+    expect(lookup).toHaveBeenCalledTimes(1)
+    harness.clock.advance(15_001)
+    await harness.get(testnetList)
+    expect(lookup).toHaveBeenCalledTimes(2)
+  })
+
+  describe("IP buckets behind a shared egress", () => {
+    // Cloudflare's cross-zone Worker egress: every Worker caller shares it.
+    const workerIp = "2a06:98c0:3600::103"
+    let junkCount = 0
+    function junkKey(): string {
+      junkCount += 1
+      const prefix = `Junk${String(junkCount).padStart(8, "0")}`
+      return `mbx_sk_live_${prefix}_${"x".repeat(43)}`
+    }
+
+    it("never charges a verified key, even with a cold cache", async () => {
+      const harness = await createHarness()
+      const statuses = new Map<number, number>()
+      for (let index = 0; index < 200; index++) {
+        const response = await harness.get(mainnetList, {
+          key: junkKey(),
+          ip: workerIp,
+        })
+        statuses.set(response.status, (statuses.get(response.status) ?? 0) + 1)
+      }
+      expect(statuses.get(401)).toBe(30)
+      expect(statuses.get(429)).toBe(170)
+      for (let index = 0; index < 3; index++) {
+        harness.clock.advance(15_001)
+        const valid = await harness.get(mainnetList, {
+          key: keys.skLive,
+          ip: workerIp,
+        })
+        expect(valid.status).toBe(200)
+      }
+    })
+
+    it("keeps a verified key working after junk spends the daily bucket", {
+      timeout: 60_000,
+    }, async () => {
+      const harness = await createHarness()
+      for (let minute = 0; minute < 34; minute++) {
+        for (let index = 0; index < 30; index++) {
+          await harness.get(mainnetList, { key: junkKey(), ip: workerIp })
+        }
+        harness.clock.advance(60_000)
+      }
+      const junk = await harness.get(mainnetList, {
+        key: junkKey(),
+        ip: workerIp,
+      })
+      expect(junk.status).toBe(429)
+      expect(Number(junk.headers.get("Retry-After"))).toBeGreaterThan(3_600)
+      const valid = await harness.get(mainnetList, {
+        key: keys.skLive,
+        ip: workerIp,
+      })
+      expect(valid.status).toBe(200)
+    })
+
+    it("still limits unknown and wrong keys per IP prefix", async () => {
+      const harness = await createHarness()
+      const wrongSecret = `${keys.skTest.slice(0, -3)}zzz`
+      for (let index = 0; index < 30; index++) {
+        const response = await harness.get(testnetList, {
+          key: index % 2 === 0 ? junkKey() : wrongSecret,
+        })
+        expect(response.status).toBe(401)
+      }
+      const limited = await harness.get(testnetList, { key: junkKey() })
+      expect(limited.status).toBe(429)
+      expect(await errorCode(limited)).toBe("rate_limited")
+      expect((await harness.get(testnetList)).status).toBe(200)
+    })
+
+    // A thousand requests by design: its checks are call counts, not
+    // timings, so it gets room beyond vitest's 5 s on a loaded full run.
+    it("stops reading key rows for junk once ip: is spent", async () => {
+      const harness = await createHarness()
+      const lookup = vi.spyOn(harness.store, "findApiKeyByPrefix")
+      const snapshot = vi.spyOn(harness.store, "listActiveKeyPrefixes")
+      for (let index = 0; index < 1_000; index++) {
+        await harness.get(mainnetList, { key: junkKey(), ip: workerIp })
+      }
+      // 30 allowed + the one that found the bucket spent.
+      expect(lookup).toHaveBeenCalledTimes(31)
+      expect(snapshot).toHaveBeenCalledTimes(1)
+
+      // A cold cache still verifies a known prefix.
+      const valid = await harness.get(mainnetList, {
+        key: keys.skLive,
+        ip: workerIp,
+      })
+      expect(valid.status).toBe(200)
+      expect(lookup).toHaveBeenCalledTimes(32)
+
+      // An unknown prefix reloads the snapshot at most every 10 s.
+      harness.clock.advance(5_000)
+      await harness.get(mainnetList, { key: junkKey(), ip: workerIp })
+      expect(snapshot).toHaveBeenCalledTimes(1)
+      harness.clock.advance(5_000)
+      const junk = await harness.get(mainnetList, {
+        key: junkKey(),
+        ip: workerIp,
+      })
+      expect(junk.status).toBe(429)
+      expect(snapshot).toHaveBeenCalledTimes(2)
+      expect(lookup).toHaveBeenCalledTimes(32)
+    }, 30_000)
+
+    it("answers repeated wrong secrets on one prefix from cache", async () => {
+      const harness = await createHarness()
+      const lookup = vi.spyOn(harness.store, "findApiKeyByPrefix")
+      for (let index = 0; index < 200; index++) {
+        const secret = String(index).padStart(43, "z")
+        const wrong = `${keys.skLive.slice(0, -43)}${secret}`
+        await harness.get(mainnetList, { key: wrong, ip: workerIp })
+      }
+      expect(lookup).toHaveBeenCalledTimes(1)
+      const valid = await harness.get(mainnetList, {
+        key: keys.skLive,
+        ip: workerIp,
+      })
+      expect(valid.status).toBe(200)
+      expect(lookup).toHaveBeenCalledTimes(2)
+    })
+
+    it("fails closed on the miss path while the limiter is down", async () => {
+      const harness = await createHarness({
+        rateLimits: (memory) => ({
+          consume(bucket, policy) {
+            if (bucket.startsWith("ip:")) {
+              return Promise.reject(new Error("limiter down"))
+            }
+            return memory.consume(bucket, policy)
+          },
+        }),
+      })
+      const lookup = vi.spyOn(harness.store, "findApiKeyByPrefix")
+      for (let index = 0; index < 300; index++) {
+        const response = await harness.get(mainnetList, {
+          key: junkKey(),
+          ip: workerIp,
+        })
+        expect(response.status).toBe(401)
+      }
+      expect(lookup).toHaveBeenCalledTimes(1)
+      const valid = await harness.get(mainnetList, {
+        key: keys.skLive,
+        ip: workerIp,
+      })
+      expect(valid.status).toBe(200)
+    })
+  })
+
+  type Case = {
+    name: string
+    key: string
+    path: string
+    origin?: string
+    ip?: string
+    status: number
+    code?: string
+    allowOrigin?: string | null
+  }
+
+  const cases: Case[] = [
+    {
+      name: "publishable + registered origin",
+      key: keys.pkTest,
+      path: testnetList,
+      origin: testOrigin,
+      status: 200,
+      allowOrigin: testOrigin,
+    },
+    {
+      name: "publishable + unregistered origin",
+      key: keys.pkTest,
+      path: testnetList,
+      origin: "https://evil.example",
+      status: 403,
+      code: "origin_not_allowed",
+      allowOrigin: null,
+    },
+    {
+      name: "publishable + absent origin",
+      key: keys.pkTest,
+      path: testnetList,
+      status: 403,
+      code: "origin_not_allowed",
+    },
+    {
+      name: "test publishable + registered origin + mainnet",
+      key: keys.pkTest,
+      path: mainnetList,
+      origin: testOrigin,
+      status: 200,
+      allowOrigin: testOrigin,
+    },
+    {
+      name: "live publishable + registered origin",
+      key: keys.pkLive,
+      path: mainnetList,
+      origin: liveOrigin,
+      status: 200,
+      allowOrigin: liveOrigin,
+    },
+    {
+      name: "live publishable + test origin",
+      key: keys.pkLive,
+      path: mainnetList,
+      origin: testOrigin,
+      status: 403,
+      code: "origin_not_allowed",
+      allowOrigin: null,
+    },
+    {
+      name: "secret + absent origin",
+      key: keys.skTest,
+      path: testnetList,
+      status: 200,
+    },
+    {
+      name: "secret + any origin (browser use)",
+      key: keys.skTest,
+      path: testnetList,
+      origin: testOrigin,
+      status: 403,
+      code: "origin_not_allowed",
+      allowOrigin: null,
+    },
+    {
+      name: "test secret + mainnet",
+      key: keys.skTest,
+      path: mainnetList,
+      status: 200,
+    },
+    {
+      name: "live secret + testnet",
+      key: keys.skLive,
+      path: testnetList,
+      status: 200,
+    },
+    {
+      name: "live secret + mainnet",
+      key: keys.skLive,
+      path: mainnetList,
+      status: 200,
+    },
+    {
+      name: "revoked",
+      key: keys.skRevoked,
+      path: testnetList,
+      status: 401,
+      code: "unauthorized",
+    },
+    {
+      name: "expired",
+      key: keys.skExpired,
+      path: testnetList,
+      status: 401,
+      code: "unauthorized",
+    },
+    {
+      name: "not yet expired",
+      key: keys.skFutureExpiry,
+      path: testnetList,
+      status: 200,
+    },
+    {
+      name: "unapproved live environment",
+      key: keys.skLiveUnapproved,
+      path: mainnetList,
+      status: 403,
+      code: "forbidden",
+    },
+    {
+      name: "approved live environment without gauge-profiles:read",
+      key: keys.skLiveNoScope,
+      path: mainnetList,
+      status: 403,
+      code: "forbidden",
+    },
+    {
+      name: "suspended app",
+      key: keys.skSuspended,
+      path: testnetList,
+      status: 403,
+      code: "forbidden",
+    },
+    {
+      name: "restricted app keeps read access",
+      key: keys.skRestrictedLive,
+      path: mainnetList,
+      status: 200,
+    },
+    {
+      name: "CIDR allowlist match",
+      key: keys.skTestCidr,
+      path: testnetList,
+      ip: "203.0.113.54",
+      status: 200,
+    },
+    {
+      name: "CIDR allowlist miss",
+      key: keys.skTestCidr,
+      path: testnetList,
+      ip: "198.51.100.7",
+      status: 403,
+      code: "forbidden",
+    },
+  ]
+
+  it.each(cases)("$name → $status", async (testCase) => {
+    const harness = await createHarness()
+    const response = await harness.get(testCase.path, {
+      key: testCase.key,
+      ...(testCase.origin === undefined ? {} : { origin: testCase.origin }),
+      ...(testCase.ip === undefined ? {} : { ip: testCase.ip }),
+    })
+    expect(response.status).toBe(testCase.status)
+    if (testCase.code !== undefined) {
+      expect(await errorCode(response)).toBe(testCase.code)
+    }
+    if (testCase.allowOrigin !== undefined) {
+      expect(response.headers.get("Access-Control-Allow-Origin")).toBe(
+        testCase.allowOrigin,
+      )
+    }
+    expect(response.headers.get("Vary")).toContain("Origin")
+    expect(response.headers.get("Vary")).toContain("Authorization")
+  })
+
+  it("rejects a CIDR-restricted key when the client IP is unknown", async () => {
+    const harness = await createHarness()
+    const response = await harness.app.request(testnetList, {
+      headers: { Authorization: `Bearer ${keys.skTestCidr}` },
+    })
+    expect(response.status).toBe(403)
+  })
+
+  it("applies development limits to restricted apps", async () => {
+    const harness = await createHarness()
+    const response = await harness.get(mainnetList, {
+      key: keys.skRestrictedLive,
+    })
+    expect(response.headers.get("RateLimit-Limit")).toBe("60")
+    const live = await harness.get(mainnetList, { key: keys.skLive })
+    expect(live.headers.get("RateLimit-Limit")).toBe("300")
+  })
+
+  it("updates last_used_at at most once per key per 5 minutes", async () => {
+    const harness = await createHarness()
+    const touch = vi.spyOn(harness.store, "touchKeyLastUsed")
+    await harness.get(testnetList)
+    await harness.get(testnetList)
+    expect(touch).toHaveBeenCalledTimes(1)
+    expect(harness.store.lastUsed.get(keyIds.skTest)).toEqual(harness.clock.now)
+    harness.clock.advance(5 * 60_000)
+    await harness.get(testnetList)
+    expect(touch).toHaveBeenCalledTimes(2)
+  })
+
+  it("logs one Analytics Engine data point per request", async () => {
+    const harness = await createHarness()
+    await harness.get(
+      "/v1/gauge-profiles/mezo-testnet/0x8E1B4D7A0C3F6E9B2D5A8C1F4E7B0D3A6C9F2E5B",
+    )
+    await harness.get(testnetList, { key: "garbage" })
+    expect(harness.dataPoints).toHaveLength(2)
+    const [ok, anonymous] = harness.dataPoints
+    expect(ok?.indexes).toEqual([ids.testEnv])
+    expect(ok?.blobs.slice(1, 6)).toEqual([
+      keyIds.skTest,
+      "/v1/gauge-profiles/{network}/{gaugeAddress}",
+      "GET",
+      "200",
+      "full",
+    ])
+    expect(ok?.blobs[8]).toBe("test")
+    expect(ok?.doubles[1]).toBe(200)
+    expect(anonymous?.indexes).toEqual(["anonymous"])
+    expect(anonymous?.blobs[1]).toBe("")
+    expect(anonymous?.blobs[4]).toBe("401")
+    expect(anonymous?.blobs[5]).toBe("none")
+    expect(ok?.blobs[9]).toBe("")
+    expect(anonymous?.blobs[9]).toBe("unauthorized")
+  })
+})

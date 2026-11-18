@@ -1,0 +1,1362 @@
+/*
+ * Stuart's panel. Loaded with the panel chunk, never on first paint. Every
+ * colour is a token from @matchbox/tokens; motion is transform and opacity
+ * under 400ms, and [data-mbx-motion] drops it under reduced motion.
+ */
+
+.stuart-panel,
+.stuart-pill {
+  --stuart-surface: var(--sheet);
+  --stuart-card: var(--soft);
+  --stuart-gap: 14px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+:where(
+    [data-theme="graphite"],
+    [data-theme="walnut"],
+    [data-theme="slate"],
+    [data-theme="onyx"]
+  )
+  :is(.stuart-panel, .stuart-pill) {
+  --stuart-card: var(--soft2);
+}
+
+.stuart-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes stuart-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes stuart-slide-in {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+
+@keyframes stuart-slide-out {
+  to {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+}
+
+/* The docked panel grows out of the Ctrl K bar and collapses back into it. */
+@keyframes stuart-grow {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.6, 0.12);
+  }
+}
+
+@keyframes stuart-collapse {
+  to {
+    opacity: 0;
+    transform: translateY(14px) scale(0.6, 0.12);
+  }
+}
+
+@keyframes stuart-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Surfaces */
+
+.stuart-panel {
+  position: fixed;
+  z-index: 35;
+  display: flex;
+  background: var(--stuart-surface);
+  overflow: hidden;
+}
+
+.stuart-docked {
+  right: 24px;
+  bottom: 90px;
+  width: min(400px, calc(100vw - 32px));
+  height: min(620px, calc(100dvh - var(--stuart-dock-bottom, 90px) - 24px));
+  border-radius: 24px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    var(--popShadow);
+  animation: stuart-grow 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: 50% calc(100% + 39px);
+}
+
+.stuart-docked[data-state="closed"] {
+  animation: stuart-collapse 220ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+.stuart-expanded {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(600px, 100vw);
+  box-shadow: inset 1px 0 0 var(--line);
+  animation: stuart-slide-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.stuart-expanded[data-state="closed"] {
+  animation: stuart-slide-out 220ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+@media (min-width: 1280px) {
+  html[data-stuart-expanded] body {
+    padding-right: 600px;
+  }
+}
+
+.stuart-sheet {
+  left: 0;
+  right: 0;
+  /* Above the on-screen keyboard: see keyboard-inset.ts. */
+  bottom: var(--keyboard-inset, 0px);
+  z-index: 45;
+  border-radius: 24px 24px 0 0;
+  box-shadow: inset 0 1px 0 var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: mbx-sheet-up 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.stuart-sheet[data-state="closed"] {
+  animation: mbx-sheet-down 220ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+.stuart-sheet-half {
+  height: min(56dvh, calc(100dvh - 48px - var(--keyboard-inset, 0px)));
+}
+
+.stuart-sheet-full {
+  height: calc(100dvh - 48px - var(--keyboard-inset, 0px));
+}
+
+.stuart-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 44;
+  border: 0;
+  background: var(--scrim);
+  animation: mbx-fade-in 240ms ease-out;
+}
+
+.stuart-scrim[data-state="closed"] {
+  animation: stuart-fade-out 220ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stuart-docked,
+  .stuart-expanded,
+  .stuart-sheet {
+    animation: mbx-fade-in 160ms ease-out;
+  }
+
+  .stuart-docked[data-state="closed"],
+  .stuart-expanded[data-state="closed"],
+  .stuart-sheet[data-state="closed"],
+  .stuart-scrim[data-state="closed"] {
+    animation: stuart-fade-out 120ms ease-in forwards;
+  }
+}
+
+.stuart-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+}
+
+.stuart-grab {
+  flex: none;
+  display: grid;
+  place-items: center;
+  height: 24px;
+  border: 0;
+  background: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.stuart-grab span {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ring);
+}
+
+/* Header */
+
+.stuart-header {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 10px;
+  height: 60px;
+  padding: 0 6px 0 18px;
+}
+
+.stuart-sheet .stuart-header {
+  height: 48px;
+}
+
+.stuart-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.stuart-header-mark {
+  color: var(--ink);
+  flex: none;
+}
+
+.stuart-header-actions {
+  display: flex;
+  margin-left: auto;
+}
+
+.stuart-icon-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: 0 1px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--sec);
+  cursor: pointer;
+}
+
+.stuart-icon-button::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
+.stuart-icon-button:hover,
+.stuart-icon-button[aria-pressed="true"] {
+  background: var(--stuart-card);
+  color: var(--ink);
+}
+
+.stuart-panel :focus-visible,
+.stuart-pill:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Thread */
+
+.stuart-thread {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 20px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stuart-turns {
+  list-style: none;
+  margin: auto 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.stuart-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stuart-turn + .stuart-turn {
+  padding-top: 22px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+.stuart-question {
+  align-self: flex-end;
+  max-width: 300px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 20px 20px 6px 20px;
+  background: var(--stuart-card);
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.stuart-status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--sec);
+}
+
+.stuart-answer {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.stuart-answer b {
+  font-weight: 650;
+}
+
+.stuart-pos {
+  color: var(--pos);
+}
+
+.stuart-neg {
+  color: var(--neg);
+}
+
+.stuart-acc-ink {
+  color: var(--accInk);
+}
+
+.stuart-strong {
+  font-weight: 650;
+}
+
+.stuart-spin {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--soft2);
+  border-top-color: var(--acc);
+  animation: mbx-spin 900ms linear infinite;
+}
+
+.stuart-sample-card {
+  height: 150px;
+}
+
+.stuart-failure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.stuart-notice {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--sec);
+}
+
+/* Cards and tables */
+
+.stuart-card {
+  border-radius: 18px;
+  background: var(--stuart-card);
+  padding: 4px 14px 6px;
+}
+
+.stuart-pad {
+  padding: 12px 16px 14px;
+}
+
+.stuart-card-title {
+  margin: 0 0 6px;
+  font-size: 14.5px;
+  font-weight: 650;
+}
+
+.stuart-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.stuart-table th,
+.stuart-table td {
+  padding: 7px 0;
+  text-align: left;
+  font-weight: inherit;
+  vertical-align: middle;
+}
+
+.stuart-table tfoot th,
+.stuart-table tfoot td {
+  box-shadow: inset 0 1px 0 var(--soft2);
+  font-size: 14.5px;
+}
+
+.stuart-table thead th {
+  padding: 8px 0 2px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--sec);
+}
+
+.stuart-table thead th + th,
+.stuart-table .stuart-num {
+  text-align: right;
+  padding-left: 10px;
+  white-space: nowrap;
+}
+
+.stuart-table tbody td.stuart-num {
+  font-size: 14px;
+  color: var(--ink2);
+}
+
+.stuart-table tbody td.stuart-strong {
+  font-size: 14.5px;
+  color: var(--ink);
+}
+
+.stuart-gauge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.stuart-gauge-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stuart-gauge-name {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+a.stuart-gauge-name:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.stuart-gauge-sub {
+  margin-top: 1px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: var(--sec);
+}
+
+.stuart-pair {
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.stuart-coins {
+  display: inline-flex;
+  align-items: center;
+}
+
+.stuart-coins > * {
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--stuart-card);
+}
+
+.stuart-coins > * + * {
+  margin-left: -4px;
+}
+
+.stuart-money {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.stuart-more {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink2);
+  cursor: pointer;
+}
+
+.stuart-kv {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 14px;
+}
+
+.stuart-kv div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stuart-kv dt {
+  color: var(--sec);
+}
+
+.stuart-kv dd {
+  margin: 0;
+  color: var(--ink2);
+  text-align: right;
+}
+
+.stuart-figure-card {
+  padding: 14px 16px 16px;
+  overflow: hidden;
+}
+
+.stuart-figure-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.stuart-figure {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.stuart-figure-label {
+  font-size: 13.5px;
+  color: var(--sec);
+}
+
+.stuart-figure-value {
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.stuart-figure-value small {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--sec);
+}
+
+.stuart-band {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  margin: 12px -16px 0;
+  padding: 0 16px;
+  background: var(--soft2);
+  font-size: 14px;
+  color: var(--ink2);
+  overflow: hidden;
+}
+
+.stuart-band > span:not(.stuart-band-fill),
+.stuart-band > b {
+  position: relative;
+}
+
+.stuart-band b {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.stuart-band-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--bandAcc);
+  transform-origin: left center;
+}
+
+/* From optimal on the band is green, however far past it (no red). */
+.stuart-band[data-optimal] .stuart-band-fill {
+  background: var(--bandPos);
+}
+
+.stuart-alloc {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.stuart-alloc li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  font-size: 14.5px;
+}
+
+.stuart-alloc-name {
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.stuart-alloc-change {
+  margin-left: auto;
+  color: var(--sec);
+}
+
+.stuart-alloc-change b,
+.stuart-alloc b {
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.stuart-projected {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.stuart-projected-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 15px;
+  color: var(--sec);
+}
+
+.stuart-projected-row b {
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+.stuart-projected-row em {
+  margin-left: auto;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.stuart-steps,
+.stuart-trace,
+.stuart-calls {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.stuart-steps li,
+.stuart-calls li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.stuart-steps b {
+  margin-left: auto;
+}
+
+.stuart-call-label {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+/* Prepared transaction */
+
+.stuart-tx {
+  border-radius: 20px;
+  background: var(--stuart-card);
+  overflow: hidden;
+}
+
+.stuart-tx-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 46px;
+  margin: 0;
+  padding: 0 16px;
+  font-size: 14.5px;
+  font-weight: 650;
+}
+
+.stuart-tx-mezo {
+  background: var(--mezo);
+  color: var(--onMezo);
+}
+
+.stuart-tx-btc {
+  background: var(--acc);
+  color: var(--onAcc);
+}
+
+.stuart-tx-plain {
+  background: var(--soft2);
+  color: var(--ink);
+}
+
+.stuart-tx-coin {
+  box-shadow: 0 0 0 2px var(--coinRing);
+}
+
+.stuart-tx-body {
+  padding: 12px 16px 14px;
+}
+
+.stuart-sim {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding-top: 10px;
+  box-shadow: inset 0 1px 0 var(--soft2);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stuart-sim-block {
+  margin-left: auto;
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--sec);
+}
+
+.stuart-material {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--accSoft);
+  color: var(--accInk);
+}
+
+.stuart-material .stuart-projected-row,
+.stuart-material .stuart-alloc-change {
+  color: var(--accInk);
+}
+
+.stuart-outcome,
+.stuart-blocked {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.stuart-blocked {
+  color: var(--sec);
+  font-weight: 400;
+}
+
+.stuart-ctas {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 14px;
+}
+
+.stuart-ctas:empty {
+  display: none;
+}
+
+.stuart-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Sources, why, rows */
+
+.stuart-sources {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--sec);
+}
+
+.stuart-sources li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stuart-sources svg {
+  flex: none;
+}
+
+.stuart-sources a {
+  color: inherit;
+  text-underline-offset: 2px;
+  text-decoration-color: var(--mut);
+}
+
+.stuart-why summary {
+  width: fit-content;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.stuart-why summary::-webkit-details-marker {
+  display: none;
+}
+
+.stuart-why ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--ink2);
+}
+
+.stuart-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stuart-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.stuart-row:hover:not(:disabled) {
+  background: var(--stuart-card);
+}
+
+.stuart-row:disabled {
+  cursor: not-allowed;
+  color: var(--mut);
+}
+
+.stuart-row svg {
+  margin-left: auto;
+  flex: none;
+  color: var(--mut);
+}
+
+.stuart-row-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.stuart-clarify {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.stuart-clarify legend {
+  padding: 0 0 6px;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+/* Empty state */
+
+.stuart-empty {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  margin: 0 -8px;
+}
+
+.stuart-empty-mark {
+  margin: auto;
+}
+
+/* Context chip */
+
+.stuart-context {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  margin: 0 16px 4px;
+  padding: 6px 4px 6px 10px;
+  border-radius: 16px;
+  background: var(--stuart-card);
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.stuart-context-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* History */
+
+.stuart-history {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.stuart-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stuart-history-label {
+  margin: 0 0 4px;
+  padding: 0 12px;
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--sec);
+}
+
+.stuart-new-chat,
+.stuart-history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stuart-new-chat {
+  font-weight: 600;
+}
+
+.stuart-history-item {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  line-height: 40px;
+}
+
+.stuart-history-item:hover,
+.stuart-history-item[aria-current="true"] {
+  background: var(--stuart-card);
+}
+
+.stuart-history-item[aria-current="true"] {
+  font-weight: 600;
+}
+
+.stuart-thread > .stuart-history {
+  margin: 0 -10px;
+  padding-bottom: 12px;
+}
+
+/* Composer */
+
+.stuart-composer {
+  flex: none;
+  padding: 12px 16px 16px;
+}
+
+.stuart-field {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  padding: 0 7px 0 18px;
+  border-radius: 25px;
+  background: var(--stuart-card);
+}
+
+.stuart-field:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.stuart-field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+  caret-color: var(--acc);
+}
+
+.stuart-field input::placeholder {
+  color: var(--mut);
+}
+
+.stuart-panel .stuart-field input:focus-visible {
+  outline: none;
+}
+
+.stuart-send {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--soft2);
+  color: var(--mut);
+  cursor: pointer;
+}
+
+.stuart-send::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
+.stuart-send-live {
+  background: var(--acc);
+  color: var(--onAcc);
+}
+
+.stuart-send[aria-disabled="true"] {
+  cursor: default;
+}
+
+/* Minimized pill */
+
+.stuart-pill {
+  position: fixed;
+  right: 24px;
+  bottom: 84px;
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(318px, calc(100vw - 40px));
+  height: 62px;
+  padding: 0 18px 0 14px;
+  border: 0;
+  border-radius: 31px;
+  background: var(--stuart-surface);
+  box-shadow: var(--popShadow);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: stuart-rise 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.stuart-pill-ring {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--stuart-card);
+}
+
+.stuart-pill-ring .stuart-spin {
+  width: 16px;
+  height: 16px;
+}
+
+.stuart-pill-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.stuart-pill-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.stuart-pill-status {
+  font-size: 13px;
+  color: var(--sec);
+}
+
+.stuart-pill > svg {
+  flex: none;
+  color: var(--sec);
+}
+
+@media (max-width: 767.98px) {
+  .stuart-pill {
+    right: 20px;
+    bottom: calc(env(safe-area-inset-bottom) + 140px);
+  }
+}
+
+/* Expanded: history column plus thread */
+
+.stuart-expanded .stuart-history {
+  flex: 0 0 200px;
+  box-shadow: inset -1px 0 0 var(--line);
+  padding: 18px 10px;
+}
+
+.stuart-expanded .stuart-main {
+  flex: 1 1 400px;
+}
+
+/* The collapsed summary row (41yLhKsfh5): steps and sources, each once. */
+
+.stuart-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--sec);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stuart-summary-row > svg {
+  flex: none;
+}
+
+.stuart-summary-row > svg:last-child {
+  margin-left: auto;
+}
+
+.stuart-summary-row:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.stuart-summary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--stuart-card);
+  transform-origin: 50% 0;
+  animation: stuart-unfold 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.stuart-summary-body[data-state="closed"] {
+  animation: stuart-fold 160ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes stuart-unfold {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scaleY(0.96);
+  }
+}
+
+@keyframes stuart-fold {
+  to {
+    opacity: 0;
+    transform: translateY(-4px) scaleY(0.96);
+  }
+}
+
+.stuart-pill[data-state="closed"] {
+  animation: stuart-fade-out 180ms ease-in forwards;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stuart-summary-body,
+  .stuart-pill {
+    animation: mbx-fade-in 120ms ease-out;
+  }
+
+  .stuart-summary-body[data-state="closed"],
+  .stuart-pill[data-state="closed"] {
+    animation: stuart-fade-out 100ms ease-in forwards;
+  }
+}
+
+.stuart-summary-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.stuart-summary-steps li {
+  display: flex;
+  gap: 10px;
+}
+
+.stuart-summary-steps li > svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.stuart-summary-steps b {
+  display: block;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.stuart-summary-steps span span {
+  display: block;
+  font-size: 13.5px;
+  color: var(--sec);
+}
+
+.stuart-summary-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 10px 0 0;
+  list-style: none;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+.stuart-summary-sources li {
+  color: var(--sec);
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: 12.5px;
+}
+
+.stuart-summary-sources a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
+
+/* Gauge type icons (matchbox-v3): 16px, secondary, with a tooltip. */
+
+.stuart-kind {
+  flex: none;
+  color: var(--sec);
+}
+
+.stuart-unit {
+  color: var(--sec);
+  font-weight: 400;
+}
+
+/* Prepared transaction: plain-word steps. */
+
+.stuart-tx-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.stuart-tx-steps li {
+  display: flex;
+  gap: 10px;
+}
+
+.stuart-tx-step-index {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--soft2);
+  color: var(--sec);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.stuart-tx-steps b {
+  display: block;
+  font-weight: 600;
+}
+
+.stuart-tx-steps span span {
+  display: block;
+  font-size: 13.5px;
+  color: var(--sec);
+}
+
+.stuart-tx-epoch {
+  font-weight: 650;
+}

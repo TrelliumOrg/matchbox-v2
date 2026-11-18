@@ -1,0 +1,15 @@
+# Copy to .dev.vars (git-ignored). `wrangler dev --test-scheduled` and the
+# scripts (migrate, roles, rebuild:history, ...) read it. Tests need none of
+# this: they run on PGlite and a fake chain.
+#
+# Any local Postgres 16 or later works, for example:
+#   docker run -d --name matchbox-pg -p 5432:5432 \
+#     -e POSTGRES_HOST_AUTH_METHOD=trust postgres:18.4
+# then `pnpm --filter @matchbox/indexer migrate`. Never point these at a
+# production database.
+DATABASE_URL=postgres://postgres@localhost:5432/postgres
+# Migrations, roles and loads need a direct (non-pooler) connection. Locally
+# it is the same URL.
+DATABASE_URL_UNPOOLED=postgres://postgres@localhost:5432/postgres
+# Dead man's switch pinged after each tick. Leave empty locally.
+HEARTBEAT_URL=

@@ -1,0 +1,144 @@
+{
+  "items": [
+    {
+      "block_hash": "0xd9c0714bd050e7d42044d8b6a841393bed7b918822c448b4f7266e6990157b8a",
+      "block_number": 13022411,
+      "from": {
+        "ens_domain_name": null,
+        "hash": "0x2Ba614a598Cffa5a19d683cDCA97bac3a49313d1",
+        "implementations": [
+          {
+            "address_hash": "0xA696Dc56522E41811D06BBDA83c1a6D976637624",
+            "name": "BoostVoter"
+          }
+        ],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "TransparentUpgradeableProxy",
+        "private_tags": [],
+        "proxy_type": "eip1967",
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "log_index": 2,
+      "method": "addBribes",
+      "timestamp": "2026-11-05T16:30:41.000000Z",
+      "to": {
+        "ens_domain_name": null,
+        "hash": "0xF60754Ce4CeF898e020553989800AA926d451800",
+        "implementations": [],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": false,
+        "metadata": null,
+        "name": null,
+        "private_tags": [],
+        "proxy_type": null,
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "token": {
+        "address_hash": "0x7B7c000000000000000000000000000000000001",
+        "circulating_market_cap": null,
+        "circulating_supply": null,
+        "decimals": "18",
+        "exchange_rate": null,
+        "holders_count": "5216",
+        "icon_url": "https://storage.googleapis.com/mezo-production-explorer-logos-bucket/mezo-token.png",
+        "name": "MEZO",
+        "new_ui_multiplier": null,
+        "reputation": "ok",
+        "symbol": "MEZO",
+        "total_supply": "1147955228326066431408380585",
+        "type": "ERC-20",
+        "ui_multiplier": null,
+        "ui_multiplier_effective_at": null,
+        "volume_24h": null
+      },
+      "token_type": "ERC-20",
+      "total": {
+        "decimals": "18",
+        "ui_multiplier": null,
+        "value": "5000000000000000000000"
+      },
+      "transaction_hash": "0x78ab8d36005f317ef8aaaa0e319eedb7f5840f59a847f6df349ff30bde4c9f0a",
+      "type": "token_transfer"
+    },
+    {
+      "block_hash": "0xd9c0714bd050e7d42044d8b6a841393bed7b918822c448b4f7266e6990157b8a",
+      "block_number": 13022411,
+      "from": {
+        "ens_domain_name": null,
+        "hash": "0x41B1A7f633eB9DaC1FC19ADae41Aa7562c620971",
+        "implementations": [],
+        "is_contract": false,
+        "is_scam": false,
+        "is_verified": false,
+        "metadata": null,
+        "name": null,
+        "private_tags": [],
+        "proxy_type": null,
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "log_index": 0,
+      "method": "addBribes",
+      "timestamp": "2026-11-05T16:30:41.000000Z",
+      "to": {
+        "ens_domain_name": null,
+        "hash": "0x2Ba614a598Cffa5a19d683cDCA97bac3a49313d1",
+        "implementations": [
+          {
+            "address_hash": "0xA696Dc56522E41811D06BBDA83c1a6D976637624",
+            "name": "BoostVoter"
+          }
+        ],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "TransparentUpgradeableProxy",
+        "private_tags": [],
+        "proxy_type": "eip1967",
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "token": {
+        "address_hash": "0x7B7c000000000000000000000000000000000001",
+        "circulating_market_cap": null,
+        "circulating_supply": null,
+        "decimals": "18",
+        "exchange_rate": null,
+        "holders_count": "5216",
+        "icon_url": "https://storage.googleapis.com/mezo-production-explorer-logos-bucket/mezo-token.png",
+        "name": "MEZO",
+        "new_ui_multiplier": null,
+        "reputation": "ok",
+        "symbol": "MEZO",
+        "total_supply": "1147955228326066431408380585",
+        "type": "ERC-20",
+        "ui_multiplier": null,
+        "ui_multiplier_effective_at": null,
+        "volume_24h": null
+      },
+      "token_type": "ERC-20",
+      "total": {
+        "decimals": "18",
+        "ui_multiplier": null,
+        "value": "5000000000000000000000"
+      },
+      "transaction_hash": "0x78ab8d36005f317ef8aaaa0e319eedb7f5840f59a847f6df349ff30bde4c9f0a",
+      "type": "token_transfer"
+    }
+  ],
+  "next_page_params": {
+    "index": 1,
+    "block_number": 11288224
+  }
+}

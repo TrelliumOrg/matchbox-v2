@@ -1,0 +1,231 @@
+<!doctype html><html data-theme="paper"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..700&family=DM+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;600&family=Martian+Mono:wdth,wght@75..112.5,100..800&display=block" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root,[data-theme="paper"]{color-scheme:light;--bg:#FFFFFF;--soft:#F2F2F0;--soft2:#E9E9E6;--line:#E9E9E6;--ink:#0E0F0C;--ink2:#3B3D39;--sec:#6A6C68;--mut:#9C9E99;--acc:#F7931A;--onAcc:#1A1206;--accSoft:#FDEBD3;--accInk:#9A4F0C;--mezo:#D23A61;--pos:#1F7A4D;--posSoft:#E3F0E7;--track:#E4E4E0;--raise:#FFFFFF;--tPro:#D23A61;--tScan:#FDEBD3;--tId:#0E0F0C;--tDev:#3B3D39;--fillO:.14;--avGs:#DCE8EC;--avGsI:#2E5566;--kiln:#2B2A6B;--clBg:#FAFAF9;--clSurf:#FFFFFF;--clBorder:#E7E5E4;--clInk:#1C1917;--clSec:#57534E}
+[data-theme="graphite"]{color-scheme:dark;--bg:#121212;--soft:#1E1E1C;--soft2:#2A2A27;--line:#2E2E2B;--ink:#F4F4F2;--ink2:#D9DAD5;--sec:#A3A49F;--mut:#8E908A;--accSoft:#3A2A14;--accInk:#F7B055;--mezo:#C7365C;--pos:#5BC48A;--posSoft:#1F4A33;--track:#2A2A27;--raise:#2A2A27;--tPro:#C7365C;--tScan:#3A2A14;--tId:#F4F4F2;--fillO:.07;--avGs:hsl(195 26% 23%);--avGsI:hsl(195 52% 82%);--clBg:#0C0C0C;--clSurf:#161616;--clBorder:#2A2A2A;--clInk:#FAFAF9;--clSec:#A8A29E}
+html,body{background:var(--bg);color:var(--ink);font-family:Figtree,sans-serif;-webkit-font-smoothing:antialiased}
+body{width:1440px}
+a{color:inherit;text-decoration:none}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none;display:block}
+[data-live],[data-computed]{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+.mbx-lockup{--mbx-h:22px;--c:calc(var(--mbx-h) / 1.51);display:inline-flex;align-items:center;flex:none;color:var(--ink);line-height:1}
+.mbx-icon{position:relative;flex:none;overflow:hidden;width:calc(var(--c) * 3.657);height:calc(var(--c) * 1.51)}
+.mbx-icon img{position:absolute;display:block;max-width:none;width:calc(var(--c) * 4.019);height:calc(var(--c) * 4.019);left:calc(var(--c) * -.2067);top:calc(var(--c) * -1.2573)}
+[data-theme="graphite"] .mbx-icon img{content:url(https://doop.design/a/ACKwu-uvvY.png)}
+.mbx-text{display:flex;align-items:center;flex:none;margin-left:calc(var(--c) * .66);font-family:'Martian Mono',monospace;font-weight:380;font-stretch:112.5%;font-variation-settings:"wdth" 112.5;font-size:calc(var(--c) * 1.3);letter-spacing:.03em;line-height:1;white-space:nowrap}
+.mbx-word:not(:last-child){margin-right:1ch}
+.mbx-product{color:var(--sec)}
+.hd{height:76px;display:flex;align-items:center;gap:36px;padding:0 40px;border-bottom:1px solid var(--line)}
+.hd nav{display:flex;gap:2px}
+.hd nav a{height:40px;padding:0 14px;border-radius:20px;display:flex;align-items:center;font-size:16px;font-weight:500;color:var(--ink2)}
+.hd .r{margin-left:auto;display:flex;align-items:center;gap:14px}
+.ts{display:inline-flex;align-items:center;height:40px;padding:4px;border-radius:20px;background:var(--soft)}
+.ts i{width:32px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;color:var(--sec)}
+.ts i.on{background:var(--raise);color:var(--ink)}
+.ts .ic{width:17px;height:17px}
+.pill{height:44px;padding:0 22px;border-radius:22px;display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:600;white-space:nowrap}
+.p1{background:var(--acc);color:var(--onAcc)}
+.p2{background:var(--accSoft);color:var(--accInk)}
+.lnk{display:inline-flex;align-items:center;gap:6px;font-size:16px;font-weight:600;text-decoration:underline;text-underline-offset:4px;text-decoration-thickness:1.5px;white-space:nowrap}
+.lnk .ic{width:15px;height:15px;stroke-width:2.2}
+.strip{height:8px;flex:none}
+.s-pro{background:var(--tPro)}.s-scan{background:var(--tScan)}.s-id{background:var(--tId)}.s-dev{background:var(--tDev)}
+.hero{text-align:center;padding:96px 0 56px}
+.hero h1{font-size:64px;font-weight:650;letter-spacing:-.035em;line-height:1.05}
+.hero p{font-size:20px;line-height:28px;color:var(--sec);margin-top:18px}
+.b1{width:1360px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.hc{background:var(--soft);border-radius:24px;overflow:hidden;display:flex;flex-direction:column}
+.hc .bd{padding:40px 36px 0}
+.line{font-size:20px;line-height:28px;color:var(--ink2);margin-top:18px}
+.act{height:56px;display:flex;align-items:center;margin-top:26px}
+.sf{width:100%;height:56px;border-radius:28px;background:var(--raise);display:flex;align-items:center;gap:14px;padding:0 6px 0 22px;font-size:17px;color:var(--sec)}
+.sf .ic{width:20px;height:20px;stroke-width:2}
+.sf kbd{margin-left:auto;width:44px;height:44px;border-radius:22px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:15px;color:var(--ink2)}
+.scr{margin:36px 16px 0;height:428px;border-radius:20px 20px 0 0;background:var(--bg);overflow:hidden;padding:20px 20px 0}
+.lh{display:flex;justify-content:space-between;align-items:center;height:22px;font-size:14px;color:var(--sec)}
+.asof{visibility:hidden}
+/* Pro: this epoch */
+.ep{background:var(--soft);border-radius:24px 24px 0 0;height:100%;overflow:hidden}
+.rt{height:54px;background:var(--mezo);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:15px;font-weight:650}
+.rt>span{display:flex;align-items:center;gap:10px;white-space:pre}
+.rt img{width:22px;height:22px;border-radius:50%;box-shadow:0 0 0 2px #fff;display:block}
+.rt .cd{font-weight:500;gap:0}.rt .cd b{font-weight:650}
+.rb{padding:22px 22px 0}
+.k{font-size:15px;color:var(--sec)}
+.bf{font-size:44px;font-weight:650;letter-spacing:-.025em;line-height:52px;margin-top:2px}
+.ep .lh{margin-top:24px;margin-bottom:4px}
+.gr{display:grid;grid-template-columns:40px 1fr auto;column-gap:14px;align-items:center;height:62px}
+.gr+.gr{border-top:1px solid var(--track)}
+.pic{width:40px;height:40px;position:relative;flex:none}
+.pic.pair img{position:absolute;width:27px;height:27px;border-radius:50%;display:block}
+.pic.pair img:first-child{left:0;top:0}
+.pic.pair img:last-child{right:0;bottom:0;box-shadow:0 0 0 2px var(--soft)}
+.pic.kl{border-radius:12px;background:var(--kiln);display:flex;align-items:center;justify-content:center}
+.pic.kl svg{width:28px;height:28px}
+.nm{font-size:16px;font-weight:600;line-height:21px}
+.ss{display:flex;align-items:center;gap:6px;font-size:14.5px;color:var(--sec);margin-top:2px;line-height:19px}
+.ss .ic{width:15px;height:15px}
+.iv{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600}
+.cs{display:flex}.cs img{width:20px;height:20px;border-radius:50%;display:block;box-shadow:0 0 0 2px var(--soft)}.cs img+img{margin-left:-6px}
+/* Matchscan: network */
+.ms{padding:18px 18px 0}
+.sts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.st{background:var(--soft);border-radius:24px;padding:18px 20px 58px;position:relative;overflow:hidden}
+.st .h{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--sec)}
+.st .h span{width:32px;height:32px;border-radius:50%;background:var(--raise);display:flex;align-items:center;justify-content:center;color:var(--ink2)}
+.st .h img{width:32px;height:32px;display:block}
+.st .h .ic{width:16px;height:16px;stroke-width:1.9}
+.st .v{font-size:30px;font-weight:650;letter-spacing:-.02em;line-height:36px;margin-top:12px}
+.st .s{font-size:14.5px;color:var(--sec);margin-top:2px}
+.st .sp{position:absolute;left:0;right:0;bottom:0;width:100%;height:44px;display:block}
+.blk{background:var(--soft);border-radius:24px 24px 0 0;margin-top:14px;padding:14px 20px 0}
+.blk .lh{margin-bottom:2px}
+.br{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:14px;height:56px}
+.br+.br{border-top:1px solid var(--track)}
+.bi{width:36px;height:36px;border-radius:12px;background:var(--raise);display:flex;align-items:center;justify-content:center;color:var(--ink2)}
+.bi .ic{width:16px;height:16px}
+.br .n{font-size:15.5px;font-weight:600;line-height:20px}.br .s{font-size:14px;color:var(--sec);line-height:18px}
+.br .a{font-size:14.5px;font-weight:600;color:var(--ink2)}
+/* compact pair, from A2 */
+.b2{width:1200px;margin:104px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pc{background:var(--soft);border-radius:24px;overflow:hidden;display:flex;flex-direction:column}
+.pc .in{display:grid;grid-template-columns:240px 1fr;gap:22px;padding:28px 28px 0;flex:1}
+.pc .tx{padding-bottom:28px;display:flex;flex-direction:column;align-items:flex-start}
+.l2{font-size:17px;line-height:25px;color:var(--ink2);margin-top:16px}
+.pc .lnk{margin-top:auto;padding-top:20px}
+.mini{background:var(--bg);border-radius:20px 20px 0 0;padding:18px 18px 8px;align-self:end;min-height:197px}
+.mt{display:flex;align-items:center;gap:10px;font-size:15.5px;font-weight:650;line-height:21px}
+.cr{display:flex;align-items:center;gap:12px;height:48px}
+.cr+.cr{border-top:1px solid var(--line)}
+.ci{width:34px;height:34px;border-radius:50%;background:var(--soft);display:flex;align-items:center;justify-content:center;color:var(--ink);flex:none}
+.ci .ic{width:16px;height:16px}
+.cr b{font-size:15px;font-weight:600}
+.cr em{margin-left:auto;font-style:normal;font-size:14px;color:var(--sec)}
+.sw{margin-left:auto;width:44px;height:26px;border-radius:13px;background:var(--acc);position:relative;flex:none}.sw::after{content:"";position:absolute;right:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff}
+.chip{display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:13px;background:var(--soft);font-size:13.5px;font-weight:650;color:var(--ink2);white-space:nowrap}
+.chip.ok{background:var(--posSoft);color:var(--pos)}
+.kr{display:flex;align-items:center;gap:12px;padding:11px 0}
+.kr+.kr{border-top:1px solid var(--line)}
+.kr b{display:block;font-size:15px;font-weight:600}.kr .mono{display:block;font-family:'DM Mono',monospace;font-size:13px;color:var(--sec);margin-top:3px}
+.kr .chip{margin-left:auto}
+.b3{width:1200px;margin:104px auto 0;display:grid;grid-template-columns:1fr 1fr;background:var(--soft);border-radius:24px}
+.si{display:flex;align-items:center;gap:16px;padding:20px 28px;min-height:96px}
+.si+.si{border-left:1px solid var(--track)}
+.si .t2{font-size:15px;color:var(--sec);margin-top:6px}
+.si b{display:block;font-size:17px;font-weight:650}
+.si .lnk{margin-left:auto}
+.dogb{width:48px;height:48px;border-radius:50%;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:none;--dogface:var(--bg)}
+.dogb svg{width:26px;height:26px;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+/* Classic: card with a memory, rebuilt from apps/webapp (IBM Plex Mono, lowercase nav, orange marker, signed-out dashboard) */
+.cl{width:1200px;margin:104px auto 0;background:var(--soft);border-radius:24px;overflow:hidden;display:grid;grid-template-columns:1fr 640px;column-gap:28px;padding:0 28px}
+.cl .tx{padding:32px 0;display:flex;flex-direction:column;align-items:flex-start}
+.cl .l2{margin-top:14px}
+.cl .lnk{margin-top:18px}
+.clwin{align-self:end;margin-top:28px;height:184px;background:var(--clBg);border:1px solid var(--clBorder);border-bottom:0;border-radius:16px 16px 0 0;overflow:hidden;font-family:'IBM Plex Mono',monospace;color:var(--clSec)}
+.clhd{height:52px;display:flex;align-items:center;gap:18px;padding:0 18px;background:var(--clSurf);border-bottom:1px solid var(--clBorder);font-size:12.5px;white-space:nowrap}
+.clhd .lg{display:flex;align-items:center;gap:7px;color:var(--clInk);font-size:13px;letter-spacing:.09em}
+.clhd .lg .mbx-lockup{--mbx-h:14px}
+.clhd nav{display:flex}
+.clhd nav span{position:relative;height:51px;display:flex;align-items:center;padding:0 8px}
+.clhd nav .on{color:var(--clInk)}
+.clhd nav .on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:#F7931A}
+.clhd nav .on b{color:#F7931A;font-weight:400;margin-right:5px}
+.clhd nav .ic{width:11px;height:11px;margin-left:4px;stroke-width:2}
+.clbd{padding:20px 22px 0}
+.clbd h4{font-size:17px;font-weight:600;color:var(--clInk);line-height:22px}
+.clbd h4 b{color:#F7931A;font-weight:600}
+.clbd p{font-size:12.5px;margin-top:6px}
+.clcd{margin-top:16px;height:80px;background:var(--clSurf);border:1px solid var(--clBorder);border-radius:8px;text-align:center;padding-top:22px;font-size:12.5px}
+.ft{width:1200px;margin:104px auto 0;border-top:1px solid var(--line);padding:36px 0 60px;display:flex;align-items:center;gap:48px;font-size:15px;color:var(--sec)}
+.ft nav{display:flex;gap:28px}
+.ft .lg{margin-left:auto;display:flex;gap:28px}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+<symbol id="i-mon" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+<symbol id="i-ext" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+<symbol id="i-drops" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5"/></symbol>
+<symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></symbol>
+<symbol id="i-discord" viewBox="0 0 24 24"><path d="M8 12h.01M16 12h.01M7.5 17c-1.5 0-3.5-.5-4.5-1.5 0-4 1-7.5 3-10 1.2-.6 2.4-.9 3.5-1l.5 1.5c1.3-.2 2.7-.2 4 0l.5-1.5c1.1.1 2.3.4 3.5 1 2 2.5 3 6 3 10-1 1-3 1.5-4.5 1.5l-1-2c-2 .7-4 .7-6 0z"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="g-kiln" viewBox="0 0 40 40"><path d="M9 31V20a11 11 0 0 1 22 0v11z" fill="#fff"/><rect x="16" y="22" width="8" height="9" rx="1.5" fill="#2B2A6B"/></symbol>
+<symbol id="dog" viewBox="0 0 24 24"><g style="stroke:var(--dogface,#fff)"><path d="M11.25 16.25h1.5L12 17z"/><path d="M16 14v.5"/><path d="M4.42 11.247A13.2 13.2 0 0 0 4 14.556C4 18.728 7.582 21 12 21s8-2.272 8-6.444a11.7 11.7 0 0 0-.493-3.309"/><path d="M8 14v.5"/></g><path stroke="#F7931A" d="M8.5 8.5c-.384 1.05-1.083 2.028-2.344 2.5c-1.931.722-3.576-.297-3.656-1c-.113-.994 1.177-6.53 4-7c1.923-.321 3.651.845 3.651 2.235A7.5 7.5 0 0 1 14 5.277c0-1.39 1.844-2.598 3.767-2.277c2.823.47 4.113 6.006 4 7c-.08.703-1.725 1.722-3.656 1c-1.261-.472-1.855-1.45-2.239-2.5"/></symbol>
+</defs></svg>
+<header class="hd" data-doop-id="hf-header"><div class="mbx-lockup" role="img" aria-label="Matchbox"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">MATCHBOX</span></span></div>
+<nav><a>Pro</a><a>Matchscan</a><a>ID</a><a>Developer</a><a>Docs</a></nav>
+<div class="r"><span class="ts" role="radiogroup" aria-label="Theme"><i aria-label="Light"><svg class="ic"><use href="#i-sun"/></svg></i><i aria-label="Dark"><svg class="ic"><use href="#i-moon"/></svg></i><i class="on" aria-label="System"><svg class="ic"><use href="#i-mon"/></svg></i></span><a class="pill p2" href="https://pro.matchbox.markets">Open Pro</a></div></header>
+<section class="hero" data-doop-id="hf-hero"><h1>Vote on Mezo. Explore Mezo.</h1><p>Apps for Mezo, where BTC pays for gas.</p></section>
+<section class="b1" data-doop-id="hf-heroes">
+<article class="hc" data-doop-id="hf-pro"><div class="strip s-pro"></div>
+<div class="bd"><div class="mbx-lockup" style="--mbx-h:32px" role="img" aria-label="Matchbox Pro"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">MATCHBOX</span><span class="mbx-word mbx-product">PRO</span></span></div>
+<p class="line">Lock, vote on gauges and claim rewards.</p>
+<div class="act"><a class="pill p1" href="https://pro.matchbox.markets">Open Pro</a></div></div>
+<div class="scr" aria-label="This epoch on Matchbox Pro: incentives and the gauges with the most incentives"><div class="ep" data-doop-id="hf-pro-live">
+<div class="rt"><span><img src="https://doop.design/a/HpuzH08trU.svg" alt="MEZO"><b>Epoch <span data-computed="epoch.number">47</span></b></span><span class="cd">Closes in <b data-computed="epoch.countdown">3d 12h</b></span></div>
+<div class="rb"><div class="k">Incentives this epoch</div><div class="bf" data-live="pro.incentivesTotal">$14,820</div>
+<div class="lh"><span>Most incentives</span><span class="asof" data-live="pro.asOf">As of 14:05</span></div>
+<div class="gr"><span class="pic pair"><img src="https://doop.design/a/y69en5OxBa.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><div><div class="nm" data-live="pro.gauge1.name">BTC/MUSD</div><div class="ss"><svg class="ic" aria-label="Pool gauge"><use href="#i-drops"/></svg><span data-live="pro.gauge1.votes">112.40 veBTC</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/HpuzH08trU.svg" alt="MEZO"><img src="https://doop.design/a/be1DrI6IjG.svg" alt="MUSD"></span><span data-live="pro.gauge1.incentives">$4,210</span></div></div>
+<div class="gr"><span class="pic pair"><img src="https://doop.design/a/6GXiH2WbJO.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><div><div class="nm" data-live="pro.gauge2.name">mUSDC/MUSD</div><div class="ss"><svg class="ic" aria-label="Pool gauge"><use href="#i-drops"/></svg><span data-live="pro.gauge2.votes">79.30 veBTC</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/be1DrI6IjG.svg" alt="MUSD"></span><span data-live="pro.gauge2.incentives">$2,480</span></div></div>
+<div class="gr"><span class="pic kl"><svg viewBox="0 0 40 40"><use href="#g-kiln"/></svg></span><div><div class="nm" data-live="pro.gauge3.name">Kiln Labs</div><div class="ss"><svg class="ic" aria-label="veBTC gauge"><use href="#i-lock"/></svg><span data-live="pro.gauge3.votes">5.88M veMEZO</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/HpuzH08trU.svg" alt="MEZO"></span><span data-live="pro.gauge3.incentives">$1,180</span></div></div>
+</div></div></div>
+</article>
+<article class="hc" data-doop-id="hf-scan"><div class="strip s-scan"></div>
+<div class="bd"><div class="mbx-lockup" style="--mbx-h:32px" role="img" aria-label="Matchscan"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span>MATCH</span><span class="mbx-product">SCAN</span></span></div>
+<p class="line">Every block, lock and loan on Mezo.</p>
+<div class="act"><form class="sf" action="https://scan.matchbox.markets/search" role="search"><svg class="ic"><use href="#i-search"/></svg>Address or transaction<kbd>/</kbd></form></div></div>
+<div class="scr ms" aria-label="Mezo now on Matchscan: borrowed, veBTC locked and the latest blocks"><div data-doop-id="hf-scan-live">
+<div class="sts">
+<div class="st"><div class="h"><img src="https://doop.design/a/be1DrI6IjG.svg" alt="MUSD">Borrowed</div><div class="v" data-live="scan.borrowed">$4,130,114</div><div class="s"><span data-live="scan.borrowedEnclaves">97.2%</span> Enclaves</div><svg class="sp" viewBox="0 0 300 44" preserveAspectRatio="none" data-live="scan.borrowedSeries"><path d="M0 40 H10 V26 H96 V23 H122 V15 H300 V44 H0Z" style="fill:var(--ink);opacity:calc(var(--fillO) * .45)"/><path d="M0 40 H10 V26 H96 V23 H122 V15 H300" fill="none" style="stroke:var(--ink2)" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg></div>
+<div class="st"><div class="h"><span><svg class="ic"><use href="#i-lock"/></svg></span>veBTC locked</div><div class="v" data-live="scan.vebtcLocked">1,404.32 BTC</div><div class="s" data-live="scan.vebtcLockedUsd">$148.45M</div><svg class="sp" viewBox="0 0 300 44" preserveAspectRatio="none" data-live="scan.vebtcSeries"><path d="M0 40 L31 36 L62 33 L93 31 L124 30 L155 27 L186 24 L217 21 L248 17 L279 13 L300 10 L300 44 L0 44Z" fill="#F7931A" style="opacity:var(--fillO)"/><path d="M0 40 L31 36 L62 33 L93 31 L124 30 L155 27 L186 24 L217 21 L248 17 L279 13 L300 10" fill="none" stroke="#F7931A" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg></div>
+</div>
+<div class="blk"><div class="lh"><span>Latest blocks</span><span class="asof" data-live="scan.asOf">As of 14:05</span></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n" data-live="scan.block1.number">13,078,795</div><div class="s" data-live="scan.block1.validator">Northfield Nodes</div></div><div class="a" data-live="scan.block1.txns">5 txns</div></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n" data-live="scan.block2.number">13,078,794</div><div class="s" data-live="scan.block2.validator">Harbor Stake</div></div><div class="a" data-live="scan.block2.txns">2 txns</div></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n" data-live="scan.block3.number">13,078,793</div><div class="s" data-live="scan.block3.validator">Copperline</div></div><div class="a" data-live="scan.block3.txns">1 txn</div></div>
+</div></div></div>
+</article>
+</section>
+<section class="b2" data-doop-id="hf-pair">
+<article class="pc" data-doop-id="hf-id"><div class="strip s-id"></div>
+<div class="in"><div class="tx"><div class="mbx-lockup" role="img" aria-label="Matchbox ID"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">MATCHBOX</span><span class="mbx-word mbx-product">ID</span></span></div>
+<p class="l2">Sign in to apps with your wallet, no fee.</p>
+<a class="lnk" href="https://id.matchbox.markets">Open Matchbox ID<svg class="ic"><use href="#i-ext"/></svg></a></div>
+<div class="mini" aria-label="Matchbox ID consent screen"><b class="mt">Allow Gauge Scout to sign you in</b>
+<div style="margin-top:6px">
+<div class="cr"><span class="ci"><svg class="ic"><use href="#i-key"/></svg></span><b>Sign-in ID</b><em>Required</em></div>
+<div class="cr"><span class="ci"><svg class="ic"><use href="#i-wallet"/></svg></span><b>Wallet</b><em>Required</em></div>
+<div class="cr"><span class="ci"><svg class="ic"><use href="#i-discord"/></svg></span><b>Discord ID</b><span class="sw" aria-label="On"></span></div>
+</div></div></div>
+</article>
+<article class="pc" data-doop-id="hf-dev"><div class="strip s-dev"></div>
+<div class="in"><div class="tx"><div class="mbx-lockup" role="img" aria-label="Matchbox Developer"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">DEVELOPER</span></span></div>
+<p class="l2">API keys, OAuth apps and Mezo Earn data.</p>
+<a class="lnk" href="https://developer.matchbox.markets">Open Matchbox Developer<svg class="ic"><use href="#i-ext"/></svg></a></div>
+<div class="mini" aria-label="Matchbox Developer API keys screen"><div class="mt"><span style="width:30px;height:30px;border-radius:9px;background:var(--avGs);color:var(--avGsI);display:flex;align-items:center;justify-content:center"><svg class="ic" style="width:16px;height:16px"><use href="#i-gauge"/></svg></span>Gauge Scout<span class="chip ok" style="margin-left:auto">Active</span></div>
+<div style="margin-top:6px">
+<div class="kr"><div><b>Production server</b><span class="mono">mbx_sk_live_…9TbR</span></div><span class="chip">Secret</span></div>
+<div class="kr"><div><b>Browser widget</b><span class="mono">mbx_pk_live_…4Qa2</span></div><span class="chip">Publishable</span></div>
+</div></div></div>
+</article>
+</section>
+<section class="b3" data-doop-id="hf-support">
+<div class="si"><div><div class="mbx-lockup" role="img" aria-label="Matchbox Docs"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">MATCHBOX</span><span class="mbx-word mbx-product">DOCS</span></span></div><div class="t2">Every product, explained once.</div></div><a class="lnk" href="https://docs.matchbox.markets">Read the docs<svg class="ic"><use href="#i-ext"/></svg></a></div>
+<div class="si"><span class="dogb" aria-hidden="true"><svg><use href="#dog"/></svg></span><div><b>Stuart</b><div class="t2" style="margin-top:2px">Ask about your locks.</div></div><a class="lnk" href="https://pro.matchbox.markets">Ask in Pro<svg class="ic"><use href="#i-ext"/></svg></a></div>
+</section>
+<section class="cl" data-doop-id="hf-classic" aria-label="Matchbox Classic"><div class="tx"><div class="mbx-lockup" role="img" aria-label="Matchbox Classic"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">MATCHBOX</span><span class="mbx-word mbx-product">CLASSIC</span></span></div>
+<p class="l2">The original Matchbox app</p>
+<a class="lnk" href="https://app.matchbox.markets">Open Classic<svg class="ic"><use href="#i-ext"/></svg></a></div>
+<div class="clwin" aria-hidden="true" data-doop-id="hf-classic-win"><div class="clhd"><span class="lg"><span class="mbx-lockup"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span></span>MATCHBOX</span><nav><span class="on"><b>&gt;</b>dashboard</span><span>veMEZO</span><span>veBTC</span><span>pools</span><span>MEZO gauges</span><span>more<svg class="ic"><use href="#i-down"/></svg></span></nav></div>
+<div class="clbd"><h4><b>$</b> dashboard --status</h4><p>Track your veBTC and veMEZO positions</p><div class="clcd">Connect your wallet to view your dashboard</div></div></div>
+</section>
+<footer class="ft" data-doop-id="hf-footer"><div class="mbx-lockup" role="img" aria-label="Matchbox"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">MATCHBOX</span></span></div>
+<nav><a>Pro</a><a>Matchscan</a><a>ID</a><a>Developer</a><a>Docs</a><a href="https://app.matchbox.markets">Classic</a></nav>
+<div class="lg"><a>Privacy</a><a>Terms</a></div></footer>
+</body></html>

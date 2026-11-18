@@ -1,0 +1,283 @@
+/*
+ * Matchbox theme presets, from the Doop guideline `matchbox-themes`.
+ * Set data-theme on <html> to the resolved preset (see themeScript).
+ * Never hard-code these hexes in a component: use the variables.
+ */
+
+:root,
+[data-theme="paper"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --soft: #f2f2f0;
+  --soft2: #e9e9e6;
+  --line: #e9e9e6;
+  --edge: transparent;
+  --ink: #0e0f0c;
+  --ink2: #3b3d39;
+  --sec: #6a6c68;
+  --mut: #9c9e99;
+  --acc: #f7931a;
+  --onAcc: #1a1206;
+  --accSoft: #fdebd3;
+  --accInk: #9a4f0c;
+  --mezo: #d23a61;
+  --onMezo: #ffffff;
+  --mezoSoft: #fce3ea;
+  --pos: #1f7a4d;
+  --neg: #b42318;
+  --bandAcc: #f9c784;
+  --bandPos: #aedbc0;
+  --bandNeg: #f1b5ac;
+}
+
+[data-theme="linen"] {
+  color-scheme: light;
+  --bg: #faf7f2;
+  --soft: #f1ece4;
+  --soft2: #e7e1d6;
+  --line: #e4ddd1;
+  --edge: transparent;
+  --ink: #1b1814;
+  --ink2: #433d35;
+  --sec: #6b6358;
+  --mut: #a39b8f;
+  --acc: #f7931a;
+  --onAcc: #1a1206;
+  --accSoft: #fbe4c6;
+  --accInk: #904809;
+  --mezo: #d23a61;
+  --onMezo: #ffffff;
+  --mezoSoft: #f9dee3;
+  --pos: #1d7247;
+  --neg: #ab2416;
+  --bandAcc: #f7c47f;
+  --bandPos: #abd6b8;
+  --bandNeg: #efb2a6;
+}
+
+[data-theme="concrete"] {
+  color-scheme: light;
+  --bg: #f6f7f8;
+  --soft: #e9ecef;
+  --soft2: #dee2e6;
+  --line: #dde0e4;
+  --edge: transparent;
+  --ink: #0f1215;
+  --ink2: #383d43;
+  --sec: #5e656d;
+  --mut: #959ca4;
+  --acc: #f7931a;
+  --onAcc: #1a1206;
+  --accSoft: #fce7cd;
+  --accInk: #924a0a;
+  --mezo: #d23a61;
+  --onMezo: #ffffff;
+  --mezoSoft: #f8dfe6;
+  --pos: #1c754a;
+  --neg: #ae2317;
+  --bandAcc: #f8c583;
+  --bandPos: #acd8bf;
+  --bandNeg: #efb4ac;
+}
+
+[data-theme="porcelain"] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --soft: #ededea;
+  --soft2: #deded9;
+  --line: #c9c9c3;
+  --edge: #c9c9c3;
+  --ink: #000000;
+  --ink2: #1f201e;
+  --sec: #474945;
+  --mut: #6e706b;
+  --acc: #f7931a;
+  --onAcc: #1a1206;
+  --accSoft: #fbddb5;
+  --accInk: #733905;
+  --mezo: #d23a61;
+  --onMezo: #ffffff;
+  --mezoSoft: #f8d3de;
+  --pos: #145c38;
+  --neg: #951b11;
+  --bandAcc: #f6bc6e;
+  --bandPos: #9ccfb1;
+  --bandNeg: #eba598;
+}
+
+[data-theme="graphite"] {
+  color-scheme: dark;
+  --bg: #121212;
+  --soft: #1e1e1c;
+  --soft2: #2a2a27;
+  --line: #2e2e2b;
+  --edge: transparent;
+  --ink: #f4f4f2;
+  --ink2: #d9dad5;
+  --sec: #a3a49f;
+  --mut: #8e908a;
+  --acc: #f7931a;
+  --onAcc: #1a1206;
+  --accSoft: #3a2a14;
+  --accInk: #f7b055;
+  --mezo: #c7365c;
+  --onMezo: #ffffff;
+  --mezoSoft: #3a1a24;
+  --pos: #5bc48a;
+  --neg: #f0796b;
+  --bandAcc: #5a3f18;
+  --bandPos: #1f4a33;
+  --bandNeg: #5c2620;
+  --posSoft: #1f4a33;
+  --negSoft: #3a1d1a;
+  --onNeg: #1f0a07;
+}
+
+[data-theme="walnut"] {
+  color-scheme: dark;
+  --bg: #16130f;
+  --soft: #221e19;
+  --soft2: #2e2923;
+  --line: #352f28;
+  --edge: transparent;
+  --ink: #f6f1ea;
+  --ink2: #ddd5ca;
+  --sec: #aea497;
+  --mut: #8f8577;
+  --acc: #f7931a;
+  --onAcc: #1a1206;
+  --accSoft: #3e2c14;
+  --accInk: #f8b562;
+  --mezo: #c7365c;
+  --onMezo: #ffffff;
+  --mezoSoft: #3c1b22;
+  --pos: #62c48d;
+  --neg: #f07c6c;
+  --bandAcc: #5e4219;
+  --bandPos: #244a32;
+  --bandNeg: #5e2a21;
+  --posSoft: #244a32;
+  --negSoft: #3c1f19;
+  --onNeg: #1f0a07;
+}
+
+[data-theme="slate"] {
+  color-scheme: dark;
+  --bg: #0f1216;
+  --soft: #1a1e24;
+  --soft2: #252a31;
+  --line: #2b3139;
+  --edge: transparent;
+  --ink: #f1f3f5;
+  --ink2: #d3d8de;
+  --sec: #9ca4ae;
+  --mut: #7d8691;
+  --acc: #f7931a;
+  --onAcc: #1a1206;
+  --accSoft: #362916;
+  --accInk: #f7b055;
+  --mezo: #c9395f;
+  --onMezo: #ffffff;
+  --mezoSoft: #371a26;
+  --pos: #5bc48a;
+  --neg: #f07a6e;
+  --bandAcc: #573e1b;
+  --bandPos: #1e4733;
+  --bandNeg: #5a2724;
+  --posSoft: #1e4733;
+  --negSoft: #371d1c;
+  --onNeg: #1f0a07;
+}
+
+[data-theme="onyx"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --soft: #0e0e0d;
+  --soft2: #1b1b19;
+  --line: #2a2a27;
+  --edge: #2a2a27;
+  --ink: #f4f4f2;
+  --ink2: #d9dad5;
+  --sec: #a3a49f;
+  --mut: #85877f;
+  --acc: #f7931a;
+  --onAcc: #1a1206;
+  --accSoft: #2b1e0c;
+  --accInk: #f7ae4e;
+  --mezo: #c7365c;
+  --onMezo: #ffffff;
+  --mezoSoft: #2e1219;
+  --pos: #5bc48a;
+  --neg: #f0796b;
+  --bandAcc: #4d3514;
+  --bandPos: #173d29;
+  --bandNeg: #4e1f1a;
+  --posSoft: #173d29;
+  --negSoft: #2e1513;
+  --onNeg: #1f0a07;
+}
+
+/*
+ * Mode treatments from the guideline's "Dark treatments", "Picker rules" and
+ * Components frame. Light first, then dark presets.
+ */
+
+:root,
+[data-theme="paper"],
+[data-theme="linen"],
+[data-theme="concrete"],
+[data-theme="porcelain"] {
+  /* White-on-soft surfaces: selected segments, neutral pills, inner panels. */
+  --raised: #ffffff;
+  --sheet: var(--bg);
+  --scrim: rgb(14 15 12 / 0.24);
+  --tip: #0e0f0c;
+  --onTip: #ffffff;
+  --ring: #d9d9d5;
+  --tabOff: #d9d9d5;
+  --onTabOff: var(--ink2);
+  --skel: rgb(14 15 12 / 0.07);
+  --skelHi: rgb(255 255 255 / 0.6);
+  --posSoft: var(--bandPos);
+  --negSoft: var(--bandNeg);
+  --onNeg: #ffffff;
+  /* Token coins on tabs and in stacks keep a white ring in every theme. */
+  --coinRing: #ffffff;
+  --switchOff: #d4d4d0;
+  /* Off thumb: the spec's mut is 2.7:1 on white, so light uses sec (AA). */
+  --offThumb: var(--sec);
+  --dashed: #d9d9d5;
+  --knob: #ffffff;
+  --knobShadow: 0 1px 3px rgb(14 15 12 / 0.2);
+  --lift: 0 1px 3px rgb(14 15 12 / 0.1);
+  --pop: #ffffff;
+  --popShadow: 0 0 0 1px var(--line), 0 12px 32px rgb(14 15 12 / 0.1);
+  --sheetShadow: -16px 0 48px rgb(14 15 12 / 0.1);
+}
+
+[data-theme="graphite"],
+[data-theme="walnut"],
+[data-theme="slate"],
+[data-theme="onyx"] {
+  --raised: var(--soft2);
+  --sheet: var(--soft);
+  --scrim: rgb(0 0 0 / 0.5);
+  --tip: #f4f4f2;
+  --onTip: #121212;
+  --ring: #3a3a36;
+  --tabOff: #3a3a36;
+  --onTabOff: var(--ink2);
+  --skel: rgb(244 244 242 / 0.08);
+  --skelHi: rgb(244 244 242 / 0.1);
+  --coinRing: #ffffff;
+  --switchOff: var(--mut);
+  --offThumb: var(--mut);
+  --dashed: var(--soft2);
+  --knob: #ffffff;
+  --knobShadow: 0 1px 3px rgb(0 0 0 / 0.4);
+  /* Dark treatments: no decorative shadows, popovers on soft with a hairline. */
+  --lift: none;
+  --pop: var(--soft);
+  --popShadow: 0 0 0 1px var(--line);
+  --sheetShadow: none;
+}

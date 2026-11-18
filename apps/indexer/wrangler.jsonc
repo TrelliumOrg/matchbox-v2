@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "matchbox-indexer",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-30",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  // Each tick ingests from the logs checkpoint to head minus confirmations,
+  // projects it and prunes old raw rows. Every 15 minutes, not every
+  // minute: each tick wakes the Neon compute for at least its 5-minute
+  // suspend timeout, and the Free plan has 100 CU-hours a month (GO-LIVE.md,
+  // "Free-tier budget"). Fallback: "*/30 * * * *".
+  // DATABASE_URL is a secret (`wrangler secret put DATABASE_URL`): the direct
+  // Neon URL for the matchbox_indexer login, never committed here.
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  "observability": {
+    "enabled": true,
+    "logs": { "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  },
+  "vars": {
+    "ENVIRONMENT": "development"
+  },
+  // Post-tick hook (src/hook.ts, README "Post-tick hook for apps/jobs"):
+  // after each tick the indexer calls JOBS.warehouseSnapshot(summary).
+  "services": [{ "binding": "JOBS", "service": "matchbox-jobs" }]
+}

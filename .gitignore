@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.output/
+.wrangler/
+.turbo/
+.vinxi/
+.tanstack/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.dev.vars
+.DS_Store
+
+# Lighthouse CI and Playwright output
+.lighthouseci/
+test-results/
+playwright-report/
+preview.log
+
+# Release snapshots (pnpm release:trellium:prepare)
+.trellium-release/

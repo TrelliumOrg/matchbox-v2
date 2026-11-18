@@ -1,0 +1,63 @@
+{
+  "items": [
+    {
+      "address": {
+        "ens_domain_name": null,
+        "hash": "0x2Ba614a598Cffa5a19d683cDCA97bac3a49313d1",
+        "implementations": [
+          {
+            "address_hash": "0xA696Dc56522E41811D06BBDA83c1a6D976637624",
+            "name": "BoostVoter"
+          }
+        ],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "TransparentUpgradeableProxy",
+        "private_tags": [],
+        "proxy_type": "eip1967",
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "block_hash": "0x1ee7a3579f28c7a5e8a658eff614460da73c8fc356506834d3fbd67b8b0d6d58",
+      "block_number": 13118222,
+      "block_timestamp": "2026-11-09T22:01:12.000000Z",
+      "data": "0x00000000000000000000000000000000000000000000031d3fa1f599fe0d50e800000000000000000000000000000000000000000000031d3fa1f599fe0d50e8000000000000000000000000000000000000000000000000000000006af242a8",
+      "decoded": null,
+      "index": 3,
+      "smart_contract": {
+        "ens_domain_name": null,
+        "hash": "0x2Ba614a598Cffa5a19d683cDCA97bac3a49313d1",
+        "implementations": [
+          {
+            "address_hash": "0xA696Dc56522E41811D06BBDA83c1a6D976637624",
+            "name": "BoostVoter"
+          }
+        ],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": null,
+        "private_tags": [],
+        "proxy_type": "eip1967",
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "topics": [
+        "0x452d440efc30dfa14a0ef803ccb55936af860ec6a6960ed27f129bef913f296a",
+        "0x000000000000000000000000f8176df5b9fbcf0ed38c06970371ba89b7701bbb",
+        "0x00000000000000000000000038e3d176cec15fa9a1d9af939451882a795a0a0b",
+        "0x00000000000000000000000000000000000000000000000000000000000008fc"
+      ],
+      "transaction_hash": "0x759e7d47cdcf41dee2f089731f0ee7ae5582b5d8c3330d5d1b3026fc1eab5aa6"
+    }
+  ],
+  "next_page_params": {
+    "index": 1,
+    "block_number": 13114427
+  }
+}

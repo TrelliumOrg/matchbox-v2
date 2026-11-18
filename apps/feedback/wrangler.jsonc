@@ -1,0 +1,83 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "matchbox-feedback",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // workers.dev until a person attaches a route (README, Deploy).
+  "workers_dev": true,
+  // RATE_LIMITER: per-IP-prefix report and upload limits
+  // (@matchbox/server/rate-limiter, a SQLite Durable Object: free plan).
+  "durable_objects": {
+    "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }],
+  // FEEDBACK_DB: the reports (migrations/). Placeholder id: create the
+  // database first (README, Deploy, step 1), then put its id here.
+  "d1_databases": [
+    {
+      "binding": "FEEDBACK_DB",
+      "database_name": "matchbox-feedback",
+      "database_id": "REPLACE_WITH_MATCHBOX_FEEDBACK_D1_ID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // SCREENSHOTS: one object per screenshot under screenshots/. A lifecycle
+  // rule deletes them after 90 days (README, Deploy, step 2).
+  "r2_buckets": [
+    { "binding": "SCREENSHOTS", "bucket_name": "matchbox-feedback-screenshots" }
+  ],
+  // Every 15 minutes: post reports whose screenshot never came, retry
+  // Discord posts that failed, and mark screenshots older than 90 days as
+  // expired (src/sweep.ts).
+  "triggers": { "crons": ["*/15 * * * *"] },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": { "enabled": true, "invocation_logs": true }
+  },
+  // Secrets (wrangler secret put): TURNSTILE_SECRET_KEY (without it every
+  // report is refused with 503 unavailable), DISCORD_BOT_TOKEN (without it,
+  // or without DISCORD_FEEDBACK_CHANNEL_ID, reports are stored and not
+  // posted). Optional var FEEDBACK_ALLOWED_ORIGINS (comma list) adds page
+  // origins to the built-in list in src/env.ts.
+  "vars": {
+    "ENVIRONMENT": "production",
+    "TURNSTILE_SITE_KEY": "REPLACE_WITH_TURNSTILE_SITE_KEY",
+    "DISCORD_FEEDBACK_CHANNEL_ID": ""
+  },
+  // Preview: the surfaces' preview Workers, with their own database, bucket
+  // and Turnstile widget. wrangler deploy --env preview (secrets are per
+  // env).
+  "env": {
+    "preview": {
+      "name": "matchbox-feedback-preview",
+      "workers_dev": true,
+      "durable_objects": {
+        "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }],
+      "d1_databases": [
+        {
+          "binding": "FEEDBACK_DB",
+          "database_name": "matchbox-feedback-preview",
+          "database_id": "REPLACE_WITH_MATCHBOX_FEEDBACK_PREVIEW_D1_ID",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "SCREENSHOTS",
+          "bucket_name": "matchbox-feedback-screenshots-preview"
+        }
+      ],
+      "triggers": { "crons": ["*/15 * * * *"] },
+      "vars": {
+        "ENVIRONMENT": "preview",
+        "TURNSTILE_SITE_KEY": "REPLACE_WITH_TURNSTILE_PREVIEW_SITE_KEY",
+        "DISCORD_FEEDBACK_CHANNEL_ID": "",
+        "FEEDBACK_ALLOWED_ORIGINS": "https://matchbox-pro-v2-preview.mallard.workers.dev,https://beta.matchbox.markets,https://matchscan-v2-preview.mallard.workers.dev,https://matchbox-docs-preview.mallard.workers.dev,https://matchbox-home-preview.mallard.workers.dev,https://matchbox-id-staging.mallard.workers.dev,https://matchbox-developer-console-staging.mallard.workers.dev"
+      }
+    }
+  }
+}

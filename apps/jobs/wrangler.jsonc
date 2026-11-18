@@ -1,0 +1,78 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "matchbox-jobs",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  // READ_DB: shared with the API (binding READ_DB on matchbox-developer-api).
+  // Not created yet: `wrangler d1 create matchbox-read-models`, then set the
+  // id here and in apps/api/wrangler.jsonc, then
+  // `wrangler d1 migrations apply matchbox-read-models --remote`.
+  "d1_databases": [
+    {
+      "binding": "READ_DB",
+      "database_name": "matchbox-read-models",
+      "database_id": "abe98edf-ff3c-4ac6-b974-6edf4294089a",
+      "migrations_dir": "migrations"
+    },
+    // SCAN_DB: matchbox-scan, Matchscan's explorer rows (created 10 Nov
+    // 2026). Without this binding every scan step logs "SCAN_DB not bound"
+    // and skips. src/wrangler-config.test.ts fails on a placeholder id.
+    {
+      "binding": "SCAN_DB",
+      "database_name": "matchbox-scan",
+      "database_id": "ace6a0e7-ddf9-4e29-9b75-c80df48c3ab2",
+      "migrations_dir": "scan-migrations"
+    }
+  ],
+  // API: the API Worker's InternalApi entrypoint, for the once-a-day
+  // Blockscout counters through its allowlisted proxy
+  // (/internal/blockscout/api/v2/...). Deploy the API first: a binding to a
+  // Worker or entrypoint that does not exist yet fails this deploy.
+  // matchbox-api-v2-preview is this repo's API (apps/api, env v2preview),
+  // the one Pro and Matchscan bind. matchbox-developer-api is still the
+  // Classic API at api.matchbox.markets, which has no InternalApi
+  // entrypoint; switch this binding only when that Worker is cut over.
+  "services": [
+    {
+      "binding": "API",
+      "service": "matchbox-api-v2-preview",
+      "entrypoint": "InternalApi"
+    }
+  ],
+  // PRICES: read by the API's /internal/pro routes. Not created yet:
+  // `wrangler kv namespace create matchbox-prices`.
+  "kv_namespaces": [
+    { "binding": "PRICES", "id": "bc89cdb653554c42af1b04d91d2b23d0" }
+  ],
+  // "* * * * *" prices; "*/5 * * * *" live RPC snapshot; "3,18,33,48 * * * *"
+  // warehouse fallback, three minutes after each indexer tick (*/15). The
+  // primary warehouse trigger is the indexer calling warehouseSnapshot()
+  // over a service binding (see README).
+  "triggers": {
+    "crons": ["* * * * *", "*/5 * * * *", "3,18,33,48 * * * *"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": { "enabled": true, "invocation_logs": true }
+  },
+  // Secrets (wrangler secret put): WAREHOUSE_DATABASE_URL (Neon, role
+  // matchbox_api_ro); optional MEZO_RPC_URLS, BASE_RPC_URL,
+  // COINGECKO_API_KEY (unset: keyless CoinGecko), ETHEREUM_RPC_URL and
+  // BSC_RPC_URL (cross-chain reads; public RPCs follow). Optional vars
+  // COINGECKO_API_PLAN (demo or pro) and COINGECKO_REFRESH_SECONDS (unset:
+  // 90, or 360 with a Demo key, which never goes below 300; README
+  // "CoinGecko call budget", which a Demo key's pool reads also spend).
+  // Validator uptime reads Pathrock's public CometBFT archive node, then
+  // Lavender Five's, by default; override with UPTIME_RPC_URL,
+  // UPTIME_REST_URL, UPTIME_FALLBACK_RPC_URL, UPTIME_FALLBACK_REST_URL and
+  // UPTIME_HEIGHTS_PER_RUN (README "Validator uptime").
+  "vars": {
+    "ENVIRONMENT": "production",
+    "BASE_RPC_URL": "https://base-mainnet.public.blastapi.io",
+    "WAREHOUSE_SWEEP_WALLETS": "150",
+    "MORPHO_LOG_WINDOWS_PER_RUN": "20"
+  }
+}

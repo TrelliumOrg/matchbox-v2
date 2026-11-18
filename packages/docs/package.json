@@ -1,0 +1,81 @@
+{
+  "name": "@matchbox/docs",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./links": {
+      "types": "./src/links.gen.ts",
+      "default": "./src/links.gen.ts"
+    },
+    "./topics": "./src/topics.gen.json",
+    "./knowledge": {
+      "types": "./src/knowledge.gen.ts",
+      "default": "./src/knowledge.gen.ts"
+    },
+    "./site": {
+      "types": "./src/site.ts",
+      "default": "./src/site.ts"
+    },
+    "./render": {
+      "types": "./src/render-types.ts",
+      "default": "./src/render-types.ts"
+    },
+    "./pages": {
+      "types": "./dist/pages.d.ts",
+      "default": "./dist/pages.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "default": "./dist/manifest.js"
+    },
+    "./search": {
+      "types": "./src/search.ts",
+      "default": "./src/search.ts"
+    },
+    "./ask": {
+      "types": "./src/ask.ts",
+      "default": "./src/ask.ts"
+    },
+    "./redirects": {
+      "types": "./src/redirects.ts",
+      "default": "./src/redirects.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "generate": "tsx scripts/build.ts --write-generated",
+    "check": "tsx scripts/build.ts --check",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.samples.json"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@matchbox-dev/sdk": "workspace:*",
+    "@matchbox/contracts": "workspace:*",
+    "@matchbox/domain": "workspace:*",
+    "@types/hast": "3.0.5",
+    "@types/mdast": "4.0.4",
+    "@types/node": "24.19.2",
+    "@types/unist": "3.0.3",
+    "github-slugger": "2.0.0",
+    "hast-util-to-string": "3.0.1",
+    "mdast-util-to-string": "4.0.0",
+    "prettier": "^3.4.1",
+    "remark-directive": "4.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "remark-rehype": "11.1.2",
+    "shiki": "4.6.0",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "unified": "11.0.5",
+    "unist-util-visit": "5.2.0",
+    "vitest": "4.1.12",
+    "yaml": "2.9.1"
+  }
+}

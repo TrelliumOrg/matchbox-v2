@@ -1,0 +1,82 @@
+/*
+ * Tailwind 4 theme for Matchbox. Import after tailwindcss and themes.css:
+ *   @import "tailwindcss";
+ *   @import "@matchbox/tokens/themes.css";
+ *   @import "@matchbox/tokens/tailwind.css";
+ * Utilities read the CSS variables, so every class follows data-theme.
+ * The default palette is removed so components cannot hard-code a colour.
+ */
+
+@custom-variant dark (
+  &:where(
+    [data-theme="graphite"],
+    [data-theme="graphite"] *,
+    [data-theme="walnut"],
+    [data-theme="walnut"] *,
+    [data-theme="slate"],
+    [data-theme="slate"] *,
+    [data-theme="onyx"],
+    [data-theme="onyx"] *
+  )
+);
+
+@theme inline {
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --color-bg: var(--bg);
+  --color-soft: var(--soft);
+  --color-soft2: var(--soft2);
+  --color-line: var(--line);
+  --color-edge: var(--edge);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-sec: var(--sec);
+  --color-mut: var(--mut);
+  --color-acc: var(--acc);
+  --color-on-acc: var(--onAcc);
+  --color-acc-soft: var(--accSoft);
+  --color-acc-ink: var(--accInk);
+  --color-mezo: var(--mezo);
+  --color-on-mezo: var(--onMezo);
+  --color-mezo-soft: var(--mezoSoft);
+  --color-pos: var(--pos);
+  --color-neg: var(--neg);
+  --color-band-acc: var(--bandAcc);
+  --color-band-pos: var(--bandPos);
+  --color-band-neg: var(--bandNeg);
+  --color-pos-soft: var(--posSoft);
+  --color-neg-soft: var(--negSoft);
+  --color-on-neg: var(--onNeg);
+  --color-raised: var(--raised);
+  --color-sheet: var(--sheet);
+  --color-scrim: var(--scrim);
+  --color-tip: var(--tip);
+  --color-on-tip: var(--onTip);
+  --color-ring: var(--ring);
+  --color-tab-off: var(--tabOff);
+  --color-on-tab-off: var(--onTabOff);
+  --color-coin-ring: var(--coinRing);
+  --color-switch-off: var(--switchOff);
+  --color-off-thumb: var(--offThumb);
+  --color-dash: var(--dashed);
+  --color-skel: var(--skel);
+  --color-knob: var(--knob);
+  --color-pop: var(--pop);
+
+  --shadow-lift: var(--lift);
+  --shadow-knob: var(--knobShadow);
+  --shadow-pop: var(--popShadow);
+  --shadow-sheet: var(--sheetShadow);
+
+  --font-sans: "Figtree Variable", Figtree, system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --radius-card: 24px;
+  --radius-banner: 20px;
+  --radius-pill: 22px;
+
+  --ease-roll: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-text: cubic-bezier(0.19, 1, 0.22, 1);
+}

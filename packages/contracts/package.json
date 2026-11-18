@@ -1,0 +1,130 @@
+{
+  "name": "@matchbox/contracts",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./api-request-log": {
+      "types": "./src/api-request-log.ts",
+      "default": "./src/api-request-log.ts"
+    },
+    "./audit": {
+      "types": "./src/audit.ts",
+      "default": "./src/audit.ts"
+    },
+    "./bench": {
+      "types": "./src/bench/index.ts",
+      "default": "./src/bench/index.ts"
+    },
+    "./blockscout": {
+      "types": "./src/blockscout/index.ts",
+      "default": "./src/blockscout/index.ts"
+    },
+    "./common": {
+      "types": "./src/common.ts",
+      "default": "./src/common.ts"
+    },
+    "./consent": {
+      "types": "./src/consent.ts",
+      "default": "./src/consent.ts"
+    },
+    "./console": {
+      "types": "./src/console.ts",
+      "default": "./src/console.ts"
+    },
+    "./credentials": {
+      "types": "./src/credentials.ts",
+      "default": "./src/credentials.ts"
+    },
+    "./cursor": {
+      "types": "./src/cursor.ts",
+      "default": "./src/cursor.ts"
+    },
+    "./encoding": {
+      "types": "./src/encoding.ts",
+      "default": "./src/encoding.ts"
+    },
+    "./errors": {
+      "types": "./src/errors.ts",
+      "default": "./src/errors.ts"
+    },
+    "./feedback": {
+      "types": "./src/feedback.ts",
+      "default": "./src/feedback.ts"
+    },
+    "./gauge-profiles": {
+      "types": "./src/gauge-profiles.ts",
+      "default": "./src/gauge-profiles.ts"
+    },
+    "./identity": {
+      "types": "./src/identity.ts",
+      "default": "./src/identity.ts"
+    },
+    "./market": {
+      "types": "./src/market.ts",
+      "default": "./src/market.ts"
+    },
+    "./network": {
+      "types": "./src/network.ts",
+      "default": "./src/network.ts"
+    },
+    "./oidc": {
+      "types": "./src/oidc.ts",
+      "default": "./src/oidc.ts"
+    },
+    "./openapi": {
+      "types": "./src/openapi.ts",
+      "default": "./src/openapi.ts"
+    },
+    "./openapi.json": "./openapi.json",
+    "./platform-health": {
+      "types": "./src/platform-health.ts",
+      "default": "./src/platform-health.ts"
+    },
+    "./rate-limits": {
+      "types": "./src/rate-limits.ts",
+      "default": "./src/rate-limits.ts"
+    },
+    "./read-models": {
+      "types": "./src/read-models/index.ts",
+      "default": "./src/read-models/index.ts"
+    },
+    "./read-models/fixtures": {
+      "types": "./src/read-models/fixtures.ts",
+      "default": "./src/read-models/fixtures.ts"
+    },
+    "./redirects": {
+      "types": "./src/redirects.ts",
+      "default": "./src/redirects.ts"
+    },
+    "./scan": {
+      "types": "./src/scan/index.ts",
+      "default": "./src/scan/index.ts"
+    },
+    "./scopes": {
+      "types": "./src/scopes.ts",
+      "default": "./src/scopes.ts"
+    }
+  },
+  "files": [
+    "src",
+    "openapi.json"
+  ],
+  "scripts": {
+    "generate:openapi": "tsx scripts/generate-openapi.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@matchbox/domain": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "4.1.12"
+  }
+}

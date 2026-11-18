@@ -1,0 +1,24 @@
+{
+  "average_block_time": 3808,
+  "coin_image": "https://coin-images.coingecko.com/coins/images/1/small/bitcoin.png?1696501400",
+  "coin_price": "74973",
+  "coin_price_change_percentage": 0.32,
+  "gas_price_updated_at": "2026-11-09T22:24:18.409051Z",
+  "gas_prices": {
+    "slow": 0.01,
+    "average": 0.01,
+    "fast": 0.01
+  },
+  "gas_prices_update_in": 22611,
+  "gas_used_today": "235476404",
+  "market_cap": "1507708904325.0",
+  "network_utilization_percentage": 0.021847,
+  "secondary_coin_image": null,
+  "secondary_coin_price": null,
+  "static_gas_price": null,
+  "total_addresses": "64013",
+  "total_blocks": "13116782",
+  "total_transactions": "1135619",
+  "transactions_today": "791",
+  "tvl": null
+}

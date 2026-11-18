@@ -1,0 +1,35 @@
+{
+  "available_supply": "20110025.0",
+  "chart_data": [
+    {
+      "closing_price": "74973",
+      "date": "2026-11-09",
+      "market_cap": "1508373896732.7146",
+      "tvl": null
+    },
+    {
+      "closing_price": "74740.41780080694",
+      "date": "2026-11-08",
+      "market_cap": "1503004988155.5178",
+      "tvl": null
+    },
+    {
+      "closing_price": "75776.37720009114",
+      "date": "2026-11-07",
+      "market_cap": "1523812023768.3545",
+      "tvl": null
+    },
+    {
+      "closing_price": "75775.28148740849",
+      "date": "2026-11-06",
+      "market_cap": "1523663975429.5115",
+      "tvl": null
+    },
+    {
+      "closing_price": "76005.50915811297",
+      "date": "2026-11-05",
+      "market_cap": "1528118503634.7039",
+      "tvl": null
+    }
+  ]
+}

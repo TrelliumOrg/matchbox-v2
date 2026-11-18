@@ -1,0 +1,10 @@
+pnpm-lock.yaml
+node_modules/
+dist/
+.output/
+.wrangler/
+**/routeTree.gen.ts
+CODE_OF_CONDUCT.md
+# Local benchmark and eval output (gitignored)
+apps/stuart/bench/results/
+apps/stuart/eval/results/

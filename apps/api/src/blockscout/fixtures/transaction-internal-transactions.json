@@ -1,0 +1,105 @@
+{
+  "items": [
+    {
+      "block_number": 11381234,
+      "created_contract": null,
+      "error": null,
+      "from": {
+        "ens_domain_name": null,
+        "hash": "0xf613e798AE1ceF938e9FeCaD006f8C13E5e0fe67",
+        "implementations": [],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": false,
+        "metadata": null,
+        "name": null,
+        "private_tags": [],
+        "proxy_type": null,
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "gas_limit": "456069",
+      "index": 1,
+      "success": true,
+      "timestamp": "2026-08-25T12:38:42.000000Z",
+      "to": {
+        "ens_domain_name": null,
+        "hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+        "implementations": [
+          {
+            "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+            "name": "Pool"
+          }
+        ],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "Volatile AMM - BTC/MUSD",
+        "private_tags": [],
+        "proxy_type": "eip1167",
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "transaction_hash": "0xb20e29817c204bbd4520d95f4f4ebda9946449f96c3c212b0ac266629297a644",
+      "transaction_index": 0,
+      "type": "staticcall",
+      "value": "0"
+    },
+    {
+      "block_number": 11381234,
+      "created_contract": null,
+      "error": null,
+      "from": {
+        "ens_domain_name": null,
+        "hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+        "implementations": [
+          {
+            "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+            "name": "Pool"
+          }
+        ],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "Volatile AMM - BTC/MUSD",
+        "private_tags": [],
+        "proxy_type": "eip1167",
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "gas_limit": "446355",
+      "index": 2,
+      "success": true,
+      "timestamp": "2026-08-25T12:38:42.000000Z",
+      "to": {
+        "ens_domain_name": null,
+        "hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+        "implementations": [],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "Pool",
+        "private_tags": [],
+        "proxy_type": null,
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "transaction_hash": "0xb20e29817c204bbd4520d95f4f4ebda9946449f96c3c212b0ac266629297a644",
+      "transaction_index": 0,
+      "type": "delegatecall",
+      "value": "0"
+    }
+  ],
+  "meta": {
+    "message": null,
+    "status": 1
+  },
+  "next_page_params": null
+}

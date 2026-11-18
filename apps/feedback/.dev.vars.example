@@ -1,0 +1,17 @@
+# Local secrets for `wrangler dev`. Copy to `.dev.vars` (git-ignored).
+# Production values are set with `wrangler secret put <NAME>`.
+
+ENVIRONMENT=development
+
+# Cloudflare's published Turnstile test keys: the widget always passes and
+# Siteverify always answers success. Never use them in production.
+# https://developers.cloudflare.com/turnstile/troubleshooting/testing/
+TURNSTILE_SITE_KEY=1x00000000000000000000AA
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+
+# Leave empty to store reports without posting them to Discord.
+DISCORD_BOT_TOKEN=
+DISCORD_FEEDBACK_CHANNEL_ID=
+
+# Extra page origins allowed to send reports (comma list).
+FEEDBACK_ALLOWED_ORIGINS=

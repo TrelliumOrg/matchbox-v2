@@ -1,0 +1,43 @@
+{
+  "items": [
+    {
+      "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+      "address_url": "/address/0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+      "certified": false,
+      "circulating_market_cap": null,
+      "exchange_rate": null,
+      "icon_url": "https://storage.googleapis.com/mezo-production-explorer-logos-bucket/musd-token.png",
+      "is_smart_contract_address": true,
+      "is_smart_contract_verified": true,
+      "is_verified_via_admin_panel": false,
+      "name": "Mezo USD",
+      "priority": 2,
+      "reputation": "ok",
+      "symbol": "MUSD",
+      "token_type": "ERC-20",
+      "token_url": "/token/0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+      "total_supply": "19009212613409522617586413",
+      "type": "token"
+    },
+    {
+      "address_hash": "0x221B2D9aD7B994861Af3f4c8A80c86C4aa86Bf53",
+      "address_url": "/address/0x221B2D9aD7B994861Af3f4c8A80c86C4aa86Bf53",
+      "certified": false,
+      "circulating_market_cap": null,
+      "exchange_rate": null,
+      "icon_url": null,
+      "is_smart_contract_address": true,
+      "is_smart_contract_verified": true,
+      "is_verified_via_admin_panel": false,
+      "name": "August mUSD Vault",
+      "priority": 2,
+      "reputation": "ok",
+      "symbol": "upMUSD",
+      "token_type": "ERC-20",
+      "token_url": "/token/0x221B2D9aD7B994861Af3f4c8A80c86C4aa86Bf53",
+      "total_supply": "48166325568507336570798",
+      "type": "token"
+    }
+  ],
+  "next_page_params": null
+}

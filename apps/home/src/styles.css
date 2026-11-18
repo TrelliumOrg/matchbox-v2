@@ -1,0 +1,1800 @@
+@import "tailwindcss";
+@import "@matchbox/tokens/themes.css";
+@import "@matchbox/tokens/tailwind.css";
+@import "@matchbox/ui/styles.css";
+
+@source "./";
+
+/*
+ * Figtree is preloaded (see the root route) and optional, like DM Mono: if it
+ * misses the first frame the fallback stays, so text never reflows after
+ * first paint. Copied from Scan.
+ */
+@font-face {
+  font-family: "Figtree Variable";
+  font-style: normal;
+  font-display: optional;
+  font-weight: 300 900;
+  src: url("../node_modules/@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "DM Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: url("../node_modules/@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2")
+    format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+ * The homepage's frame values (docs/design/home-final) on the theme tokens.
+ * The frames' --raise is --raised, their product strips are the product
+ * colours, and their row rule (--track) is --soft2. Sparkline fills are
+ * fainter on dark presets, as in desktop-dark.
+ */
+:root {
+  --home-track: var(--soft2);
+  --home-fill: 0.14;
+  /*
+   * The frames' light posSoft (#e3f0e7), which keeps the "Active" chip at
+   * AA; the shared light token (bandPos) gives 3.5:1. Dark presets keep
+   * their posSoft.
+   */
+  --home-pos-soft: color-mix(in srgb, var(--pos) 10%, #ffffff);
+  --home-strip-pro: var(--mezo);
+  --home-strip-scan: var(--accSoft);
+  --home-strip-id: var(--ink);
+  --home-strip-dev: var(--ink2);
+  /* Gauge Scout's avatar on the Developer screen: the frames' --avGs. */
+  --home-gs-bg: #dce8ec;
+  --home-gs-ink: #2e5566;
+}
+
+:root:is(
+  [data-theme="graphite"],
+  [data-theme="walnut"],
+  [data-theme="slate"],
+  [data-theme="onyx"]
+) {
+  --home-fill: 0.07;
+  --home-pos-soft: var(--posSoft);
+  --home-gs-bg: hsl(195 26% 23%);
+  --home-gs-ink: hsl(195 52% 82%);
+}
+
+html {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+/* No specificity, so .p1, .p2 and the nav's own colours win over it. */
+:where(.home a:not(.lnk)) {
+  color: inherit;
+  text-decoration: none;
+}
+.home a.lnk {
+  color: inherit;
+}
+
+/*
+ * The frames set no base line height, so text without its own takes the
+ * font's normal one (about 1.2 for Figtree), not the reset's 1.5.
+ */
+.home {
+  line-height: normal;
+}
+
+/* Every live or computed figure: tabular, so a digit change moves nothing. */
+.home [data-live],
+.home [data-computed] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.home :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.home .ic {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: block;
+}
+
+/* Header */
+.hd {
+  height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  padding: 0 40px;
+  border-bottom: 1px solid var(--line);
+}
+.hd > nav {
+  display: flex;
+  gap: 2px;
+}
+.hd > nav a {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink2);
+}
+.hd > nav a:hover {
+  background: var(--soft);
+}
+.hd .r {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.ts {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 4px;
+  border-radius: 20px;
+  background: var(--soft);
+  border: 0;
+  margin: 0;
+}
+.ts label {
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--sec);
+  cursor: pointer;
+  position: relative;
+}
+.ts input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.ts label:has(input:checked) {
+  background: var(--raised);
+  color: var(--ink);
+}
+.ts label:has(input:focus-visible) {
+  outline: 2px solid var(--ink);
+}
+.ts .ic {
+  width: 17px;
+  height: 17px;
+}
+
+/* The phone's menu button (390 frame) and the menu it opens. */
+.mb {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  border: 0;
+  padding: 0;
+  background: var(--soft);
+  color: var(--ink);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.menu {
+  inset: 72px 12px auto;
+  margin: 0;
+  width: auto;
+  border: 0;
+  border-radius: 24px;
+  padding: 8px;
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 16px 40px rgb(0 0 0 / 0.16);
+}
+.menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.menu nav a {
+  height: 48px;
+  padding: 0 12px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.menu nav a:hover {
+  background: var(--soft);
+}
+.menu .mtheme {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  padding: 12px 4px 4px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  color: var(--sec);
+}
+/* Wider than the phone, the header shows everything and the menu never. */
+@media (width > 760px) {
+  .menu:popover-open {
+    display: none;
+  }
+}
+
+.pill {
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 22px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.p1 {
+  background: var(--acc);
+  color: var(--onAcc);
+}
+.p2 {
+  background: var(--accSoft);
+  color: var(--accInk);
+}
+.lnk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1.5px;
+  white-space: nowrap;
+}
+.lnk .ic {
+  width: 15px;
+  height: 15px;
+}
+
+.strip {
+  height: 8px;
+  flex: none;
+}
+.s-pro {
+  background: var(--home-strip-pro);
+}
+.s-scan {
+  background: var(--home-strip-scan);
+}
+.s-id {
+  background: var(--home-strip-id);
+}
+.s-dev {
+  background: var(--home-strip-dev);
+}
+
+/* Hero */
+.hero {
+  text-align: center;
+  padding: 96px 20px 56px;
+}
+.hero h1 {
+  margin: 0;
+  font-size: 64px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+.hero p {
+  margin: 18px 0 0;
+  font-size: 20px;
+  line-height: 28px;
+  color: var(--sec);
+}
+
+/* The two product cards */
+.b1 {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 20px;
+  box-sizing: content-box;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.hc {
+  background: var(--soft);
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.hc .bd {
+  padding: 40px 36px 0;
+}
+/*
+ * 18 px under the lockup in the frames, whose lockup sits inline on a text
+ * line 4 px taller than the 32 px mark: the line starts 54 px below the
+ * lockup's top there, so 22 px here under the bare 32 px mark.
+ */
+.line {
+  font-size: 20px;
+  line-height: 28px;
+  color: var(--ink2);
+  margin: 22px 0 0;
+}
+.act {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  margin-top: 26px;
+}
+.act search {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+/* Beside the search, and as tall as it. */
+.act .open {
+  height: 56px;
+  border-radius: 28px;
+  padding: 0 24px;
+  margin-left: 10px;
+  flex: none;
+}
+.sf {
+  width: 100%;
+  height: 56px;
+  border-radius: 28px;
+  background: var(--raised);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 6px 0 22px;
+  box-sizing: border-box;
+  color: var(--sec);
+  margin: 0;
+}
+.sf .ic {
+  width: 20px;
+  height: 20px;
+}
+.sf input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 17px;
+  color: var(--ink);
+  outline: none;
+}
+.sf input::placeholder {
+  color: var(--sec);
+  opacity: 1;
+}
+.sf:focus-within {
+  outline: 2px solid var(--ink);
+}
+.sf kbd {
+  margin-left: auto;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 22px;
+  background: var(--soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "DM Mono", var(--font-mono, monospace);
+  font-size: 15px;
+  color: var(--ink2);
+}
+/*
+ * The screens run to the card's foot. They are 428 high as the frames
+ * have them, and grow only when Matchscan's stats stack (below): both
+ * cards share the grid row, so both screens grow together.
+ */
+.scr {
+  margin: 36px 16px 0;
+  min-height: 428px;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-radius: 20px 20px 0 0;
+  background: var(--bg);
+  overflow: hidden;
+  padding: 20px 20px 0;
+}
+.lh {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 22px;
+  font-size: 14px;
+  color: var(--sec);
+}
+/* "As of HH:MM": its space is always kept, so showing it moves nothing. */
+.asof {
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    opacity 200ms ease-out,
+    visibility 0s linear 200ms;
+}
+.asof[data-shown="true"] {
+  visibility: visible;
+  opacity: 1;
+  transition: opacity 200ms ease-out;
+}
+.na {
+  color: var(--sec);
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* Pro: this epoch */
+.ep {
+  background: var(--soft);
+  border-radius: 24px 24px 0 0;
+  flex: 1 0 auto;
+  overflow: hidden;
+}
+.rt {
+  height: 54px;
+  background: var(--mezo);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 650;
+}
+.rt > span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: pre;
+}
+.rt .coin {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff;
+  display: block;
+}
+.rt b {
+  font-weight: 650;
+}
+.rt .cd {
+  font-weight: 500;
+  gap: 0;
+}
+.rt .cd b {
+  font-weight: 650;
+}
+.rb {
+  padding: 22px 22px 0;
+}
+.k {
+  font-size: 15px;
+  color: var(--sec);
+}
+.bf {
+  font-size: 44px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 52px;
+  height: 52px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+}
+.ep .lh {
+  margin-top: 24px;
+  margin-bottom: 4px;
+}
+.gr {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  column-gap: 14px;
+  align-items: center;
+  height: 62px;
+}
+.gr + .gr {
+  border-top: 1px solid var(--home-track);
+}
+.pic {
+  width: 40px;
+  height: 40px;
+  position: relative;
+  flex: none;
+}
+.pic.pair > :first-child,
+.pic.pair > :last-child {
+  position: absolute;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  display: block;
+}
+.pic.pair > :first-child {
+  left: 0;
+  top: 0;
+}
+.pic.pair > :last-child {
+  right: 0;
+  bottom: 0;
+  box-shadow: 0 0 0 2px var(--soft);
+}
+.pic.one > * {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: block;
+  object-fit: cover;
+}
+.pic .initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--soft2);
+  color: var(--ink2);
+  font-size: 14px;
+  font-weight: 650;
+}
+.nm {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 21px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ss {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14.5px;
+  color: var(--sec);
+  margin-top: 2px;
+  line-height: 19px;
+  min-width: 0;
+}
+/* The votes ("444.65 veBTC") truncate before they reach the token icons. */
+.ss > :last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ss .ic {
+  width: 15px;
+  height: 15px;
+}
+.iv {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.cs {
+  display: flex;
+}
+.cs > * {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: block;
+  box-shadow: 0 0 0 2px var(--soft);
+}
+.cs > * + * {
+  margin-left: -6px;
+}
+
+/* Matchscan: network */
+.ms {
+  padding: 18px 18px 0;
+  container: scan / inline-size;
+}
+.sts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.st {
+  background: var(--soft);
+  border-radius: 24px;
+  padding: 18px 20px 58px;
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+}
+.st .h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: var(--sec);
+  --stat-icon: 32px;
+}
+.st .h > span {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink2);
+}
+.st .h img {
+  width: 32px;
+  height: 32px;
+  display: block;
+}
+.st .h .ic {
+  width: 16px;
+  height: 16px;
+}
+.st .v {
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 36px;
+  height: 36px;
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.st .s {
+  font-size: 14.5px;
+  color: var(--sec);
+  margin-top: 2px;
+  height: 18px;
+}
+.st .sp {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 44px;
+  display: block;
+}
+.sp .fill-ink {
+  fill: var(--ink);
+  opacity: calc(var(--home-fill) * 0.45);
+}
+.sp .line-ink {
+  stroke: var(--ink2);
+}
+.sp .fill-acc {
+  fill: var(--acc);
+  opacity: var(--home-fill);
+}
+.sp .line-acc {
+  stroke: var(--acc);
+}
+.blk {
+  background: var(--soft);
+  border-radius: 24px 24px 0 0;
+  margin-top: 14px;
+  padding: 14px 20px 0;
+}
+
+/*
+ * Matchscan's two stats sit side by side only while each has room for its
+ * value: "1,404.32 BTC" is 186 px at 30 px, and 494 px of screen leaves
+ * each stat 200, a digit to spare. Narrower, from about 761 to 1180 wide,
+ * they stack as the 390 frame stacks them (the phone has its own rules),
+ * subline beside the value, so a value that grows on a swap has the full
+ * width.
+ */
+@media (width > 760px) {
+  @container scan (width < 494px) {
+    .sts {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+    .st {
+      padding-top: 16px;
+      padding-bottom: 50px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: baseline;
+      column-gap: 12px;
+    }
+    .st .h {
+      grid-column: 1 / -1;
+    }
+    .st .v {
+      margin-top: 10px;
+    }
+    .st .s {
+      margin-top: 0;
+      height: auto;
+    }
+    .st .sp {
+      height: 38px;
+    }
+  }
+  /* Too narrow for the subline beside the value: under it, as on desktop. */
+  @container scan (width < 330px) {
+    .st {
+      display: block;
+    }
+    .st .s {
+      margin-top: 2px;
+      height: 18px;
+    }
+  }
+}
+
+.blk .lh {
+  margin-bottom: 2px;
+}
+.br {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 14px;
+  height: 56px;
+}
+.br + .br {
+  border-top: 1px solid var(--home-track);
+}
+/*
+ * "txn" and "txns" take the same room, right aligned: the transactions
+ * cell is right aligned, so a unit that narrowed would move the count
+ * and count as a layout shift. Both words sit in one grid cell and only
+ * the visible one changes, so no word on screen ever changes its text.
+ */
+.br .tu {
+  display: inline-grid;
+}
+.br .tu > span {
+  grid-area: 1 / 1;
+  text-align: right;
+}
+.br .tu > [aria-hidden="true"] {
+  visibility: hidden;
+}
+/*
+ * The count keeps three digits' room for the same reason: a count that
+ * gains a digit (9 to 10) would widen the cell and move it. The number
+ * fills that room, right aligned inside it, so its box never moves.
+ */
+.br .tc {
+  display: inline-grid;
+  align-items: baseline;
+}
+.br .tc::before {
+  content: "000";
+  visibility: hidden;
+  grid-area: 1 / 1;
+}
+.br .tc > * {
+  grid-area: 1 / 1;
+  text-align: right;
+}
+.bi {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: var(--raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink2);
+}
+.bi .ic {
+  width: 16px;
+  height: 16px;
+}
+.br .n {
+  font-size: 15.5px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.br .s {
+  font-size: 14px;
+  color: var(--sec);
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/*
+ * Once the text morph takes the name over (after first paint), its root
+ * is an inline block as wide as the whole name, which the cell would cut
+ * mid letter with no ellipsis. Held to the cell's width, it ends in an
+ * ellipsis as the plain text did, at the same letter: the name reaches
+ * the morph with no-break spaces, so it is split into letters, not words
+ * (cards.tsx).
+ */
+.br .s [torph-root] {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.br .a {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink2);
+}
+
+/* The narrower pair: Matchbox ID and Developer */
+.b2 {
+  max-width: 1200px;
+  margin: 104px auto 0;
+  padding: 0 20px;
+  box-sizing: content-box;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.pc {
+  background: var(--soft);
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pc .in {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 22px;
+  padding: 28px 28px 0;
+  flex: 1;
+}
+.pc .tx {
+  padding-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.l2 {
+  font-size: 17px;
+  line-height: 25px;
+  color: var(--ink2);
+  margin: 16px 0 0;
+}
+.pc .lnk {
+  margin-top: auto;
+  padding-top: 20px;
+}
+.mini {
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  padding: 18px 18px 8px;
+  align-self: end;
+  min-height: 197px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+/* The list under a mini screen's title. */
+.mls {
+  margin-top: 6px;
+}
+.mt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15.5px;
+  font-weight: 650;
+  line-height: 21px;
+}
+.cr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 48px;
+}
+.cr + .cr {
+  border-top: 1px solid var(--line);
+}
+.ci {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  flex: none;
+}
+.ci .ic {
+  width: 16px;
+  height: 16px;
+}
+.cr b {
+  font-size: 15px;
+  font-weight: 600;
+}
+.cr em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 14px;
+  color: var(--sec);
+}
+.sw {
+  margin-left: auto;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--acc);
+  position: relative;
+  flex: none;
+}
+.sw::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 13px;
+  background: var(--soft);
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--ink2);
+  white-space: nowrap;
+}
+.chip.ok {
+  background: var(--home-pos-soft);
+  color: var(--pos);
+}
+.kr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+}
+.kr + .kr {
+  border-top: 1px solid var(--line);
+}
+.kr b {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+.kr .mono {
+  display: block;
+  font-family: "DM Mono", var(--font-mono, monospace);
+  font-size: 13px;
+  color: var(--sec);
+  margin-top: 3px;
+}
+.kr .chip {
+  margin-left: auto;
+}
+.gs {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--home-gs-bg);
+  color: var(--home-gs-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Docs and Stuart */
+.b3 {
+  max-width: 1200px;
+  margin: 104px auto 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--soft);
+  border-radius: 24px;
+}
+.si {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 28px;
+  min-height: 96px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+.si + .si {
+  border-left: 1px solid var(--home-track);
+}
+.si .t2 {
+  font-size: 15px;
+  color: var(--sec);
+  margin-top: 6px;
+  height: 18px;
+  white-space: nowrap;
+}
+/* Under the Docs lockup: 6 px plus the 4 px the frame's inline lockup adds. */
+.si svg + .t2 {
+  margin-top: 10px;
+}
+.si b {
+  display: block;
+  font-size: 17px;
+  font-weight: 650;
+}
+.si .lnk {
+  margin-left: auto;
+}
+.dogb {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.dogb svg {
+  width: 26px;
+  height: 26px;
+}
+
+/* Matchbox Classic */
+.cl {
+  max-width: 1200px;
+  margin: 104px auto 0;
+  background: var(--soft);
+  border-radius: 24px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1fr 640px;
+  column-gap: 28px;
+  padding: 0 28px;
+}
+.cl .tx {
+  padding: 32px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.cl .l2 {
+  margin-top: 14px;
+}
+.cl .lnk {
+  margin-top: 18px;
+}
+.clwin {
+  --cl-bg: #fafaf9;
+  --cl-surf: #ffffff;
+  --cl-border: #e7e5e4;
+  --cl-ink: #1c1917;
+  --cl-sec: #57534e;
+  align-self: end;
+  margin-top: 28px;
+  height: 184px;
+  background: var(--cl-bg);
+  border: 1px solid var(--cl-border);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  overflow: hidden;
+  font-family: "IBM Plex Mono", "DM Mono", var(--font-mono, monospace);
+  color: var(--cl-sec);
+}
+:root:is(
+    [data-theme="graphite"],
+    [data-theme="walnut"],
+    [data-theme="slate"],
+    [data-theme="onyx"]
+  )
+  .clwin {
+  --cl-bg: #0c0c0c;
+  --cl-surf: #161616;
+  --cl-border: #2a2a2a;
+  --cl-ink: #fafaf9;
+  --cl-sec: #a8a29e;
+}
+.clhd {
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 18px;
+  background: var(--cl-surf);
+  border-bottom: 1px solid var(--cl-border);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.clhd .lg {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--cl-ink);
+  font-size: 13px;
+  letter-spacing: 0.09em;
+}
+.clhd nav {
+  display: flex;
+}
+.clhd nav span {
+  position: relative;
+  height: 51px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+}
+.clhd nav .on {
+  color: var(--cl-ink);
+}
+.clhd nav .on::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: #f7931a;
+}
+.clhd nav .on b {
+  color: #f7931a;
+  font-weight: 400;
+  margin-right: 5px;
+}
+.clhd nav .ic {
+  width: 11px;
+  height: 11px;
+  margin-left: 4px;
+}
+.clbd {
+  padding: 20px 22px 0;
+}
+.clbd h4 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--cl-ink);
+  line-height: 22px;
+}
+.clbd h4 b {
+  color: #f7931a;
+  font-weight: 600;
+}
+.clbd p {
+  font-size: 12.5px;
+  margin: 6px 0 0;
+}
+.clcd {
+  margin-top: 16px;
+  height: 80px;
+  box-sizing: border-box;
+  background: var(--cl-surf);
+  border: 1px solid var(--cl-border);
+  border-radius: 8px;
+  text-align: center;
+  padding-top: 22px;
+  font-size: 12.5px;
+}
+
+/* Footer */
+.ft {
+  max-width: 1200px;
+  margin: 104px auto 0;
+  border-top: 1px solid var(--line);
+  padding: 36px 0 60px;
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  font-size: 15px;
+  color: var(--sec);
+}
+.ft nav {
+  display: flex;
+  gap: 28px;
+}
+.ft .lg {
+  margin-left: auto;
+  display: flex;
+  gap: 28px;
+}
+
+/* 1024 wide: the same layout, narrower columns, inside 20px gutters */
+@media (max-width: 1260px) {
+  .b3,
+  .ft {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+  .cl {
+    margin-left: 20px;
+    margin-right: 20px;
+    grid-template-columns: 1fr minmax(0, 520px);
+  }
+  .pc .in {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pc .mini {
+    margin-top: 4px;
+  }
+  .hd {
+    gap: 20px;
+    padding: 0 24px;
+  }
+  .hd > nav a {
+    padding: 0 10px;
+  }
+}
+
+/*
+ * 761 to 900 wide: the cards are as narrow as the phone's, so they take
+ * the 390 frame's 26 high lockups, and their screens its insets and
+ * gauge rows, which keep every lockup and gauge name whole.
+ */
+@media (760px < width <= 900px) {
+  .hc .bd {
+    padding: 40px 24px 0;
+  }
+  /* Two narrow cards: Open Matchscan goes under the search, full width. */
+  .act:has(.open) {
+    height: auto;
+    flex-wrap: wrap;
+  }
+  .act search {
+    flex: 1 0 100%;
+  }
+  .act .open {
+    width: 100%;
+    height: 48px;
+    border-radius: 24px;
+    margin: 10px 0 0;
+    justify-content: center;
+  }
+  .hc .bd > svg {
+    height: 26px;
+    width: auto;
+  }
+  .sf {
+    padding: 0 6px 0 18px;
+    gap: 10px;
+  }
+  .scr {
+    margin: 24px 12px 0;
+    padding: 14px 14px 0;
+  }
+  .rt {
+    padding: 0 16px;
+  }
+  .rb {
+    padding: 18px 16px 0;
+  }
+  .gr {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    column-gap: 12px;
+  }
+  .pic,
+  .pic.one > * {
+    width: 36px;
+    height: 36px;
+  }
+  .pic.one > * {
+    border-radius: 11px;
+  }
+  .pic.pair > :first-child,
+  .pic.pair > :last-child {
+    width: 24px;
+    height: 24px;
+  }
+  .nm {
+    font-size: 15px;
+  }
+  .iv {
+    gap: 7px;
+    font-size: 15px;
+  }
+  .cs > * {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+/* Phone, from the 390 frame */
+@media (max-width: 760px) {
+  .hd {
+    height: 64px;
+    padding: 0 20px;
+    justify-content: space-between;
+  }
+  .hd > nav {
+    display: none;
+  }
+  .hd .p2 {
+    display: none;
+  }
+  .hd .r > .ts {
+    display: none;
+  }
+  .mb {
+    display: flex;
+  }
+  .hero {
+    text-align: left;
+    padding: 44px 20px 32px;
+  }
+  .hero h1 {
+    font-size: 40px;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+  }
+  .hero p {
+    font-size: 17px;
+    line-height: 25px;
+    margin-top: 14px;
+  }
+  .b1 {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0 20px;
+  }
+  .hc .bd {
+    padding: 28px 20px 0;
+  }
+  /* 14 px under the frame's inline 26 px lockup, which adds 4 px. */
+  .line {
+    font-size: 17px;
+    line-height: 25px;
+    margin-top: 18px;
+  }
+  /* As tall as what it holds: the 48 px pill, or the 52 px search. */
+  .act {
+    height: auto;
+    margin-top: 22px;
+  }
+  .act .p1 {
+    width: 100%;
+    height: 48px;
+    justify-content: center;
+    border-radius: 24px;
+  }
+  /* Open Matchscan under the search, as wide. */
+  .act:has(.open) {
+    flex-wrap: wrap;
+  }
+  .act search {
+    flex: 1 0 100%;
+  }
+  .act .open {
+    margin: 10px 0 0;
+  }
+  .sf {
+    height: 52px;
+    padding: 0 6px 0 18px;
+  }
+  .sf kbd {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+  }
+  .scr {
+    margin: 24px 12px 0;
+    padding: 14px 14px 0;
+    min-height: 0;
+  }
+  .ep {
+    padding-bottom: 10px;
+  }
+  .rt {
+    height: 50px;
+    padding: 0 16px;
+    font-size: 14.5px;
+  }
+  .rb {
+    padding: 18px 16px 0;
+  }
+  .k {
+    font-size: 14.5px;
+  }
+  .ep .lh {
+    margin-top: 18px;
+    margin-bottom: 2px;
+  }
+  .bf {
+    font-size: 36px;
+    line-height: 44px;
+    height: 44px;
+  }
+  .gr {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    column-gap: 12px;
+    height: 58px;
+  }
+  /* The 390 frame's gauge rows: one line each, so the row height holds. */
+  .pic,
+  .pic.one > * {
+    width: 36px;
+    height: 36px;
+  }
+  .pic.one > * {
+    border-radius: 11px;
+  }
+  .pic.pair > :first-child,
+  .pic.pair > :last-child {
+    width: 24px;
+    height: 24px;
+  }
+  .nm {
+    font-size: 15px;
+    line-height: 20px;
+  }
+  .ss {
+    gap: 5px;
+    font-size: 14px;
+    line-height: 18px;
+    margin-top: 1px;
+    white-space: nowrap;
+  }
+  .ss .ic {
+    width: 14px;
+    height: 14px;
+  }
+  .iv {
+    gap: 7px;
+    font-size: 15px;
+  }
+  .cs > * {
+    width: 18px;
+    height: 18px;
+  }
+  /* Product lockups in the two cards are 26 high on the phone frame. */
+  .hc .bd > svg {
+    height: 26px;
+    width: auto;
+  }
+  .sts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  /* The 390 frame sets each stat's subline beside its value. */
+  .st {
+    padding: 16px 16px 50px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    column-gap: 12px;
+  }
+  .st .h {
+    grid-column: 1 / -1;
+    font-size: 14.5px;
+    --stat-icon: 30px;
+  }
+  .st .h > span {
+    width: 30px;
+    height: 30px;
+  }
+  .st .h .ic {
+    width: 15px;
+    height: 15px;
+  }
+  .st .v {
+    font-size: 26px;
+    line-height: 32px;
+    height: 32px;
+    margin-top: 10px;
+  }
+  .st .s {
+    font-size: 14px;
+    margin-top: 0;
+    height: auto;
+  }
+  .st .sp {
+    height: 38px;
+  }
+  .blk {
+    margin-top: 12px;
+    padding: 12px 16px 4px;
+  }
+  .blk .lh {
+    margin-bottom: 0;
+  }
+  .br {
+    height: 54px;
+    column-gap: 12px;
+  }
+  /*
+   * The 390 frame's row: 300 wide cards that scroll sideways, Developer
+   * peeking in from the right. It snaps to each card, scrolls only
+   * itself (never the page), and a card's link brings it into view
+   * when reached with Tab.
+   */
+  .b2 {
+    margin-top: 56px;
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 20px;
+    scrollbar-width: none;
+    max-width: none;
+    box-sizing: border-box;
+    width: 100%;
+  }
+  .b2 > .pc {
+    flex: none;
+    width: 300px;
+    scroll-snap-align: start;
+  }
+  /* The row ends before Developer's start can reach the left edge. */
+  .b2 > .pc:last-child {
+    scroll-snap-align: end;
+  }
+  .pc .in {
+    padding: 24px 20px 0;
+    gap: 0;
+  }
+  .pc .tx {
+    padding-bottom: 0;
+  }
+  /* Each card's parts stack from the top, as the frame has them. */
+  .pc .in {
+    align-content: start;
+  }
+  .pc .lnk {
+    margin-top: 0;
+    padding-top: 14px;
+  }
+  /* 12 px under the frame's inline 22 px lockup, which adds 4 px. */
+  .l2 {
+    font-size: 16px;
+    line-height: 23px;
+    margin-top: 16px;
+  }
+  /* In flow under the link, as the frame has them, not held to the foot. */
+  .mini,
+  .pc .mini {
+    margin: 20px -8px 0;
+    min-height: 0;
+    padding: 16px 16px 6px;
+    align-self: start;
+  }
+  .mt {
+    font-size: 15px;
+    line-height: 20px;
+  }
+  .mls {
+    margin-top: 4px;
+  }
+  .gs {
+    width: 28px;
+    height: 28px;
+  }
+  .cr {
+    height: 46px;
+  }
+  .ci {
+    width: 32px;
+    height: 32px;
+  }
+  .ci .ic {
+    width: 15px;
+    height: 15px;
+  }
+  .cr b {
+    font-size: 14.5px;
+  }
+  .cr em {
+    font-size: 13.5px;
+  }
+  .kr {
+    gap: 10px;
+    padding: 10px 0;
+  }
+  .kr b {
+    font-size: 14.5px;
+    line-height: 18px;
+  }
+  .kr .mono {
+    font-size: 12.5px;
+    line-height: 16px;
+  }
+  .b3 {
+    margin-top: 56px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .si {
+    padding: 22px 20px;
+    flex-wrap: wrap;
+    gap: 12px 14px;
+  }
+  .si .lnk {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+  /* Ask in Pro sits under Stuart's text, past the 44 px dog and its gap. */
+  .si + .si .lnk {
+    margin-left: 58px;
+  }
+  .dogb {
+    width: 44px;
+    height: 44px;
+  }
+  .si + .si {
+    border-left: 0;
+    border-top: 1px solid var(--home-track);
+  }
+  .cl {
+    margin-top: 56px;
+    grid-template-columns: minmax(0, 1fr);
+    padding: 24px 20px 0;
+  }
+  .cl .tx {
+    padding: 0;
+  }
+  /* 12 px under the inline 22 px lockup, which adds 4 px, as in .pc. */
+  .cl .l2 {
+    margin-top: 16px;
+  }
+  .cl .lnk {
+    margin-top: 14px;
+  }
+  .clwin {
+    margin: 22px -8px 0;
+    height: 164px;
+  }
+  .clhd {
+    gap: 10px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+  .ft {
+    margin-top: 56px;
+    display: block;
+    padding: 28px 0 48px;
+  }
+  /* 24 px under the frame's inline 22 px lockup, which adds 4 px. */
+  /* Rows 44 apart, so each link's 44px touch area (data-tap) is its own. */
+  .ft nav {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 26px;
+    margin-top: 28px;
+  }
+  .ft .lg {
+    margin-top: 26px;
+    gap: 24px;
+  }
+  /*
+   * The Classic rendition on the 390 frame: the icon without the
+   * wordmark, four menu items, and a smaller body that fits its 164 px.
+   */
+  .clhd {
+    height: 46px;
+  }
+  .clhd .wm,
+  .clhd nav > :nth-child(n + 5) {
+    display: none;
+  }
+  .clhd nav span {
+    height: 45px;
+    padding: 0 6px;
+  }
+  .clbd {
+    padding: 16px 14px 0;
+  }
+  .clbd h4 {
+    font-size: 15px;
+    line-height: 20px;
+  }
+  .clbd p {
+    font-size: 11.5px;
+    margin-top: 5px;
+  }
+  .clcd {
+    margin-top: 12px;
+    height: 60px;
+    padding-top: 14px;
+    font-size: 11px;
+  }
+}
+
+/* A value replacing "Not available": a 200ms fade, no roll. */
+@keyframes home-arrive {
+  from {
+    opacity: 0;
+  }
+}
+.arrive {
+  animation: home-arrive 200ms ease-out;
+}
+/* A gauge picture or coin stack that changed: 200ms crossfade in. */
+.swap-in {
+  animation: home-arrive 200ms ease-out;
+}
+
+/*
+ * Phones narrower than the 390 frame (stats under 298 wide): the subline
+ * goes under its value, as on desktop. Beside it, "4.06M MUSD" (153 px)
+ * and its subline need 298 (Borrowed stacks sooner, above), and "1,404.32 BTC" needs 291. It
+ * follows the width only, never the value, so a swap moves nothing.
+ */
+@media (max-width: 760px) {
+  /*
+   * Borrowed alone stacks sooner: its widest value, four digits and a
+   * suffix ("888.9M MUSD"), beside "98.6% in Enclaves" needs about 330,
+   * which a phone 390 to 420 wide does not have. veBTC locked keeps the
+   * layout of the 390 frame.
+   */
+  @container scan (width < 332px) {
+    .st-borrowed {
+      display: block;
+    }
+    .st-borrowed .s {
+      margin-top: 2px;
+      height: 18px;
+    }
+  }
+  @container scan (width < 298px) {
+    .st {
+      display: block;
+    }
+    .st .s {
+      margin-top: 2px;
+      height: 18px;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrive,
+  .swap-in {
+    animation: none;
+  }
+  .asof,
+  .asof[data-shown="true"] {
+    transition: none;
+  }
+}

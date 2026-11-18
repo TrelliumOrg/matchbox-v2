@@ -1,0 +1,63 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "matchbox-stuart",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // workers.dev only until Pro's cutover picks a route.
+  "workers_dev": true,
+  // API: the read models (/internal/pro/*) and, once the API serves it, the
+  // Blockscout proxy (/internal/blockscout/*).
+  "services": [{ "binding": "API", "service": "matchbox-developer-api" }],
+  // RATE_LIMITER: per-IP and per-wallet limits plus the daily spend bucket
+  // (stuart-spend:<UTC day>).
+  "durable_objects": {
+    "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": { "enabled": true, "invocation_logs": true }
+  },
+  // Secrets (wrangler secret put): ANTHROPIC_API_KEY (without it Stuart
+  // answers deterministically), PROPOSAL_HMAC_SECRET (signs proposal refresh
+  // tokens and support drafts), SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
+  // (support report storage; without them /support-report answers
+  // support_unavailable), BLOCKSCOUT_CALLER_SALT (32+ bytes: per-visitor
+  // buckets at the API's Blockscout proxy; without it visitors share one).
+  // Optional var STUART_ALLOWED_ORIGINS (comma list).
+  "vars": {
+    "ENVIRONMENT": "production",
+    "MCP_ENABLED": "false",
+    "STUART_DAILY_BUDGET_USD": "25",
+    "STUART_IP_DAILY_BUDGET_USD": "3",
+    "STUART_SPEND_CAP": "off",
+    "ANTHROPIC_MODEL": "claude-sonnet-5-5",
+    "STUART_EFFORT": "low",
+    "MEZO_RPC_URL": "https://mainnet.mezo.public.validationcloud.io,https://rpc-internal.mezo.org,https://rpc-http.mezo.boar.network"
+  },
+  // Preview: reads the v2 preview API and answers the Pro preview Worker.
+  // wrangler deploy --env preview (secrets are per env).
+  "env": {
+    "preview": {
+      "name": "matchbox-stuart-preview",
+      "workers_dev": true,
+      "services": [{ "binding": "API", "service": "matchbox-api-v2-preview" }],
+      "durable_objects": {
+        "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
+      },
+      "vars": {
+        "ENVIRONMENT": "preview",
+        "MCP_ENABLED": "false",
+        "STUART_DAILY_BUDGET_USD": "25",
+        "STUART_IP_DAILY_BUDGET_USD": "3",
+        "STUART_SPEND_CAP": "off",
+        "ANTHROPIC_MODEL": "claude-sonnet-5-5",
+        "STUART_EFFORT": "low",
+        "STUART_ALLOWED_ORIGINS": "https://matchbox-pro-v2-preview.mallard.workers.dev,https://beta.matchbox.markets",
+        "MEZO_RPC_URL": "https://mainnet.mezo.public.validationcloud.io,https://rpc-internal.mezo.org,https://rpc-http.mezo.boar.network"
+      }
+    }
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "name": "@matchbox/domain",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./activity": {
+      "types": "./src/activity.ts",
+      "default": "./src/activity.ts"
+    },
+    "./btc-address": {
+      "types": "./src/btc-address.ts",
+      "default": "./src/btc-address.ts"
+    },
+    "./checksum": {
+      "types": "./src/checksum.ts",
+      "default": "./src/checksum.ts"
+    },
+    "./epoch": {
+      "types": "./src/epoch.ts",
+      "default": "./src/epoch.ts"
+    },
+    "./format": {
+      "types": "./src/format/index.ts",
+      "default": "./src/format/index.ts"
+    },
+    "./market-price": {
+      "types": "./src/market-price.ts",
+      "default": "./src/market-price.ts"
+    },
+    "./historyMath": {
+      "types": "./src/historyMath.ts",
+      "default": "./src/historyMath.ts"
+    },
+    "./loanMath": {
+      "types": "./src/loanMath.ts",
+      "default": "./src/loanMath.ts"
+    },
+    "./money": {
+      "types": "./src/money.ts",
+      "default": "./src/money.ts"
+    },
+    "./mezo-id": {
+      "types": "./src/mezo-id.ts",
+      "default": "./src/mezo-id.ts"
+    },
+    "./optimalVeMEZO": {
+      "types": "./src/optimalVeMEZO.ts",
+      "default": "./src/optimalVeMEZO.ts"
+    },
+    "./participation": {
+      "types": "./src/participation.ts",
+      "default": "./src/participation.ts"
+    },
+    "./prices": {
+      "types": "./src/prices.ts",
+      "default": "./src/prices.ts"
+    },
+    "./proposals": {
+      "types": "./src/proposals.ts",
+      "default": "./src/proposals.ts"
+    },
+    "./rewardOptimizer": {
+      "types": "./src/rewardOptimizer.ts",
+      "default": "./src/rewardOptimizer.ts"
+    },
+    "./rewardPerVeMezo": {
+      "types": "./src/rewardPerVeMezo.ts",
+      "default": "./src/rewardPerVeMezo.ts"
+    },
+    "./validatorApy": {
+      "types": "./src/validatorApy.ts",
+      "default": "./src/validatorApy.ts"
+    },
+    "./voteMath": {
+      "types": "./src/voteMath.ts",
+      "default": "./src/voteMath.ts"
+    },
+    "./voteOptimization": {
+      "types": "./src/voteOptimization.ts",
+      "default": "./src/voteOptimization.ts"
+    },
+    "./votingApr": {
+      "types": "./src/votingApr.ts",
+      "default": "./src/votingApr.ts"
+    },
+    "./pool-type": {
+      "types": "./src/pool-type.ts",
+      "default": "./src/pool-type.ts"
+    },
+    "./pool-search": {
+      "types": "./src/pool-search.ts",
+      "default": "./src/pool-search.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@matchbox/chain": "workspace:*",
+    "@thesis-co/cent": "0.0.5",
+    "viem": "2.57.17",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2",
+    "vitest": "4.1.12"
+  }
+}

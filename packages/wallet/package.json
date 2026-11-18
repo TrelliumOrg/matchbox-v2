@@ -1,0 +1,55 @@
+{
+  "name": "@matchbox/wallet",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/wallet-store.ts",
+      "default": "./src/wallet-store.ts"
+    },
+    "./mount": {
+      "types": "./src/wallet-mount.tsx",
+      "default": "./src/wallet-mount.tsx"
+    },
+    "./runtime": {
+      "types": "./src/wallet-runtime.ts",
+      "default": "./src/wallet-runtime.ts"
+    },
+    "./wallets": {
+      "types": "./src/wallets.ts",
+      "default": "./src/wallets.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@matchbox/chain": "workspace:*",
+    "@matchbox/motion": "workspace:*",
+    "@matchbox/ui": "workspace:*",
+    "@wagmi/connectors": "8.2.2",
+    "@wagmi/core": "3.6.7",
+    "@walletconnect/ethereum-provider": "2.26.0",
+    "viem": "2.57.17"
+  },
+  "peerDependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "happy-dom": "21.0.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.6",
+    "vitest": "4.1.12"
+  }
+}

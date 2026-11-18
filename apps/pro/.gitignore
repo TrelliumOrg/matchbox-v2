@@ -1,0 +1,3 @@
+# The fork tests build and serve their own copy with their own vars.
+.fork-dist
+.dev.vars.fork

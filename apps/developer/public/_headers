@@ -1,0 +1,13 @@
+# Static assets skip the Worker. They get the headers Classic's assets got
+# (Classic ID's generated _headers): HSTS, nosniff, no framing, the
+# referrer and permissions policies, COOP, and a CSP that lets a file
+# opened on its own (an SVG, say) load and run nothing. Pages get theirs,
+# with the nonce CSP, from src/server.ts.
+/*
+  Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

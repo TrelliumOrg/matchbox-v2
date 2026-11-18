@@ -1,0 +1,612 @@
+import {
+  BOOST_VOTER_EVENTS_ABI as boostVoterAbi,
+  VOTING_REWARD_EVENTS_ABI as bribeVotingRewardAbi,
+  VOTING_REWARD_EVENTS_ABI as feeVotingRewardAbi,
+  GAUGE_EVENTS_ABI as gaugeAbi,
+  MERKLE_DISTRIBUTOR_EVENTS_ABI as merkleDistributorAbi,
+  MEZO_MINTER_EVENTS_ABI as mezoMinterAbi,
+  MUSD_SAVINGS_RATE_EVENTS_ABI as musdSavingsRateAbi,
+  MUSD_TROVE_UPDATED_EVENTS_ABI as musdTrovesAbi,
+  NON_POOLS_VOTER_EVENTS_ABI as nonPoolsVoterAbi,
+  PCV_EVENTS_ABI as pcvAbi,
+  POOL_EVENTS_ABI as poolAbi,
+  POOL_FACTORY_EVENTS_ABI as poolFactoryAbi,
+  POOLS_VOTER_EVENTS_ABI as poolsVoterAbi,
+  REBASE_DISTRIBUTOR_EVENTS_ABI as rebaseDistributorAbi,
+  SPLITTER_EVENTS_ABI as splitterAbi,
+  VOTING_ESCROW_EVENTS_ABI as votingEscrowAbi,
+} from "@matchbox/chain"
+import {
+  type Abi,
+  type AbiEvent,
+  type Address,
+  decodeEventLog,
+  type Hex,
+  toEventSelector,
+} from "viem"
+import { type Network, networkConfig } from "../ingest/networks"
+import type { RawLog } from "../ingest/rpc"
+import {
+  MUSD_BORROWER_OPERATIONS_DEPLOY_BLOCK,
+  MUSD_TROVE_MANAGER_DEPLOY_BLOCK,
+} from "../ingest/static-contracts"
+import type { ContractKind } from "../ingest/store"
+import { OWNER_LOOKUP_ESCROWS } from "./constants"
+import { boostVoterHandlers } from "./handlers/boost-voter"
+import {
+  musdBorrowerOperationsHandlers,
+  musdTroveManagerHandlers,
+} from "./handlers/musd"
+import {
+  thirdPartyVoterHandlers,
+  validatorsVoterHandlers,
+} from "./handlers/non-pools-voter"
+import {
+  gaugeHandlers,
+  poolFactoryHandlers,
+  poolHandlers,
+} from "./handlers/pools-and-gauges"
+import { poolsVoterHandlers } from "./handlers/pools-voter"
+import {
+  bribeVotingRewardHandlers,
+  feeVotingRewardHandlers,
+  LEGACY_POOL_REWARDS,
+  type LegacyPoolReward,
+  voterBribeRewardHandlers,
+  WAREHOUSE_LEGACY_POOL_REWARDS,
+} from "./handlers/rewards"
+import {
+  chainFeeSplitterHandlers,
+  merkleDistributorHandlers,
+  mezoChainSplitterHandlers,
+  mezoEcosystemSplitterHandlers,
+  mezoMinterHandlers,
+  musdSavingsRateHandlers,
+  pcvHandlers,
+  rebaseDistributorHandlers,
+} from "./handlers/system"
+import { votingEscrowHandlers } from "./handlers/voting-escrow"
+import { eventTopics, type Handler, lockId, lower } from "./helpers"
+import type { ExplorerTemplateName, TemplateName } from "./rows"
+import type { Store } from "./store"
+import { ESCROW_PREHISTORY_VERSION } from "./version"
+
+// Which handler, if any, runs for a log, and whether the explorer subgraph
+// would have run it too. This is graph-node's data source model: a static
+// source handles its address from its startBlock; a template handles an
+// address from the block a handler created it in. Logs the ingest fetched for
+// anything else (escrows and pools before 7,739,500, gauges and pools created
+// before then) are skipped, which keeps the explorer-parity rows identical to
+// matchbox-explorer 3.4.0.
+//
+// The warehouse handles more than the explorer did: the voters from the
+// network start, the voters' bribe rewards (template VoterBribeReward) and
+// the mUSD trove contracts. Rows from those logs are warehouse-only
+// (activity_events.explorer_parity = false).
+
+type EventTable = {
+  selectors: ReadonlyMap<Hex, string>
+  events: ReadonlyMap<Hex, AbiEvent>
+  handlers: Record<string, Handler>
+}
+
+type StaticSource = EventTable & {
+  name: string
+  address: Address
+  // First block the decoder handles this source from.
+  startBlock: bigint
+  // First block matchbox-explorer 3.4.0 handled it from. Rows from earlier
+  // logs are warehouse-only; null for a source the explorer never had.
+  explorerStartBlock: bigint | null
+  // Events that start later than the source, by event name.
+  eventStartBlocks: ReadonlyMap<string, bigint>
+  // A later start for tables built before `version` (src/decode/version.ts).
+  startBefore?: { version: number; startBlock: bigint }
+}
+
+function eventTable(abi: Abi, handlers: Record<string, Handler>): EventTable {
+  const selectors = new Map<Hex, string>()
+  const events = new Map<Hex, AbiEvent>()
+  for (const item of abi) {
+    if (item.type === "event" && handlers[item.name] !== undefined) {
+      const topic0 = toEventSelector(item)
+      selectors.set(topic0, item.name)
+      events.set(topic0, item)
+    }
+  }
+  return { selectors, events, handlers }
+}
+
+// matchbox-explorer's start block. Exported for the legacy-gauge test.
+export const CORE_START_BLOCK = 7_739_500n
+const NETWORK_START_BLOCK = networkConfig("mezo").startBlock
+
+function staticSource(
+  name: string,
+  address: Address,
+  abi: Abi,
+  handlers: Record<string, Handler>,
+  startBlock = CORE_START_BLOCK,
+): StaticSource {
+  return {
+    name,
+    address: lower(address),
+    startBlock,
+    explorerStartBlock: startBlock,
+    eventStartBlocks: new Map(),
+    ...eventTable(abi, handlers),
+  }
+}
+
+// Voters project from the network start rather than the explorer's start
+// block, so a vote replay sees every ballot (BoostVoter's began at 6.25M).
+// Their rows before 7,739,500 are warehouse-only. Events listed in
+// `explorerStartOnly` keep the explorer start: PoolsVoter.GaugeCreated spawns
+// explorer templates, and gauges created before then must stay untracked.
+function voterSource(
+  name: string,
+  address: Address,
+  abi: Abi,
+  handlers: Record<string, Handler>,
+  explorerStartOnly: string[] = [],
+): StaticSource {
+  return {
+    ...staticSource(name, address, abi, handlers),
+    startBlock: NETWORK_START_BLOCK,
+    eventStartBlocks: new Map(
+      explorerStartOnly.map((eventName) => [eventName, CORE_START_BLOCK]),
+    ),
+  }
+}
+
+// Escrows project from the network start since decoder v3, so locks
+// created before 7,739,500 (veBTC's escrow started near block 5,043,592)
+// carry their real history; their rows before that block are
+// warehouse-only. Tables built with v2 keep the explorer's start.
+function escrowSource(
+  name: string,
+  address: Address,
+  abi: Abi,
+  handlers: Record<string, Handler>,
+): StaticSource {
+  return {
+    ...staticSource(name, address, abi, handlers),
+    startBlock: NETWORK_START_BLOCK,
+    startBefore: {
+      version: ESCROW_PREHISTORY_VERSION,
+      startBlock: CORE_START_BLOCK,
+    },
+  }
+}
+
+// A source the explorer never had: every row it produces is warehouse-only.
+function warehouseSource(
+  name: string,
+  address: Address,
+  abi: Abi,
+  handlers: Record<string, Handler>,
+  startBlock: bigint,
+): StaticSource {
+  return {
+    ...staticSource(name, address, abi, handlers, startBlock),
+    explorerStartBlock: null,
+  }
+}
+
+// subgraph.yaml on main. Start blocks for the Legacy* reward contracts are
+// their own creation blocks.
+const LEGACY_START_BLOCKS: Record<string, bigint> = {
+  "0x6f3e2afc81a8fd8e3490ddb032a91d339b371afb": 5_231_392n,
+  "0x24e2d2efc692aab0ae54e0dd8b4c19aabc463c3b": 5_231_392n,
+  "0x7c90026167ff9051fec3e14a5ec486e484722ded": 5_231_405n,
+  "0xce8c65d38d3eb67263a658802cb86ce963679871": 5_231_405n,
+  "0xa908809b0602606f86a745e13296881a9b267462": 5_231_405n,
+  "0xbbb03e37546e051f2588e12c47f804a216320c10": 5_231_405n,
+  "0x94a9a494872bf7231d8378d0aef7d32ba552e305": 5_231_418n,
+  "0x0453820c89084e20658068a27ebb90824f1a6c6d": 5_231_418n,
+  "0xa2e2f01f9342582557917d114cabcce4a26bb47f": 5_231_418n,
+  "0x0fcf5322dedbe67b68208199db234e98ef54c888": 5_231_418n,
+  "0x0377249dd6916f335048c7cd5541022b6ec2185c": 5_231_440n,
+  "0x7ab52a8fc9f9100fec58a5ee319ddb872c1208d7": 5_231_440n,
+  "0xf4c0067b6a38ca5b28fb2c8e1d8a2a20d20d2af3": 5_231_440n,
+  "0xf702cd0c9fcfd453165aef6c84627937695d5a6c": 5_231_440n,
+  "0x52a9a4310a1567ce828df137b2ead4883c0221cf": 5_231_459n,
+  "0x4989d0128724b8b9d5d12bc98f1df9d4adafbbfa": 5_231_459n,
+  "0xf2b88ec68c8fbd5261c5483d1385c46dc7619589": 5_231_459n,
+  "0x898bbe9353dc576745724e8c64a02472645561cd": 5_231_459n,
+  // sMUSD, not in the explorer's table: its creation block (first block
+  // with code, and its GaugeCreated).
+  "0x7d98f38a020a94b08eec295bfb6f4e86d581e607": 5_231_392n,
+  "0x33b8b1162f0b86d68cad418d96246ee2c5164a01": 5_231_392n,
+}
+
+// Even entries of each table are bribe contracts, odd are fees. The
+// explorer's entries keep explorer parity; the warehouse's are
+// warehouse-only from their first block.
+function legacyRewardSources(): StaticSource[] {
+  function sources(
+    table: ReadonlyArray<LegacyPoolReward>,
+    explorer: boolean,
+  ): StaticSource[] {
+    return table.map(function legacySource([reward], index) {
+      const isBribe = index % 2 === 0
+      const startBlock = LEGACY_START_BLOCKS[reward]
+      if (startBlock === undefined) {
+        throw new Error(`No start block for legacy reward contract ${reward}`)
+      }
+      const source = staticSource(
+        isBribe ? "LegacyBribe" : "LegacyFee",
+        reward,
+        isBribe ? bribeVotingRewardAbi : feeVotingRewardAbi,
+        isBribe ? bribeVotingRewardHandlers : feeVotingRewardHandlers,
+        startBlock,
+      )
+      return explorer ? source : { ...source, explorerStartBlock: null }
+    })
+  }
+  return [
+    ...sources(LEGACY_POOL_REWARDS, true),
+    ...sources(WAREHOUSE_LEGACY_POOL_REWARDS, false),
+  ]
+}
+
+const MAINNET_SOURCES: StaticSource[] = [
+  escrowSource(
+    "VeMEZO",
+    "0xb90fdAd3DFD180458D62Cc6acedc983D78E20122",
+    votingEscrowAbi,
+    votingEscrowHandlers,
+  ),
+  escrowSource(
+    "VeBTC",
+    "0x3D4b1b884A7a1E59fE8589a3296EC8f8cBB6f279",
+    votingEscrowAbi,
+    votingEscrowHandlers,
+  ),
+  voterSource(
+    "BoostVoter",
+    "0x2Ba614a598Cffa5a19d683cDCA97bac3a49313d1",
+    boostVoterAbi,
+    boostVoterHandlers,
+  ),
+  voterSource(
+    "PoolsVoter",
+    "0x48233cCC97B87Ba93bCA212cbEe48e3210211f03",
+    poolsVoterAbi,
+    poolsVoterHandlers,
+    ["GaugeCreated"],
+  ),
+  voterSource(
+    "ThirdPartyVoter",
+    "0x2e6D2F2CaCC1d24F9f9358030674eB307397A6EB",
+    nonPoolsVoterAbi,
+    thirdPartyVoterHandlers,
+  ),
+  voterSource(
+    "ValidatorsVoter",
+    "0xe99a9ad5Ed26BD30e4DB25397f378817e9b9515a",
+    nonPoolsVoterAbi,
+    validatorsVoterHandlers,
+  ),
+  staticSource(
+    "ChainFeeSplitter",
+    "0x0268ABa7FaB1ceC04ce557313C94D5832B407AA3",
+    splitterAbi,
+    chainFeeSplitterHandlers,
+  ),
+  staticSource(
+    "MezoChainSplitter",
+    "0x5C6eF634e279a77D64E21d24B1A1BB4A5e59C5DA",
+    splitterAbi,
+    mezoChainSplitterHandlers,
+  ),
+  staticSource(
+    "MezoEcosystemSplitter",
+    "0xe9e697D49d47c7042e768177F42d5789666D99FA",
+    splitterAbi,
+    mezoEcosystemSplitterHandlers,
+  ),
+  staticSource(
+    "MezoMinter",
+    "0x66Bff681611553b3204A226b2019ec621F39ffc3",
+    mezoMinterAbi,
+    mezoMinterHandlers,
+  ),
+  staticSource(
+    "MezoRebaseDistributor",
+    "0x075108F275Ed81c9CFc01065E6e50CEea81D6363",
+    rebaseDistributorAbi,
+    rebaseDistributorHandlers,
+  ),
+  staticSource(
+    "MezoMerkleDistributor",
+    "0xb91fBb559216683Aa2558596d96718407631E82d",
+    merkleDistributorAbi,
+    merkleDistributorHandlers,
+  ),
+  staticSource(
+    "MUSDSavingsRate",
+    "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+    musdSavingsRateAbi,
+    musdSavingsRateHandlers,
+  ),
+  staticSource(
+    "PCV",
+    "0x391EcC7ffEFc48cff41D0F2Bb36e38b82180B993",
+    pcvAbi,
+    pcvHandlers,
+  ),
+  staticSource(
+    "PoolFactory",
+    "0x83FE469C636C4081b87bA5b3Ae9991c6Ed104248",
+    poolFactoryAbi,
+    poolFactoryHandlers,
+  ),
+  staticSource(
+    "PoolMusdBtc",
+    "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+    poolAbi,
+    poolHandlers,
+  ),
+  staticSource(
+    "PoolMusdMusdc",
+    "0xEd812AEc0Fecc8fD882Ac3eccC43f3aA80A6c356",
+    poolAbi,
+    poolHandlers,
+  ),
+  staticSource(
+    "PoolMusdMusdt",
+    "0x10906a9E9215939561597b4C8e4b98F93c02031A",
+    poolAbi,
+    poolHandlers,
+  ),
+  ...legacyRewardSources(),
+  warehouseSource(
+    "MusdBorrowerOperations",
+    "0x44b1bac67dDA612a41a58AAf779143B181dEe031",
+    musdTrovesAbi,
+    musdBorrowerOperationsHandlers,
+    MUSD_BORROWER_OPERATIONS_DEPLOY_BLOCK,
+  ),
+  warehouseSource(
+    "MusdTroveManager",
+    "0x94AfB503dBca74aC3E4929BACEeDfCe19B93c193",
+    musdTrovesAbi,
+    musdTroveManagerHandlers,
+    MUSD_TROVE_MANAGER_DEPLOY_BLOCK,
+  ),
+]
+
+const TEMPLATES: Record<TemplateName, EventTable> = {
+  BribeVotingReward: eventTable(
+    bribeVotingRewardAbi,
+    bribeVotingRewardHandlers,
+  ),
+  FeeVotingReward: eventTable(feeVotingRewardAbi, feeVotingRewardHandlers),
+  Gauge: eventTable(gaugeAbi, gaugeHandlers),
+  Pool: eventTable(poolAbi, poolHandlers),
+  VoterBribeReward: eventTable(bribeVotingRewardAbi, voterBribeRewardHandlers),
+}
+
+const EXPLORER_TEMPLATES: ReadonlySet<TemplateName> =
+  new Set<ExplorerTemplateName>([
+    "BribeVotingReward",
+    "FeeVotingReward",
+    "Gauge",
+    "Pool",
+  ])
+
+function sourcesByAddress(sources: StaticSource[]): Map<Address, StaticSource> {
+  const byAddress = new Map<Address, StaticSource>()
+  for (const source of sources) {
+    if (byAddress.has(source.address)) {
+      throw new Error(`Duplicate static data source ${source.address}`)
+    }
+    byAddress.set(source.address, source)
+  }
+  return byAddress
+}
+
+const STATIC_SOURCES: Record<Network, ReadonlyMap<Address, StaticSource>> = {
+  mezo: sourcesByAddress(MAINNET_SOURCES),
+  // The testnet explorer subgraph was deleted before this port. Testnet is
+  // a config row later (docs/goldsky-exit.md, out of scope).
+  "mezo-testnet": new Map(),
+}
+
+export function staticSourcesFor(network: Network): StaticSource[] {
+  return [...STATIC_SOURCES[network].values()]
+}
+
+export type ResolvedHandler = {
+  handler: Handler
+  // Whether matchbox-explorer 3.4.0 would have run this handler on this log.
+  explorerParity: boolean
+}
+
+// Returns the handler to run for this log, or undefined when no active data
+// source covers it.
+export function resolveHandler(
+  log: RawLog,
+  store: Store,
+): ResolvedHandler | undefined {
+  const address = lower(log.address)
+  const topic0 = log.topics[0]
+  if (topic0 === undefined) return undefined
+  const selector = lower(topic0)
+
+  const source = STATIC_SOURCES[log.network].get(address)
+  if (source !== undefined) {
+    const eventName = source.selectors.get(selector)
+    if (eventName === undefined) return undefined
+    const sourceStart =
+      source.startBefore !== undefined &&
+      store.decoderVersion < source.startBefore.version
+        ? source.startBefore.startBlock
+        : source.startBlock
+    const start = source.eventStartBlocks.get(eventName) ?? sourceStart
+    const handler = source.handlers[eventName]
+    if (handler === undefined || log.blockNumber < start) return undefined
+    return {
+      handler,
+      explorerParity:
+        source.explorerStartBlock !== null &&
+        log.blockNumber >= source.explorerStartBlock,
+    }
+  }
+
+  const dynamic = store.getDataSource(address)
+  if (dynamic === undefined || log.blockNumber < dynamic.createdBlock) {
+    return undefined
+  }
+  const table = TEMPLATES[dynamic.template]
+  const eventName = table.selectors.get(selector)
+  const handler =
+    eventName === undefined ? undefined : table.handlers[eventName]
+  if (handler === undefined) return undefined
+  return { handler, explorerParity: EXPLORER_TEMPLATES.has(dynamic.template) }
+}
+
+const ESCROW_SOURCES = new Set(["VeMEZO", "VeBTC"])
+const VOTER_SOURCES = new Set([
+  "BoostVoter",
+  "PoolsVoter",
+  "ThirdPartyVoter",
+  "ValidatorsVoter",
+])
+// Voted and Abstained share a signature across all four voter ABIs.
+const VOTE_SELECTORS = new Set<Hex>(
+  nonPoolsVoterAbi
+    .filter((item) => item.name === "Voted" || item.name === "Abstained")
+    .map((item) => toEventSelector(item)),
+)
+
+// LockPosition ids a handler may read for this log, so a store backed by
+// Postgres can load them before the synchronous handlers run. Escrow events
+// touch their own tokenIds; votes may resolve the owner in any escrow.
+export function lockKeysForLog(log: RawLog): string[] {
+  const source = STATIC_SOURCES[log.network].get(lower(log.address))
+  const topic0 = log.topics[0]
+  if (source === undefined || topic0 === undefined) return []
+  if (log.blockNumber < source.startBlock) return []
+
+  if (VOTER_SOURCES.has(source.name) && VOTE_SELECTORS.has(lower(topic0))) {
+    const tokenTopic = log.topics[3]
+    if (tokenTopic === undefined) return []
+    const tokenId = BigInt(tokenTopic)
+    return OWNER_LOOKUP_ESCROWS.map((escrow) => lockId(escrow, tokenId))
+  }
+
+  if (!ESCROW_SOURCES.has(source.name)) return []
+  if (!source.selectors.has(lower(topic0))) return []
+  const event = decodeEventLog({
+    abi: votingEscrowAbi,
+    topics: eventTopics(log),
+    data: log.data,
+  })
+  const escrow = source.address
+  switch (event.eventName) {
+    case "Merge":
+      return [lockId(escrow, event.args._from), lockId(escrow, event.args._to)]
+    case "Deposit":
+    case "Withdraw":
+    case "Transfer":
+      return [lockId(escrow, event.args.tokenId)]
+    case "LockPermanent":
+    case "UnlockPermanent":
+    case "UpdateBoost":
+      return [lockId(escrow, event.args._tokenId)]
+    default:
+      return []
+  }
+}
+
+const TROVE_SOURCES = new Set(["MusdBorrowerOperations", "MusdTroveManager"])
+const TROVE_UPDATED_SELECTORS = new Set<Hex>(
+  musdTrovesAbi.map((item) => toEventSelector(item)),
+)
+
+// Borrowers whose latest trove state a handler reads for this log, so a
+// Postgres-backed store can load them first.
+export function troveKeysForLog(log: RawLog): Address[] {
+  const source = STATIC_SOURCES[log.network].get(lower(log.address))
+  const [topic0, borrowerTopic] = log.topics
+  if (source === undefined || !TROVE_SOURCES.has(source.name)) return []
+  if (topic0 === undefined || borrowerTopic === undefined) return []
+  if (log.blockNumber < source.startBlock) return []
+  if (!TROVE_UPDATED_SELECTORS.has(lower(topic0))) return []
+  return [lower(`0x${borrowerTopic.slice(-40)}`)]
+}
+
+// Contract kind (matchbox.contracts.kind) for each data source or template
+// name, so ingest and decode agree on what a binding is.
+const KIND_BY_NAME: Record<string, ContractKind> = {
+  VeMEZO: "votingEscrow",
+  VeBTC: "votingEscrow",
+  BoostVoter: "boostVoter",
+  PoolsVoter: "poolsVoter",
+  ThirdPartyVoter: "thirdPartyVoter",
+  ValidatorsVoter: "validatorsVoter",
+  ChainFeeSplitter: "splitter",
+  MezoChainSplitter: "splitter",
+  MezoEcosystemSplitter: "splitter",
+  MezoMinter: "minter",
+  MezoRebaseDistributor: "rebaseDistributor",
+  MezoMerkleDistributor: "merkleDistributor",
+  MUSDSavingsRate: "musdSavingsRate",
+  PCV: "pcv",
+  PoolFactory: "poolFactory",
+  PoolMusdBtc: "pool",
+  PoolMusdMusdc: "pool",
+  PoolMusdMusdt: "pool",
+  LegacyBribe: "bribeVotingReward",
+  LegacyFee: "feeVotingReward",
+  BribeVotingReward: "bribeVotingReward",
+  FeeVotingReward: "feeVotingReward",
+  Gauge: "gauge",
+  Pool: "pool",
+  VoterBribeReward: "voterBribeReward",
+  MusdBorrowerOperations: "musdBorrowerOperations",
+  MusdTroveManager: "musdTroveManager",
+}
+
+export type HandlerBinding = {
+  kind: ContractKind
+  // Data source or template name; the template a handler runs under.
+  name: string
+  topic0: Hex
+  eventName: string
+  event: AbiEvent
+  handler: Handler
+}
+
+// Every (data source or template, event) the decoder handles, deduplicated by
+// (name, topic0). Static sources sharing a name (the Legacy* contracts) share
+// their bindings.
+export function handlerBindings(network: Network): HandlerBinding[] {
+  const tables: Array<[string, EventTable]> = [
+    ...[...STATIC_SOURCES[network].values()].map(
+      (source): [string, EventTable] => [source.name, source],
+    ),
+    ...Object.entries(TEMPLATES),
+  ]
+  const bindings = new Map<string, HandlerBinding>()
+  for (const [name, table] of tables) {
+    const kind = KIND_BY_NAME[name]
+    if (kind === undefined) throw new Error(`No contract kind for ${name}`)
+    for (const [topic0, eventName] of table.selectors) {
+      const handler = table.handlers[eventName]
+      const event = table.events.get(topic0)
+      if (handler === undefined || event === undefined) continue
+      bindings.set(`${name}:${topic0}`, {
+        kind,
+        name,
+        topic0,
+        eventName,
+        event,
+        handler,
+      })
+    }
+  }
+  return [...bindings.values()]
+}

@@ -1,0 +1,2 @@
+# Copy to .dev.vars (gitignored). Fixtures need no backend.
+HOME_DATA=fixtures

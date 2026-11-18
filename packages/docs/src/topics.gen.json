@@ -1,0 +1,1687 @@
+[
+  {
+    "topic": "concepts",
+    "title": "Concepts",
+    "url": "https://docs.matchbox.markets/concepts",
+    "section": "concepts",
+    "description": "How Mezo Earn works, written once and linked from every Matchbox product.",
+    "headings": [
+      {
+        "title": "The short version",
+        "url": "https://docs.matchbox.markets/concepts#the-short-version"
+      },
+      {
+        "title": "Pages",
+        "url": "https://docs.matchbox.markets/concepts#pages"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.boost",
+    "title": "Boost",
+    "url": "https://docs.matchbox.markets/concepts/boost",
+    "section": "concepts",
+    "description": "How veMEZO votes on a veBTC gauge raise that lock's voting power, up to 5×.",
+    "headings": [
+      {
+        "title": "Formula",
+        "url": "https://docs.matchbox.markets/concepts/boost#formula"
+      },
+      {
+        "title": "Reaching 5×",
+        "url": "https://docs.matchbox.markets/concepts/boost#reaching-5x"
+      },
+      {
+        "title": "Poke",
+        "url": "https://docs.matchbox.markets/concepts/boost#poke"
+      },
+      {
+        "title": "Why boost falls",
+        "url": "https://docs.matchbox.markets/concepts/boost#why-boost-falls"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.borrow",
+    "title": "Borrow",
+    "url": "https://docs.matchbox.markets/concepts/borrow",
+    "section": "concepts",
+    "description": "Borrowing on Mezo, through Morpho Blue, Enclaves and MUSD troves.",
+    "headings": [
+      {
+        "title": "Morpho Blue",
+        "url": "https://docs.matchbox.markets/concepts/borrow#morpho-blue"
+      },
+      {
+        "title": "Enclaves",
+        "url": "https://docs.matchbox.markets/concepts/borrow#enclaves"
+      },
+      {
+        "title": "MUSD troves",
+        "url": "https://docs.matchbox.markets/concepts/borrow#musd-troves"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.epochs",
+    "title": "Epochs",
+    "url": "https://docs.matchbox.markets/concepts/epochs",
+    "section": "concepts",
+    "description": "Mezo Earn counts votes, incentives and rewards in weekly epochs that start Thursday 00:00 UTC.",
+    "headings": [
+      {
+        "title": "Epoch numbers",
+        "url": "https://docs.matchbox.markets/concepts/epochs#epoch-numbers"
+      },
+      {
+        "title": "Voting windows",
+        "url": "https://docs.matchbox.markets/concepts/epochs#voting-windows"
+      },
+      {
+        "title": "At the boundary",
+        "url": "https://docs.matchbox.markets/concepts/epochs#at-the-boundary"
+      },
+      {
+        "title": "In each product",
+        "url": "https://docs.matchbox.markets/concepts/epochs#in-each-product"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.gauges",
+    "title": "Gauges",
+    "url": "https://docs.matchbox.markets/concepts/gauges",
+    "section": "concepts",
+    "description": "The four gauge types, which lock votes on each, and what each one pays.",
+    "headings": [
+      {
+        "title": "Types",
+        "url": "https://docs.matchbox.markets/concepts/gauges#types"
+      },
+      {
+        "title": "What each pays",
+        "url": "https://docs.matchbox.markets/concepts/gauges#what-each-pays"
+      },
+      {
+        "title": "Ballots",
+        "url": "https://docs.matchbox.markets/concepts/gauges#ballots"
+      },
+      {
+        "title": "Killed gauges",
+        "url": "https://docs.matchbox.markets/concepts/gauges#killed-gauges"
+      },
+      {
+        "title": "Expired veBTC gauges",
+        "url": "https://docs.matchbox.markets/concepts/gauges#expired"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.glossary",
+    "title": "Glossary",
+    "url": "https://docs.matchbox.markets/concepts/glossary",
+    "section": "concepts",
+    "description": "Every Mezo Earn and Matchbox term in one list.",
+    "headings": [
+      {
+        "title": "Pages",
+        "url": "https://docs.matchbox.markets/concepts/glossary#pages"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.incentives",
+    "title": "Incentives",
+    "url": "https://docs.matchbox.markets/concepts/incentives",
+    "section": "concepts",
+    "description": "Tokens anyone adds to a gauge for its voters, split by voting weight when the epoch ends.",
+    "headings": [
+      {
+        "title": "Who adds them",
+        "url": "https://docs.matchbox.markets/concepts/incentives#who-adds-them"
+      },
+      {
+        "title": "Tokens",
+        "url": "https://docs.matchbox.markets/concepts/incentives#tokens"
+      },
+      {
+        "title": "When they pay",
+        "url": "https://docs.matchbox.markets/concepts/incentives#when-they-pay"
+      },
+      {
+        "title": "How they split",
+        "url": "https://docs.matchbox.markets/concepts/incentives#how-they-split"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.locks",
+    "title": "Locks",
+    "url": "https://docs.matchbox.markets/concepts/locks",
+    "section": "concepts",
+    "description": "What you can do with a veBTC or veMEZO lock, and what stands in the way.",
+    "headings": [
+      {
+        "title": "Actions",
+        "url": "https://docs.matchbox.markets/concepts/locks#actions"
+      },
+      {
+        "title": "Reset first",
+        "url": "https://docs.matchbox.markets/concepts/locks#reset-first"
+      },
+      {
+        "title": "Transfer keeps the votes",
+        "url": "https://docs.matchbox.markets/concepts/locks#transfer"
+      },
+      {
+        "title": "Edge cases",
+        "url": "https://docs.matchbox.markets/concepts/locks#edge-cases"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.mezo",
+    "title": "Mezo",
+    "url": "https://docs.matchbox.markets/concepts/mezo",
+    "section": "concepts",
+    "description": "The network Matchbox runs on, its chain ids and how gas is paid.",
+    "headings": [
+      {
+        "title": "Networks",
+        "url": "https://docs.matchbox.markets/concepts/mezo#networks"
+      },
+      {
+        "title": "Tokens",
+        "url": "https://docs.matchbox.markets/concepts/mezo#tokens"
+      },
+      {
+        "title": "Gas",
+        "url": "https://docs.matchbox.markets/concepts/mezo#gas"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.rewards",
+    "title": "Rewards",
+    "url": "https://docs.matchbox.markets/concepts/rewards",
+    "section": "concepts",
+    "description": "What a lock earns from voting, when it becomes claimable and how to claim it.",
+    "headings": [
+      {
+        "title": "What a lock earns",
+        "url": "https://docs.matchbox.markets/concepts/rewards#what-a-lock-earns"
+      },
+      {
+        "title": "Claiming",
+        "url": "https://docs.matchbox.markets/concepts/rewards#claiming"
+      },
+      {
+        "title": "Claim and relock",
+        "url": "https://docs.matchbox.markets/concepts/rewards#claim-and-relock"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.vebtc",
+    "title": "veBTC",
+    "url": "https://docs.matchbox.markets/concepts/vebtc",
+    "section": "concepts",
+    "description": "BTC locked on Mezo for up to 28 days. It votes on validator and pool gauges.",
+    "headings": [
+      {
+        "title": "Lock length",
+        "url": "https://docs.matchbox.markets/concepts/vebtc#lock-length"
+      },
+      {
+        "title": "Voting power",
+        "url": "https://docs.matchbox.markets/concepts/vebtc#voting-power"
+      },
+      {
+        "title": "What it votes on",
+        "url": "https://docs.matchbox.markets/concepts/vebtc#what-it-votes-on"
+      },
+      {
+        "title": "Boost",
+        "url": "https://docs.matchbox.markets/concepts/vebtc#boost"
+      },
+      {
+        "title": "Unlock",
+        "url": "https://docs.matchbox.markets/concepts/vebtc#unlock"
+      }
+    ]
+  },
+  {
+    "topic": "concepts.vemezo",
+    "title": "veMEZO",
+    "url": "https://docs.matchbox.markets/concepts/vemezo",
+    "section": "concepts",
+    "description": "MEZO locked for up to 208 weeks. It votes on veBTC gauges and MEZO gauges.",
+    "headings": [
+      {
+        "title": "Lock length",
+        "url": "https://docs.matchbox.markets/concepts/vemezo#lock-length"
+      },
+      {
+        "title": "Voting power",
+        "url": "https://docs.matchbox.markets/concepts/vemezo#voting-power"
+      },
+      {
+        "title": "What it votes on",
+        "url": "https://docs.matchbox.markets/concepts/vemezo#what-it-votes-on"
+      },
+      {
+        "title": "Unlock",
+        "url": "https://docs.matchbox.markets/concepts/vemezo#unlock"
+      }
+    ]
+  },
+  {
+    "topic": "developer",
+    "title": "Quickstart",
+    "url": "https://docs.matchbox.markets/developer",
+    "section": "developer",
+    "description": "Install the SDK and make a first Matchbox API request.",
+    "headings": [
+      {
+        "title": "Install",
+        "url": "https://docs.matchbox.markets/developer#install"
+      },
+      {
+        "title": "Create a key",
+        "url": "https://docs.matchbox.markets/developer#create-a-key"
+      },
+      {
+        "title": "Read gauge profiles",
+        "url": "https://docs.matchbox.markets/developer#read-gauge-profiles"
+      },
+      { "title": "Next", "url": "https://docs.matchbox.markets/developer#next" }
+    ]
+  },
+  {
+    "topic": "developer.api.epochs.get-current-epoch",
+    "title": "Current and next epoch",
+    "url": "https://docs.matchbox.markets/developer/api/epochs/get-current-epoch",
+    "section": "developer",
+    "description": "GET /v1/epochs/current",
+    "headings": [
+      {
+        "title": "Headers",
+        "url": "https://docs.matchbox.markets/developer/api/epochs/get-current-epoch#headers"
+      },
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/epochs/get-current-epoch#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/epochs/get-current-epoch#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.api.gauge-profiles.get-gauge-profile",
+    "title": "Get a gauge profile",
+    "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/get-gauge-profile",
+    "section": "developer",
+    "description": "GET /v1/gauge-profiles/{network}/{gaugeAddress}",
+    "headings": [
+      {
+        "title": "Parameters",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/get-gauge-profile#parameters"
+      },
+      {
+        "title": "Headers",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/get-gauge-profile#headers"
+      },
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/get-gauge-profile#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/get-gauge-profile#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.api.gauge-profiles.get-gauge-profile-by-vebtc",
+    "title": "Get the boost gauge profile for a veBTC token",
+    "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/get-gauge-profile-by-vebtc",
+    "section": "developer",
+    "description": "GET /v1/vebtc/{network}/{tokenId}/gauge-profile",
+    "headings": [
+      {
+        "title": "Parameters",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/get-gauge-profile-by-vebtc#parameters"
+      },
+      {
+        "title": "Headers",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/get-gauge-profile-by-vebtc#headers"
+      },
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/get-gauge-profile-by-vebtc#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/get-gauge-profile-by-vebtc#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.api.gauge-profiles.list-gauge-profiles",
+    "title": "List gauge profiles",
+    "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/list-gauge-profiles",
+    "section": "developer",
+    "description": "GET /v1/gauge-profiles",
+    "headings": [
+      {
+        "title": "Parameters",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/list-gauge-profiles#parameters"
+      },
+      {
+        "title": "Headers",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/list-gauge-profiles#headers"
+      },
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/list-gauge-profiles#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/gauge-profiles/list-gauge-profiles#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.api.gauges.get-gauge",
+    "title": "Get a gauge",
+    "url": "https://docs.matchbox.markets/developer/api/gauges/get-gauge",
+    "section": "developer",
+    "description": "GET /v1/gauges/{network}/{gaugeAddress}",
+    "headings": [
+      {
+        "title": "Parameters",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/get-gauge#parameters"
+      },
+      {
+        "title": "Headers",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/get-gauge#headers"
+      },
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/get-gauge#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/get-gauge#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.api.gauges.get-gauge-by-vebtc",
+    "title": "Get the boost gauge for a veBTC token",
+    "url": "https://docs.matchbox.markets/developer/api/gauges/get-gauge-by-vebtc",
+    "section": "developer",
+    "description": "GET /v1/vebtc/{network}/{tokenId}/gauge",
+    "headings": [
+      {
+        "title": "Parameters",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/get-gauge-by-vebtc#parameters"
+      },
+      {
+        "title": "Headers",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/get-gauge-by-vebtc#headers"
+      },
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/get-gauge-by-vebtc#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/get-gauge-by-vebtc#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.api.gauges.list-gauge-epochs",
+    "title": "List a gauge's epochs",
+    "url": "https://docs.matchbox.markets/developer/api/gauges/list-gauge-epochs",
+    "section": "developer",
+    "description": "GET /v1/gauges/{network}/{gaugeAddress}/epochs",
+    "headings": [
+      {
+        "title": "Parameters",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/list-gauge-epochs#parameters"
+      },
+      {
+        "title": "Headers",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/list-gauge-epochs#headers"
+      },
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/list-gauge-epochs#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/list-gauge-epochs#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.api.gauges.list-gauges",
+    "title": "List gauges",
+    "url": "https://docs.matchbox.markets/developer/api/gauges/list-gauges",
+    "section": "developer",
+    "description": "GET /v1/gauges",
+    "headings": [
+      {
+        "title": "Parameters",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/list-gauges#parameters"
+      },
+      {
+        "title": "Headers",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/list-gauges#headers"
+      },
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/list-gauges#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/gauges/list-gauges#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.api.incentives.list-incentives",
+    "title": "List incentives for an epoch",
+    "url": "https://docs.matchbox.markets/developer/api/incentives/list-incentives",
+    "section": "developer",
+    "description": "GET /v1/incentives",
+    "headings": [
+      {
+        "title": "Parameters",
+        "url": "https://docs.matchbox.markets/developer/api/incentives/list-incentives#parameters"
+      },
+      {
+        "title": "Headers",
+        "url": "https://docs.matchbox.markets/developer/api/incentives/list-incentives#headers"
+      },
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/incentives/list-incentives#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/incentives/list-incentives#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.api.meta.get-health",
+    "title": "Service health",
+    "url": "https://docs.matchbox.markets/developer/api/meta/get-health",
+    "section": "developer",
+    "description": "GET /v1/health",
+    "headings": [
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/meta/get-health#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/meta/get-health#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.api.networks.list-networks",
+    "title": "Networks this key can read",
+    "url": "https://docs.matchbox.markets/developer/api/networks/list-networks",
+    "section": "developer",
+    "description": "GET /v1/networks",
+    "headings": [
+      {
+        "title": "Response",
+        "url": "https://docs.matchbox.markets/developer/api/networks/list-networks#response"
+      },
+      {
+        "title": "Status codes",
+        "url": "https://docs.matchbox.markets/developer/api/networks/list-networks#status-codes"
+      }
+    ]
+  },
+  {
+    "topic": "developer.auth",
+    "title": "Authentication and keys",
+    "url": "https://docs.matchbox.markets/developer/auth",
+    "section": "developer",
+    "description": "Every v1 request sends an API key as a bearer token.",
+    "headings": [
+      {
+        "title": "Key types",
+        "url": "https://docs.matchbox.markets/developer/auth#key-types"
+      },
+      {
+        "title": "Rotation",
+        "url": "https://docs.matchbox.markets/developer/auth#rotation"
+      },
+      {
+        "title": "Scope",
+        "url": "https://docs.matchbox.markets/developer/auth#scope"
+      }
+    ]
+  },
+  {
+    "topic": "developer.changelog",
+    "title": "Changelog",
+    "url": "https://docs.matchbox.markets/developer/changelog",
+    "section": "developer",
+    "description": "Releases of the Matchbox API, the SDK and Matchbox Developer.",
+    "headings": [
+      {
+        "title": "Version 2.1.0",
+        "url": "https://docs.matchbox.markets/developer/changelog#v2-1-0"
+      },
+      {
+        "title": "Version 2.0.0",
+        "url": "https://docs.matchbox.markets/developer/changelog#v2-0-0"
+      }
+    ]
+  },
+  {
+    "topic": "developer.environments",
+    "title": "Environments",
+    "url": "https://docs.matchbox.markets/developer/environments",
+    "section": "developer",
+    "description": "Each app has a test and a live environment with its own keys, client ids and redirect URIs.",
+    "headings": [
+      {
+        "title": "Networks",
+        "url": "https://docs.matchbox.markets/developer/environments#networks"
+      },
+      {
+        "title": "Going live",
+        "url": "https://docs.matchbox.markets/developer/environments#going-live"
+      }
+    ]
+  },
+  {
+    "topic": "developer.errors",
+    "title": "Errors",
+    "url": "https://docs.matchbox.markets/developer/errors",
+    "section": "developer",
+    "description": "Every API error carries a stable code, a message and the request id.",
+    "headings": [
+      {
+        "title": "Codes",
+        "url": "https://docs.matchbox.markets/developer/errors#codes"
+      },
+      {
+        "title": "Sign in with Matchbox errors",
+        "url": "https://docs.matchbox.markets/developer/errors#oauth-errors"
+      },
+      {
+        "title": "Support",
+        "url": "https://docs.matchbox.markets/developer/errors#support"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp",
+    "title": "MCP",
+    "url": "https://docs.matchbox.markets/developer/mcp",
+    "section": "developer",
+    "description": "The Matchbox MCP exposes the tools Stuart uses to AI agents, read only.",
+    "headings": [
+      {
+        "title": "What it does",
+        "url": "https://docs.matchbox.markets/developer/mcp#what-it-does"
+      },
+      {
+        "title": "Requests",
+        "url": "https://docs.matchbox.markets/developer/mcp#requests"
+      },
+      {
+        "title": "Tools",
+        "url": "https://docs.matchbox.markets/developer/mcp#tools"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools",
+    "title": "MCP tools",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools",
+    "section": "developer",
+    "description": "The 20 tools of the Matchbox MCP, generated from the schemas it serves.",
+    "headings": []
+  },
+  {
+    "topic": "developer.mcp.tools.address-activity",
+    "title": "Address activity",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/address-activity",
+    "section": "developer",
+    "description": "What an address or entity did over a period: reward claims (liquid and compounded into locks), lock deposits (own or funding someone else's), swaps, bridge transfers, MUSD minted (borrowed), transfers by counterparty (labelled), and how its locks voted in the latest epochs",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/address-activity#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.claim-collateral-surplus",
+    "title": "Claim collateral surplus",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/claim-collateral-surplus",
+    "section": "developer",
+    "description": "Prepare an unsigned BorrowerOperations.claimCollateral() for BTC left in CollSurplusPool after the wallet's trove was redeemed or liquidated",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/claim-collateral-surplus#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.compare-holders",
+    "title": "Compare holders",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/compare-holders",
+    "section": "developer",
+    "description": "The largest veBTC or veMEZO holders by locked amount (grouped by owner), what they voted for in the latest epoch, and with measure rewards, what each did with claimed rewards (relocked, swapped, sent, bridged, held)",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/compare-holders#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.explain-gauge",
+    "title": "Explain gauge",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/explain-gauge",
+    "section": "developer",
+    "description": "Explain one gauge, validator or pool: this epoch's incentives, current votes, APY, boost and optimal veMEZO, recent epochs, and why it is or isn't in the wallet's optimal ballot",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/explain-gauge#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.get-loan-position",
+    "title": "Get loan position",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/get-loan-position",
+    "section": "developer",
+    "description": "The selected wallet's mUSD trove: collateral (BTC), debt (principal + accrued interest), collateral ratio vs the 110% minimum, liquidation price, recovery mode, and any claimable collateral surplus",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/get-loan-position#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.get-protocol-stats",
+    "title": "Get protocol stats",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/get-protocol-stats",
+    "section": "developer",
+    "description": "Protocol-wide Mezo Earn totals, never wallet-specific: MEZO locked in veMEZO and BTC locked in veBTC (on chain), veMEZO voting power, number of veMEZO lockers, this epoch's total voting incentives and funded gauge count, the epoch number and when it ends, and the MEZO and BTC reference prices",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/get-protocol-stats#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.get-wallet-context",
+    "title": "Get wallet context",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/get-wallet-context",
+    "section": "developer",
+    "description": "The selected wallet: connected (can sign), watching or inspecting (read only), its veMEZO and veBTC locks and voting power",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/get-wallet-context#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.get-wallet-earnings",
+    "title": "Get wallet earnings",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/get-wallet-earnings",
+    "section": "developer",
+    "description": "The selected wallet's veMEZO voting-incentive earnings: projected this epoch from its standing votes, extrapolated APY on its veMEZO voting power, the last sealed epoch, and what is claimable",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/get-wallet-earnings#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.list-claimable-rewards",
+    "title": "List claimable rewards",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/list-claimable-rewards",
+    "section": "developer",
+    "description": "Claimable voting rewards for the selected wallet, exact on-chain amounts per lock: boost rewards and cross-chain (MEZO gauge) rewards on veMEZO locks, validator rewards and pool fees and incentives on veBTC locks",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/list-claimable-rewards#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.mezo-knowledge",
+    "title": "Mezo knowledge",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/mezo-knowledge",
+    "section": "developer",
+    "description": "Reviewed Mezo support notes with sources: how veBTC, veMEZO, boost, BoostVoter and ThirdPartyVoter, epochs, voting rules and reverts, claiming, MEZO gauges, MUSD troves, Morpho borrowing, Enclaves, MUSD Savings and gas work, plus safety rules (NFT approvals, relayers)",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/mezo-knowledge#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.optimize-votes",
+    "title": "Optimize votes",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/optimize-votes",
+    "section": "developer",
+    "description": "Best personal return: runs the Matchbox reward optimizer for the selected wallet's eligible locks in one voting domain (boost = veMEZO on boost gauges, validators / pools = veBTC) and prepares unsigned ballots",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/optimize-votes#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.prepare-claim",
+    "title": "Prepare claim",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-claim",
+    "section": "developer",
+    "description": "Prepare unsigned claim transactions for every lock with claimable rewards (one per lock and voter), exact amounts from earned()",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-claim#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.prepare-claim-relock",
+    "title": "Prepare claim relock",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-claim-relock",
+    "section": "developer",
+    "description": "Claim every claimable reward, then add the claimed MEZO to a veMEZO lock (the named one, else the largest that can take more)",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-claim-relock#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.prepare-lock-action",
+    "title": "Prepare lock action",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-lock-action",
+    "section": "developer",
+    "description": "Prepare an unsigned lock action for the selected wallet: add tokens to a lock, extend it (weeks, or null for the maximum), turn on auto max, withdraw an expired lock, merge one lock into another of the same escrow, or transfer a lock to a 0x address",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-lock-action#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.prepare-repay",
+    "title": "Prepare repay",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-repay",
+    "section": "developer",
+    "description": "Prepare an unsigned mUSD repayment on the selected wallet's trove (BorrowerOperations.repayMUSD, burns mUSD, no approval, one signature)",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-repay#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.prepare-vote",
+    "title": "Prepare vote",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-vote",
+    "section": "developer",
+    "description": "A ballot the user specified as a list (e.g",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-vote#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.prepare-vote-script",
+    "title": "Prepare vote script",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-vote-script",
+    "section": "developer",
+    "description": "A pasted vote script or governance post with 'N% to <gauge>' lines (e.g",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-vote-script#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.prepare-zap",
+    "title": "Prepare zap",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-zap",
+    "section": "developer",
+    "description": "Prepare an unsigned zap into MUSD Savings (sMUSD): MEZO is swapped to mUSD on the approved Tigris CL route (price-impact cap, exact approvals, min-out) then deposited",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-zap#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.quote-zap",
+    "title": "Quote zap",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/quote-zap",
+    "section": "developer",
+    "description": "Quote only (no transactions): how much mUSD a MEZO amount buys on the approved route, with price impact and min-out",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/quote-zap#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.rank-gauges",
+    "title": "Rank gauges",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/rank-gauges",
+    "section": "developer",
+    "description": "Rank voting targets",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/rank-gauges#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.resolve-entity",
+    "title": "Resolve entity",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/resolve-entity",
+    "section": "developer",
+    "description": "Find gauges, validators, pools/vaults or the wallet's locks by name, address or #token id",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/resolve-entity#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.resolve-holder",
+    "title": "Resolve holder",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/resolve-holder",
+    "section": "developer",
+    "description": "Who is behind a label, name, gauge, lock or address: the addresses (with the source of each link), whether they are Safes, and the veBTC and veMEZO locks they own now (ownerOf, never who voted)",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/resolve-holder#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.scenario-liquidation",
+    "title": "Scenario liquidation",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/scenario-liquidation",
+    "section": "developer",
+    "description": "Deterministic BTC price-drop table for the selected wallet's trove on the current snapshot (not a forecast)",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/scenario-liquidation#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.search-transactions",
+    "title": "Search transactions",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/search-transactions",
+    "section": "developer",
+    "description": "Bridge journeys for the selected wallet that a provider explicitly links to Mezo (Wormhole today)",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/search-transactions#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.mcp.tools.trace-rewards",
+    "title": "Trace rewards",
+    "url": "https://docs.matchbox.markets/developer/mcp/tools/trace-rewards",
+    "section": "developer",
+    "description": "Follow the money: the rewards an address or entity claimed over a period (incentives, fees, rebases, per token with tx links) and what happened to each claimed token afterwards (locked, swapped, sent and to whom, bridged out, deposited, or still held), with the attribution method",
+    "headings": [
+      {
+        "title": "Input",
+        "url": "https://docs.matchbox.markets/developer/mcp/tools/trace-rewards#input"
+      }
+    ]
+  },
+  {
+    "topic": "developer.oidc",
+    "title": "Sign in with Matchbox",
+    "url": "https://docs.matchbox.markets/developer/oidc",
+    "section": "developer",
+    "description": "Let people sign in to your app with Matchbox ID, over OpenID Connect with PKCE.",
+    "headings": [
+      {
+        "title": "How it works",
+        "url": "https://docs.matchbox.markets/developer/oidc#how-it-works"
+      },
+      {
+        "title": "Scopes",
+        "url": "https://docs.matchbox.markets/developer/oidc#scopes"
+      },
+      {
+        "title": "Claims",
+        "url": "https://docs.matchbox.markets/developer/oidc#claims"
+      },
+      {
+        "title": "Lifetimes",
+        "url": "https://docs.matchbox.markets/developer/oidc#lifetimes"
+      },
+      {
+        "title": "Errors",
+        "url": "https://docs.matchbox.markets/developer/oidc#errors"
+      }
+    ]
+  },
+  {
+    "topic": "developer.oidc.endpoints",
+    "title": "Endpoints",
+    "url": "https://docs.matchbox.markets/developer/oidc/endpoints",
+    "section": "developer",
+    "description": "The Matchbox ID OpenID Connect endpoints and what the discovery document advertises.",
+    "headings": [
+      {
+        "title": "Discovery",
+        "url": "https://docs.matchbox.markets/developer/oidc/endpoints#discovery"
+      },
+      {
+        "title": "Clients",
+        "url": "https://docs.matchbox.markets/developer/oidc/endpoints#clients"
+      }
+    ]
+  },
+  {
+    "topic": "developer.pagination",
+    "title": "Pagination",
+    "url": "https://docs.matchbox.markets/developer/pagination",
+    "section": "developer",
+    "description": "Gauge profile lists page with cursors, other lists return every match at once.",
+    "headings": [
+      {
+        "title": "Lists without pages",
+        "url": "https://docs.matchbox.markets/developer/pagination#lists-without-pages"
+      },
+      {
+        "title": "Caching",
+        "url": "https://docs.matchbox.markets/developer/pagination#caching"
+      }
+    ]
+  },
+  {
+    "topic": "developer.rate-limits",
+    "title": "Rate limits",
+    "url": "https://docs.matchbox.markets/developer/rate-limits",
+    "section": "developer",
+    "description": "Limits per environment, with a burst per minute and a daily quota.",
+    "headings": [
+      {
+        "title": "Headers",
+        "url": "https://docs.matchbox.markets/developer/rate-limits#headers"
+      },
+      {
+        "title": "Retries",
+        "url": "https://docs.matchbox.markets/developer/rate-limits#retries"
+      }
+    ]
+  },
+  {
+    "topic": "developer.reference",
+    "title": "API reference",
+    "url": "https://docs.matchbox.markets/developer/reference",
+    "section": "developer",
+    "description": "Every Matchbox API operation, generated from the OpenAPI document",
+    "headings": [
+      {
+        "title": "Meta",
+        "url": "https://docs.matchbox.markets/developer/reference#meta"
+      },
+      {
+        "title": "Networks",
+        "url": "https://docs.matchbox.markets/developer/reference#networks"
+      },
+      {
+        "title": "Gauge profiles",
+        "url": "https://docs.matchbox.markets/developer/reference#gauge-profiles"
+      },
+      {
+        "title": "Epochs",
+        "url": "https://docs.matchbox.markets/developer/reference#epochs"
+      },
+      {
+        "title": "Gauges",
+        "url": "https://docs.matchbox.markets/developer/reference#gauges"
+      },
+      {
+        "title": "Incentives",
+        "url": "https://docs.matchbox.markets/developer/reference#incentives"
+      }
+    ]
+  },
+  {
+    "topic": "developer.sdk",
+    "title": "SDK",
+    "url": "https://docs.matchbox.markets/developer/sdk",
+    "section": "developer",
+    "description": "The TypeScript client for the Matchbox API and Sign in with Matchbox.",
+    "headings": [
+      {
+        "title": "Client",
+        "url": "https://docs.matchbox.markets/developer/sdk#client"
+      },
+      {
+        "title": "Methods",
+        "url": "https://docs.matchbox.markets/developer/sdk#methods"
+      },
+      {
+        "title": "Values",
+        "url": "https://docs.matchbox.markets/developer/sdk#values"
+      },
+      {
+        "title": "Sign in with Matchbox",
+        "url": "https://docs.matchbox.markets/developer/sdk#sign-in"
+      }
+    ]
+  },
+  {
+    "topic": "id",
+    "title": "Matchbox ID",
+    "url": "https://docs.matchbox.markets/id",
+    "section": "id",
+    "description": "One sign-in for Matchbox and the apps built on it, with your wallet.",
+    "headings": [
+      {
+        "title": "Your account",
+        "url": "https://docs.matchbox.markets/id#your-account"
+      },
+      { "title": "Pages", "url": "https://docs.matchbox.markets/id#pages" }
+    ]
+  },
+  {
+    "topic": "id.appearance",
+    "title": "Appearance",
+    "url": "https://docs.matchbox.markets/id/appearance",
+    "section": "id",
+    "description": "Mode and theme presets in Matchbox ID.",
+    "headings": []
+  },
+  {
+    "topic": "id.connected-apps",
+    "title": "Connected apps",
+    "url": "https://docs.matchbox.markets/id/connected-apps",
+    "section": "id",
+    "description": "The apps you allowed to sign you in, what each can read, and how to revoke one.",
+    "headings": [
+      {
+        "title": "Scopes",
+        "url": "https://docs.matchbox.markets/id/connected-apps#scopes"
+      },
+      {
+        "title": "Revoke",
+        "url": "https://docs.matchbox.markets/id/connected-apps#revoke"
+      }
+    ]
+  },
+  {
+    "topic": "id.sessions",
+    "title": "Sessions",
+    "url": "https://docs.matchbox.markets/id/sessions",
+    "section": "id",
+    "description": "Where you are signed in to Matchbox ID, and how to sign out of each.",
+    "headings": [
+      {
+        "title": "Sign out others",
+        "url": "https://docs.matchbox.markets/id/sessions#sign-out-others"
+      }
+    ]
+  },
+  {
+    "topic": "id.sign-in",
+    "title": "Sign in",
+    "url": "https://docs.matchbox.markets/id/sign-in",
+    "section": "id",
+    "description": "Sign in to Matchbox ID by signing a message with your wallet.",
+    "headings": [
+      {
+        "title": "Discord",
+        "url": "https://docs.matchbox.markets/id/sign-in#discord"
+      },
+      {
+        "title": "Signing in to an app",
+        "url": "https://docs.matchbox.markets/id/sign-in#signing-in-to-an-app"
+      }
+    ]
+  },
+  {
+    "topic": "pro",
+    "title": "Matchbox Pro",
+    "url": "https://docs.matchbox.markets/pro",
+    "section": "pro",
+    "description": "Lock, vote and claim on Mezo Earn, with every gauge and lock in one place.",
+    "headings": [
+      {
+        "title": "How it works",
+        "url": "https://docs.matchbox.markets/pro#how-it-works"
+      },
+      { "title": "Pages", "url": "https://docs.matchbox.markets/pro#pages" }
+    ]
+  },
+  {
+    "topic": "pro.activity-and-protocol",
+    "title": "Activity and Protocol",
+    "url": "https://docs.matchbox.markets/pro/activity-and-protocol",
+    "section": "pro",
+    "description": "Your transactions in plain words, and Mezo Earn as a whole, epoch by epoch.",
+    "headings": [
+      {
+        "title": "Activity",
+        "url": "https://docs.matchbox.markets/pro/activity-and-protocol#activity"
+      },
+      {
+        "title": "Protocol",
+        "url": "https://docs.matchbox.markets/pro/activity-and-protocol#protocol"
+      }
+    ]
+  },
+  {
+    "topic": "pro.connect",
+    "title": "Connect",
+    "url": "https://docs.matchbox.markets/pro/connect",
+    "section": "pro",
+    "description": "Connect a wallet to Pro, view another address read only, and how Mezo IDs show.",
+    "headings": [
+      {
+        "title": "Connect a wallet",
+        "url": "https://docs.matchbox.markets/pro/connect#connect-a-wallet"
+      },
+      {
+        "title": "View another address",
+        "url": "https://docs.matchbox.markets/pro/connect#view-another-address"
+      },
+      {
+        "title": "Mezo ID",
+        "url": "https://docs.matchbox.markets/pro/connect#mezo-id"
+      }
+    ]
+  },
+  {
+    "topic": "pro.faq",
+    "title": "FAQ",
+    "url": "https://docs.matchbox.markets/pro/faq",
+    "section": "pro",
+    "description": "Short answers to the questions people ask most about Pro and Mezo Earn.",
+    "headings": [
+      {
+        "title": "Do I need to vote every week?",
+        "url": "https://docs.matchbox.markets/pro/faq#vote-every-week"
+      },
+      {
+        "title": "Can I change my vote this epoch?",
+        "url": "https://docs.matchbox.markets/pro/faq#change-vote"
+      },
+      {
+        "title": "When can I claim?",
+        "url": "https://docs.matchbox.markets/pro/faq#when-claim"
+      },
+      {
+        "title": "How long can I lock?",
+        "url": "https://docs.matchbox.markets/pro/faq#how-long"
+      },
+      {
+        "title": "Can I unlock early?",
+        "url": "https://docs.matchbox.markets/pro/faq#unlock-early"
+      },
+      {
+        "title": "Why did my boost drop?",
+        "url": "https://docs.matchbox.markets/pro/faq#boost-drop"
+      },
+      {
+        "title": "Which tokens can I add as incentives?",
+        "url": "https://docs.matchbox.markets/pro/faq#incentive-tokens"
+      },
+      {
+        "title": "Does Pro hold my funds?",
+        "url": "https://docs.matchbox.markets/pro/faq#custody"
+      }
+    ]
+  },
+  {
+    "topic": "pro.incentives",
+    "title": "Incentives",
+    "url": "https://docs.matchbox.markets/pro/incentives",
+    "section": "pro",
+    "description": "Add incentives to a gauge from its page in Pro.",
+    "headings": [
+      {
+        "title": "How they pay",
+        "url": "https://docs.matchbox.markets/pro/incentives#how-they-pay"
+      },
+      {
+        "title": "Gauge profiles",
+        "url": "https://docs.matchbox.markets/pro/incentives#gauge-profiles"
+      }
+    ]
+  },
+  {
+    "topic": "pro.locks",
+    "title": "Locks",
+    "url": "https://docs.matchbox.markets/pro/locks",
+    "section": "pro",
+    "description": "Create a lock, then add, extend, merge, transfer or withdraw it from the lock card.",
+    "headings": [
+      {
+        "title": "New lock",
+        "url": "https://docs.matchbox.markets/pro/locks#new-lock"
+      },
+      {
+        "title": "Manage a lock",
+        "url": "https://docs.matchbox.markets/pro/locks#manage-a-lock"
+      },
+      {
+        "title": "What stands in the way",
+        "url": "https://docs.matchbox.markets/pro/locks#what-stands-in-the-way"
+      },
+      {
+        "title": "Read only locks",
+        "url": "https://docs.matchbox.markets/pro/locks#read-only-locks"
+      }
+    ]
+  },
+  {
+    "topic": "pro.multisig",
+    "title": "Multisig",
+    "url": "https://docs.matchbox.markets/pro/multisig",
+    "section": "pro",
+    "description": "Vote, claim and manage locks from a Safe, by proposing to it or exporting a batch.",
+    "headings": [
+      {
+        "title": "Propose to Safe",
+        "url": "https://docs.matchbox.markets/pro/multisig#propose-to-safe"
+      },
+      {
+        "title": "Export for Safe",
+        "url": "https://docs.matchbox.markets/pro/multisig#export-for-safe"
+      }
+    ]
+  },
+  {
+    "topic": "pro.optimize",
+    "title": "Optimize",
+    "url": "https://docs.matchbox.markets/pro/optimize",
+    "section": "pro",
+    "description": "What the Optimize button maximises, what it reads and what it leaves out.",
+    "headings": [
+      {
+        "title": "What it maximises",
+        "url": "https://docs.matchbox.markets/pro/optimize#what-it-maximises"
+      },
+      {
+        "title": "What it reads",
+        "url": "https://docs.matchbox.markets/pro/optimize#what-it-reads"
+      },
+      {
+        "title": "Limits",
+        "url": "https://docs.matchbox.markets/pro/optimize#limits"
+      },
+      {
+        "title": "What it leaves out",
+        "url": "https://docs.matchbox.markets/pro/optimize#what-it-leaves-out"
+      }
+    ]
+  },
+  {
+    "topic": "pro.overview",
+    "title": "Overview",
+    "url": "https://docs.matchbox.markets/pro/overview",
+    "section": "pro",
+    "description": "Pro's home page, before and after a wallet connects.",
+    "headings": [
+      {
+        "title": "Before connecting",
+        "url": "https://docs.matchbox.markets/pro/overview#before-connecting"
+      },
+      {
+        "title": "With a wallet",
+        "url": "https://docs.matchbox.markets/pro/overview#with-a-wallet"
+      },
+      {
+        "title": "Lock cards",
+        "url": "https://docs.matchbox.markets/pro/overview#lock-cards"
+      }
+    ]
+  },
+  {
+    "topic": "pro.rewards",
+    "title": "Rewards",
+    "url": "https://docs.matchbox.markets/pro/rewards",
+    "section": "pro",
+    "description": "Claim what your locks earned, or claim and relock the MEZO into a veMEZO lock.",
+    "headings": [
+      {
+        "title": "The page",
+        "url": "https://docs.matchbox.markets/pro/rewards#the-page"
+      },
+      {
+        "title": "Claim",
+        "url": "https://docs.matchbox.markets/pro/rewards#claim"
+      },
+      {
+        "title": "Claim and relock",
+        "url": "https://docs.matchbox.markets/pro/rewards#claim-and-relock"
+      },
+      {
+        "title": "Other places to claim",
+        "url": "https://docs.matchbox.markets/pro/rewards#other-places"
+      }
+    ]
+  },
+  {
+    "topic": "pro.settings",
+    "title": "Settings",
+    "url": "https://docs.matchbox.markets/pro/settings",
+    "section": "pro",
+    "description": "Appearance, Haptics, Network and Signing, in the account panel.",
+    "headings": [
+      {
+        "title": "Appearance",
+        "url": "https://docs.matchbox.markets/pro/settings#appearance"
+      },
+      {
+        "title": "Haptics",
+        "url": "https://docs.matchbox.markets/pro/settings#haptics"
+      },
+      {
+        "title": "Network",
+        "url": "https://docs.matchbox.markets/pro/settings#network"
+      },
+      {
+        "title": "Signing",
+        "url": "https://docs.matchbox.markets/pro/settings#signing"
+      }
+    ]
+  },
+  {
+    "topic": "pro.troubleshooting",
+    "title": "Troubleshooting",
+    "url": "https://docs.matchbox.markets/pro/troubleshooting",
+    "section": "pro",
+    "description": "What Pro's errors mean and what to do about each.",
+    "headings": [
+      {
+        "title": "Signature rejected",
+        "url": "https://docs.matchbox.markets/pro/troubleshooting#signature-rejected"
+      },
+      {
+        "title": "Failed on chain",
+        "url": "https://docs.matchbox.markets/pro/troubleshooting#failed-on-chain"
+      },
+      {
+        "title": "Reset blocked",
+        "url": "https://docs.matchbox.markets/pro/troubleshooting#reset-blocked"
+      },
+      {
+        "title": "Votes revert",
+        "url": "https://docs.matchbox.markets/pro/troubleshooting#votes-revert"
+      },
+      {
+        "title": "Chain data unavailable",
+        "url": "https://docs.matchbox.markets/pro/troubleshooting#chain-data-unavailable"
+      },
+      {
+        "title": "Gas",
+        "url": "https://docs.matchbox.markets/pro/troubleshooting#gas"
+      }
+    ]
+  },
+  {
+    "topic": "pro.vote",
+    "title": "Vote",
+    "url": "https://docs.matchbox.markets/pro/vote",
+    "section": "pro",
+    "description": "Split your locks' votes across gauges on the Vote screen, sign one vote per lock, and change them later.",
+    "headings": [
+      {
+        "title": "Before you vote",
+        "url": "https://docs.matchbox.markets/pro/vote#before-you-vote"
+      },
+      {
+        "title": "Cast a vote",
+        "url": "https://docs.matchbox.markets/pro/vote#cast-a-vote"
+      },
+      {
+        "title": "Voting again this epoch",
+        "url": "https://docs.matchbox.markets/pro/vote#voting-again-this-epoch"
+      },
+      {
+        "title": "When votes revert",
+        "url": "https://docs.matchbox.markets/pro/vote#when-votes-revert"
+      },
+      {
+        "title": "Optimize",
+        "url": "https://docs.matchbox.markets/pro/vote#optimize"
+      },
+      {
+        "title": "Signing with a Safe",
+        "url": "https://docs.matchbox.markets/pro/vote#signing-with-a-safe"
+      }
+    ]
+  },
+  {
+    "topic": "scan",
+    "title": "Matchscan",
+    "url": "https://docs.matchbox.markets/scan",
+    "section": "scan",
+    "description": "Mezo's explorer in the Matchbox family, for transactions, addresses, gauges, epochs, locks and loans.",
+    "headings": [
+      {
+        "title": "What you can search",
+        "url": "https://docs.matchbox.markets/scan#what-you-can-search"
+      },
+      { "title": "Pages", "url": "https://docs.matchbox.markets/scan#pages" },
+      {
+        "title": "Concepts used here",
+        "url": "https://docs.matchbox.markets/scan#concepts"
+      }
+    ]
+  },
+  {
+    "topic": "scan.addresses",
+    "title": "Addresses",
+    "url": "https://docs.matchbox.markets/scan/addresses",
+    "section": "scan",
+    "description": "An address in Matchscan, with its positions, votes, activity and loans.",
+    "headings": [
+      {
+        "title": "Tabs",
+        "url": "https://docs.matchbox.markets/scan/addresses#tabs"
+      },
+      {
+        "title": "Open in Pro",
+        "url": "https://docs.matchbox.markets/scan/addresses#open-in-pro"
+      }
+    ]
+  },
+  {
+    "topic": "scan.borrow",
+    "title": "Borrow",
+    "url": "https://docs.matchbox.markets/scan/borrow",
+    "section": "scan",
+    "description": "Morpho Blue markets, positions, liquidations and MUSD troves in Matchscan.",
+    "headings": [
+      {
+        "title": "Tabs",
+        "url": "https://docs.matchbox.markets/scan/borrow#tabs"
+      },
+      {
+        "title": "Pages",
+        "url": "https://docs.matchbox.markets/scan/borrow#pages"
+      }
+    ]
+  },
+  {
+    "topic": "scan.metrics",
+    "title": "Metrics",
+    "url": "https://docs.matchbox.markets/scan/metrics",
+    "section": "scan",
+    "description": "How Matchscan counts the daily figures on its Network, Tokens and Validators pages, and where each comes from.",
+    "headings": [
+      {
+        "title": "Days, flows and levels",
+        "url": "https://docs.matchbox.markets/scan/metrics#days-flows-and-levels"
+      },
+      {
+        "title": "Network",
+        "url": "https://docs.matchbox.markets/scan/metrics#network"
+      },
+      {
+        "title": "Tokens",
+        "url": "https://docs.matchbox.markets/scan/metrics#tokens"
+      },
+      {
+        "title": "Validators",
+        "url": "https://docs.matchbox.markets/scan/metrics#validators"
+      },
+      {
+        "title": "Not shown yet",
+        "url": "https://docs.matchbox.markets/scan/metrics#not-shown-yet"
+      }
+    ]
+  },
+  {
+    "topic": "scan.transactions",
+    "title": "Transactions",
+    "url": "https://docs.matchbox.markets/scan/transactions",
+    "section": "scan",
+    "description": "Transactions and blocks in Matchscan, and what each page shows.",
+    "headings": [
+      {
+        "title": "Network",
+        "url": "https://docs.matchbox.markets/scan/transactions#network"
+      },
+      {
+        "title": "A transaction",
+        "url": "https://docs.matchbox.markets/scan/transactions#a-transaction"
+      },
+      {
+        "title": "A block",
+        "url": "https://docs.matchbox.markets/scan/transactions#a-block"
+      }
+    ]
+  },
+  {
+    "topic": "scan.validators",
+    "title": "Validators",
+    "url": "https://docs.matchbox.markets/scan/validators",
+    "section": "scan",
+    "description": "Mezo's validator set in Matchscan, with each validator's veBTC votes, incentives, blocks proposed and uptime.",
+    "headings": [
+      {
+        "title": "The list",
+        "url": "https://docs.matchbox.markets/scan/validators#the-list"
+      },
+      {
+        "title": "A validator",
+        "url": "https://docs.matchbox.markets/scan/validators#a-validator"
+      },
+      {
+        "title": "Blocks proposed",
+        "url": "https://docs.matchbox.markets/scan/validators#blocks-proposed"
+      },
+      {
+        "title": "Uptime",
+        "url": "https://docs.matchbox.markets/scan/validators#uptime"
+      },
+      {
+        "title": "Not shown yet",
+        "url": "https://docs.matchbox.markets/scan/validators#not-shown-yet"
+      }
+    ]
+  },
+  {
+    "topic": "scan.voting",
+    "title": "Voting",
+    "url": "https://docs.matchbox.markets/scan/voting",
+    "section": "scan",
+    "description": "Gauges, epochs and locks in Matchscan.",
+    "headings": [
+      {
+        "title": "Gauges",
+        "url": "https://docs.matchbox.markets/scan/voting#gauges"
+      },
+      {
+        "title": "Epochs",
+        "url": "https://docs.matchbox.markets/scan/voting#epochs"
+      },
+      {
+        "title": "Locks",
+        "url": "https://docs.matchbox.markets/scan/voting#locks"
+      }
+    ]
+  },
+  {
+    "topic": "stuart",
+    "title": "Stuart",
+    "url": "https://docs.matchbox.markets/stuart",
+    "section": "stuart",
+    "description": "Stuart answers questions about Mezo and Matchbox in Pro, and prepares transactions for you to review.",
+    "headings": [
+      {
+        "title": "What Stuart answers",
+        "url": "https://docs.matchbox.markets/stuart#what-stuart-answers"
+      },
+      {
+        "title": "Where the numbers come from",
+        "url": "https://docs.matchbox.markets/stuart#numbers"
+      },
+      {
+        "title": "Prepared transactions",
+        "url": "https://docs.matchbox.markets/stuart#prepared-transactions"
+      },
+      {
+        "title": "Limits",
+        "url": "https://docs.matchbox.markets/stuart#limits"
+      },
+      {
+        "title": "The Matchbox MCP",
+        "url": "https://docs.matchbox.markets/stuart#mcp"
+      }
+    ]
+  }
+]

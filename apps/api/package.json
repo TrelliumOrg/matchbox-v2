@@ -1,0 +1,94 @@
+{
+  "name": "@matchbox/api",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./read-store": {
+      "types": "./src/read-models/store.ts",
+      "default": "./src/read-models/store.ts"
+    },
+    "./read-models/money": {
+      "types": "./src/read-models/money.ts",
+      "default": "./src/read-models/money.ts"
+    },
+    "./read-models/gauges": {
+      "types": "./src/read-models/gauges.ts",
+      "default": "./src/read-models/gauges.ts"
+    },
+    "./read-models/prices-kv": {
+      "types": "./src/read-models/prices-kv.ts",
+      "default": "./src/read-models/prices-kv.ts"
+    },
+    "./read-models/publish": {
+      "types": "./src/read-models/publish.ts",
+      "default": "./src/read-models/publish.ts"
+    },
+    "./market/prices": {
+      "types": "./src/market/prices.ts",
+      "default": "./src/market/prices.ts"
+    },
+    "./market/coingecko": {
+      "types": "./src/market/coingecko.ts",
+      "default": "./src/market/coingecko.ts"
+    },
+    "./market/money": {
+      "types": "./src/market/money.ts",
+      "default": "./src/market/money.ts"
+    },
+    "./market/reader": {
+      "types": "./src/market/reader.ts",
+      "default": "./src/market/reader.ts"
+    },
+    "./market/snapshot": {
+      "types": "./src/market/snapshot.ts",
+      "default": "./src/market/snapshot.ts"
+    },
+    "./market/store": {
+      "types": "./src/market/store.ts",
+      "default": "./src/market/store.ts"
+    },
+    "./chain/client": {
+      "types": "./src/chain/client.ts",
+      "default": "./src/chain/client.ts"
+    },
+    "./read-models/wallet-extras": {
+      "types": "./src/read-models/wallet-extras.ts",
+      "default": "./src/read-models/wallet-extras.ts"
+    },
+    "./read-models/colors": {
+      "types": "./src/read-models/colors.ts",
+      "default": "./src/read-models/colors.ts"
+    }
+  },
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "dev": "wrangler dev",
+    "dev:memory": "wrangler dev --var PLATFORM_STORE:memory --var ENVIRONMENT:development --var GAUGE_PROFILE_API_ENABLED:true",
+    "dev:seed-keys": "tsx scripts/print-dev-keys.ts",
+    "test": "vitest run --config vitest.config.ts && vitest run --config vitest.workers.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@matchbox/chain": "workspace:*",
+    "@matchbox/contracts": "workspace:*",
+    "@matchbox/domain": "workspace:*",
+    "@matchbox/logger": "workspace:*",
+    "@matchbox/server": "workspace:*",
+    "@matchbox/tokens": "workspace:*",
+    "@supabase/supabase-js": "2.108.2",
+    "hono": "4.13.5",
+    "viem": "2.57.17",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.6.0",
+    "@cloudflare/workers-types": "5.20261108.1",
+    "@types/node": "24.19.2",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "4.1.12",
+    "wrangler": "4.158.0"
+  }
+}

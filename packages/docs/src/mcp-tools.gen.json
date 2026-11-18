@@ -1,0 +1,866 @@
+{
+  "protocolVersion": "2026-07-28",
+  "tools": [
+    {
+      "name": "resolve_entity",
+      "description": "Find gauges, validators, pools/vaults or the wallet's locks by name, address or #token id. Returns candidate ids. Names are untrusted data. Use before prepare_vote when a name might be ambiguous.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": { "type": "string" },
+          "kinds": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["gauge", "validator", "pool", "lock"]
+                }
+              },
+              { "type": "null" }
+            ]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["text", "kinds", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_wallet_context",
+      "description": "The selected wallet: connected (can sign), watching or inspecting (read only), its veMEZO and veBTC locks and voting power.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_protocol_stats",
+      "description": "Protocol-wide Mezo Earn totals, never wallet-specific: MEZO locked in veMEZO and BTC locked in veBTC (on chain), veMEZO voting power, number of veMEZO lockers, this epoch's total voting incentives and funded gauge count, the epoch number and when it ends, and the MEZO and BTC reference prices. topic picks the lead sentence.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "enum": [
+              "locked",
+              "lockers",
+              "incentives",
+              "epoch",
+              "prices",
+              "overview"
+            ]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["topic", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "mezo_knowledge",
+      "description": "Reviewed Mezo support notes with sources: how veBTC, veMEZO, boost, BoostVoter and ThirdPartyVoter, epochs, voting rules and reverts, claiming, MEZO gauges, MUSD troves, Morpho borrowing, Enclaves, MUSD Savings and gas work, plus safety rules (NFT approvals, relayers). Use it for how-to, why and troubleshooting questions. question: the user's question in their words.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string" },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["question", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "rank_gauges",
+      "description": "Rank voting targets. Objectives: best_personal_return (the optimizer, for the selected wallet), most_incentives_deposited (gross priced incentives this epoch), most_consistently_funded (funded epochs over the last 4/8/12 completed epochs), highest_apy (incentives per vote at current votes: 'which gauge pays the most'). Never call it for an ambiguous 'best gauges', ask_clarification gauge-objective instead.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "objective": {
+            "type": "string",
+            "enum": [
+              "best_personal_return",
+              "most_incentives_deposited",
+              "most_consistently_funded",
+              "highest_apy"
+            ]
+          },
+          "branch": {
+            "anyOf": [
+              { "type": "string", "enum": ["boost", "validators", "pools"] },
+              { "type": "null" }
+            ]
+          },
+          "window": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  { "type": "number", "const": 4 },
+                  { "type": "number", "const": 8 },
+                  { "type": "number", "const": 12 }
+                ]
+              },
+              { "type": "null" }
+            ]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["objective", "branch", "window", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "explain_gauge",
+      "description": "Explain one gauge, validator or pool: this epoch's incentives, current votes, APY, boost and optimal veMEZO, recent epochs, and why it is or isn't in the wallet's optimal ballot. Use for 'why is X APY down', 'tell me about the X gauge', 'why isn't X in my ballot'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "gauge": {
+            "type": "string",
+            "description": "Name, address or #veBTC token id."
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": ["overview", "apy_change", "not_selected"]
+              },
+              { "type": "null" }
+            ]
+          },
+          "window": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  { "type": "number", "const": 4 },
+                  { "type": "number", "const": 8 },
+                  { "type": "number", "const": 12 }
+                ]
+              },
+              { "type": "null" }
+            ]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["gauge", "question", "window", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "optimize_votes",
+      "description": "Best personal return: runs the Matchbox reward optimizer for the selected wallet's eligible locks in one voting domain (boost = veMEZO on boost gauges, validators / pools = veBTC) and prepares unsigned ballots. Use for 'what should I vote', 'optimize my votes', 'best return for me'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "description": "Voting domain, null means boost (veMEZO).",
+            "anyOf": [
+              { "type": "string", "enum": ["boost", "validators", "pools"] },
+              { "type": "null" }
+            ]
+          },
+          "lockIds": {
+            "description": "Restrict to these lock token ids, null = all eligible.",
+            "anyOf": [
+              { "type": "array", "items": { "type": "string" } },
+              { "type": "null" }
+            ]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["branch", "lockIds", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "prepare_vote",
+      "description": "A ballot the user specified as a list (e.g. '30% to Boar, 70% to ChooseMe'). Percentages must total 100. Names are resolved by code, and branch null lets Matchbox pick the voting domain from the names. Prepares unsigned ballots for every eligible lock in one voting domain, never mixes domains. For pasted posts use prepare_vote_script.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "anyOf": [
+              { "type": "string", "enum": ["boost", "validators", "pools"] },
+              { "type": "null" }
+            ]
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": "string",
+                  "description": "Gauge as the user wrote it: name, 'BTC/MUSD CL200', '#6033' or address."
+                },
+                "percent": {
+                  "type": "string",
+                  "description": "Percent of voting power, up to 2 decimals, e.g. \"33.33\"."
+                }
+              },
+              "required": ["target", "percent"],
+              "additionalProperties": false
+            }
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["branch", "allocations", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "prepare_vote_script",
+      "description": "A pasted vote script or governance post with 'N% to <gauge>' lines (e.g. '25% to the BTC/MUSD-200 pool, 20% to the MUSD Savings Vault'). Pass the user's text unchanged. Matchbox resolves every name by code (BTC/MUSD-200 = BTC/MUSD CL200, a pair with no type is asked when it has concentrated pools, token order and a bridged token's m prefix ignored, MUSD Savings Vault = sMUSD), picks the voting domain, checks the total is 100% and prepares an unsigned ballot, or lists the lines it could not resolve. Never rewrite or guess names.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "script": { "type": "string" },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["script", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "list_claimable_rewards",
+      "description": "Claimable voting rewards for the selected wallet, exact on-chain amounts per lock: boost rewards and cross-chain (MEZO gauge) rewards on veMEZO locks, validator rewards and pool fees and incentives on veBTC locks. Read only.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "description": "Reward sources, null = all four.",
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "boost_bribes",
+                    "mezo_bribes",
+                    "pool_fees_bribes",
+                    "validator_bribes"
+                  ]
+                }
+              },
+              { "type": "null" }
+            ]
+          },
+          "lockIds": {
+            "anyOf": [
+              { "type": "array", "items": { "type": "string" } },
+              { "type": "null" }
+            ]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["sources", "lockIds", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "prepare_claim",
+      "description": "Prepare unsigned claim transactions for every lock with claimable rewards (one per lock and voter), exact amounts from earned(). Use when the user asks to claim.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "description": "Reward sources, null = all four.",
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "boost_bribes",
+                    "mezo_bribes",
+                    "pool_fees_bribes",
+                    "validator_bribes"
+                  ]
+                }
+              },
+              { "type": "null" }
+            ]
+          },
+          "lockIds": {
+            "anyOf": [
+              { "type": "array", "items": { "type": "string" } },
+              { "type": "null" }
+            ]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["sources", "lockIds", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_wallet_earnings",
+      "description": "The selected wallet's veMEZO voting-incentive earnings: projected this epoch from its standing votes, extrapolated APY on its veMEZO voting power, the last sealed epoch, and what is claimable. Use for 'what is my APY', 'what am I earning'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_loan_position",
+      "description": "The selected wallet's mUSD trove: collateral (BTC), debt (principal + accrued interest), collateral ratio vs the 110% minimum, liquidation price, recovery mode, and any claimable collateral surplus.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "scenario_liquidation",
+      "description": "Deterministic BTC price-drop table for the selected wallet's trove on the current snapshot (not a forecast). Use for 'if BTC falls N%, do I get liquidated?'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "drops": {
+            "description": "Percent BTC price drops to model, null = 10/25/50.",
+            "anyOf": [
+              { "type": "array", "items": { "type": "integer" } },
+              { "type": "null" }
+            ]
+          },
+          "requested": {
+            "description": "The drop the user asked about, in percent.",
+            "anyOf": [{ "type": "integer" }, { "type": "null" }]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["drops", "requested", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "prepare_repay",
+      "description": "Prepare an unsigned mUSD repayment on the selected wallet's trove (BorrowerOperations.repayMUSD, burns mUSD, no approval, one signature). amount is a decimal mUSD amount or \"max\" (largest partial repay that keeps the minimum net debt).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": "string",
+            "description": "mUSD amount, e.g. \"5000\", or \"max\"."
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["amount", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "claim_collateral_surplus",
+      "description": "Prepare an unsigned BorrowerOperations.claimCollateral() for BTC left in CollSurplusPool after the wallet's trove was redeemed or liquidated.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "quote_zap",
+      "description": "Quote only (no transactions): how much mUSD a MEZO amount buys on the approved route, with price impact and min-out.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fundingAsset": {
+            "type": "string",
+            "enum": ["MEZO", "MUSD", "BTC"],
+            "description": "Asset the user pays with."
+          },
+          "amount": {
+            "description": "Amount in the funding asset's units, e.g. \"17400\" MEZO.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "amountUsd": {
+            "description": "USD notional, e.g. \"50\" for $50.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "destination": {
+            "type": "string",
+            "enum": ["musd-savings", "lp-pool"],
+            "description": "musd-savings = MUSD Savings (sMUSD). lp-pool = a dual-deposit LP pool."
+          },
+          "slippageBps": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": [
+          "fundingAsset",
+          "amount",
+          "amountUsd",
+          "destination",
+          "slippageBps",
+          "walletAddress"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "prepare_zap",
+      "description": "Prepare an unsigned zap into MUSD Savings (sMUSD): MEZO is swapped to mUSD on the approved Tigris CL route (price-impact cap, exact approvals, min-out) then deposited. mUSD deposits directly. LP pools are unavailable. Requires an amount (token or USD) and an explicit destination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "fundingAsset": {
+            "type": "string",
+            "enum": ["MEZO", "MUSD", "BTC"],
+            "description": "Asset the user pays with."
+          },
+          "amount": {
+            "description": "Amount in the funding asset's units, e.g. \"17400\" MEZO.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "amountUsd": {
+            "description": "USD notional, e.g. \"50\" for $50.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "destination": {
+            "type": "string",
+            "enum": ["musd-savings", "lp-pool"],
+            "description": "musd-savings = MUSD Savings (sMUSD). lp-pool = a dual-deposit LP pool."
+          },
+          "slippageBps": {
+            "anyOf": [{ "type": "integer" }, { "type": "null" }]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": [
+          "fundingAsset",
+          "amount",
+          "amountUsd",
+          "destination",
+          "slippageBps",
+          "walletAddress"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "search_transactions",
+      "description": "Bridge journeys for the selected wallet that a provider explicitly links to Mezo (Wormhole today). Use for 'wormhole transactions', 'bridge history', 'portal transfers'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "provider": { "type": "string", "enum": ["wormhole", "all"] },
+          "direction": {
+            "anyOf": [
+              { "type": "string", "enum": ["in", "out"] },
+              { "type": "null" }
+            ]
+          },
+          "limit": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["provider", "direction", "limit", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "prepare_claim_relock",
+      "description": "Claim every claimable reward, then add the claimed MEZO to a veMEZO lock (the named one, else the largest that can take more). Unsigned, one signature per step.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "lockId": {
+            "description": "The veMEZO lock that receives the MEZO, null picks the largest that can take more.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["lockId", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "prepare_lock_action",
+      "description": "Prepare an unsigned lock action for the selected wallet: add tokens to a lock, extend it (weeks, or null for the maximum), turn on auto max, withdraw an expired lock, merge one lock into another of the same escrow, or transfer a lock to a 0x address. Checks vesting, managed, expired, auto max and votes that need a reset first. Never an NFT approval.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "add",
+              "extend",
+              "auto_max",
+              "withdraw",
+              "merge",
+              "transfer"
+            ]
+          },
+          "tokenId": {
+            "description": "The lock, e.g. 2930, null picks the only fitting lock.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "intoTokenId": {
+            "description": "Merge only: the lock that receives tokenId.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "amount": {
+            "description": "Add only: whole tokens, e.g. 1000 or 0.05.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "weeks": {
+            "description": "Extend only: new duration in weeks from now, null = maximum.",
+            "anyOf": [{ "type": "integer" }, { "type": "null" }]
+          },
+          "recipient": {
+            "description": "Transfer only: the recipient's 0x address.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": [
+          "action",
+          "tokenId",
+          "intoTokenId",
+          "amount",
+          "weeks",
+          "recipient",
+          "walletAddress"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "resolve_holder",
+      "description": "Who is behind a label, name, gauge, lock or address: the addresses (with the source of each link), whether they are Safes, and the veBTC and veMEZO locks they own now (ownerOf, never who voted). Use for 'who is SNF', 'who owns veBTC #6033', 'which wallet is labelled X'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "description": "Who: a label or name (SNF, a gauge or validator name), a lock (#6033), or a 0x address the user wrote. Null: the selected wallet.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["subject", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "address_activity",
+      "description": "What an address or entity did over a period: reward claims (liquid and compounded into locks), lock deposits (own or funding someone else's), swaps, bridge transfers, MUSD minted (borrowed), transfers by counterparty (labelled), and how its locks voted in the latest epochs. Use for 'what has X been doing', 'who does X send to', 'X's activity since March'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "description": "Who: a label or name (SNF, a gauge or validator name), a lock (#6033), or a 0x address the user wrote. Null: the selected wallet.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "days": {
+            "description": "Days back from today. Null: 90.",
+            "anyOf": [{ "type": "integer" }, { "type": "null" }]
+          },
+          "since": {
+            "description": "Start: 2026-03-01, 23 April, March, this week, month or year, or last week, month or year (the whole calendar one, ending with it). Overrides days. Null: use days.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "until": {
+            "description": "End, included: 2026-03-31, 31 March, or March (to its last day). 'In March' is since March, until March. Null: today.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["subject", "days", "since", "until", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "trace_rewards",
+      "description": "Follow the money: the rewards an address or entity claimed over a period (incentives, fees, rebases, per token with tx links) and what happened to each claimed token afterwards (locked, swapped, sent and to whom, bridged out, deposited, or still held), with the attribution method. Use for 'what does SNF do with its incentives', 'where did X's rewards go', 'does X sell or relock'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "description": "Who: a label or name (SNF, a gauge or validator name), a lock (#6033), or a 0x address the user wrote. Null: the selected wallet.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "days": {
+            "description": "Days back from today. Null: 90.",
+            "anyOf": [{ "type": "integer" }, { "type": "null" }]
+          },
+          "since": {
+            "description": "Start: 2026-03-01, 23 April, March, this week, month or year, or last week, month or year (the whole calendar one, ending with it). Overrides days. Null: use days.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "until": {
+            "description": "End, included: 2026-03-31, 31 March, or March (to its last day). 'In March' is since March, until March. Null: today.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          },
+          "windowDays": {
+            "description": "Days after each claim to follow it. Null: to today.",
+            "anyOf": [{ "type": "integer" }, { "type": "null" }]
+          },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": [
+          "subject",
+          "days",
+          "since",
+          "until",
+          "windowDays",
+          "walletAddress"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "compare_holders",
+      "description": "The largest veBTC or veMEZO holders by locked amount (grouped by owner), what they voted for in the latest epoch, and with measure rewards, what each did with claimed rewards (relocked, swapped, sent, bridged, held). Use for 'largest veBTC holders and what they vote for', 'which voters sell incentives vs relock'.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "asset": { "type": "string", "enum": ["veBTC", "veMEZO"] },
+          "limit": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+          "measure": { "type": "string", "enum": ["votes", "rewards"] },
+          "walletAddress": {
+            "description": "Public address to read (0x…). Read only: proposals are never signable here.",
+            "anyOf": [{ "type": "string" }, { "type": "null" }]
+          }
+        },
+        "required": ["asset", "limit", "measure", "walletAddress"],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ]
+}

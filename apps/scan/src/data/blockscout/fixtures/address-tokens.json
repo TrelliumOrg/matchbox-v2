@@ -1,0 +1,97 @@
+{
+  "items": [
+    {
+      "token": {
+        "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+        "circulating_market_cap": null,
+        "circulating_supply": null,
+        "decimals": "18",
+        "exchange_rate": null,
+        "holders_count": "29242",
+        "icon_url": "https://storage.googleapis.com/mezo-production-explorer-logos-bucket/musd-token.png",
+        "name": "Mezo USD",
+        "new_ui_multiplier": null,
+        "reputation": "ok",
+        "symbol": "MUSD",
+        "total_supply": "19009212613409522617586413",
+        "type": "ERC-20",
+        "ui_multiplier": null,
+        "ui_multiplier_effective_at": null,
+        "volume_24h": null
+      },
+      "token_id": null,
+      "token_instance": null,
+      "value": "73724538339299012958"
+    },
+    {
+      "token": {
+        "address_hash": "0x7b7C000000000000000000000000000000000000",
+        "circulating_market_cap": null,
+        "circulating_supply": null,
+        "decimals": "18",
+        "exchange_rate": null,
+        "holders_count": "22725",
+        "icon_url": "https://storage.googleapis.com/mezo-production-explorer-logos-bucket/btc-token.png",
+        "name": "BTC",
+        "new_ui_multiplier": null,
+        "reputation": "ok",
+        "symbol": "BTC",
+        "total_supply": "1115673504116516054605",
+        "type": "ERC-20",
+        "ui_multiplier": null,
+        "ui_multiplier_effective_at": null,
+        "volume_24h": null
+      },
+      "token_id": null,
+      "token_instance": null,
+      "value": "130711424201618"
+    },
+    {
+      "token": {
+        "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+        "circulating_market_cap": null,
+        "circulating_supply": null,
+        "decimals": "6",
+        "exchange_rate": null,
+        "holders_count": "2500",
+        "icon_url": "https://storage.googleapis.com/mezo-production-explorer-logos-bucket/usdc-token.png",
+        "name": "Mezo Circle USDC",
+        "new_ui_multiplier": null,
+        "reputation": "ok",
+        "symbol": "mUSDC",
+        "total_supply": "272952548883",
+        "type": "ERC-20",
+        "ui_multiplier": null,
+        "ui_multiplier_effective_at": null,
+        "volume_24h": null
+      },
+      "token_id": null,
+      "token_instance": null,
+      "value": "169306769"
+    },
+    {
+      "token": {
+        "address_hash": "0x509Bc221df2B83927c695FA0bb0f5B21053C874c",
+        "circulating_market_cap": null,
+        "circulating_supply": null,
+        "decimals": null,
+        "exchange_rate": null,
+        "holders_count": "1723",
+        "icon_url": null,
+        "name": "Mezo CL Position NFT v1",
+        "new_ui_multiplier": null,
+        "reputation": "ok",
+        "symbol": "MEZO-CL-POS",
+        "total_supply": "1774",
+        "type": "ERC-721",
+        "ui_multiplier": null,
+        "ui_multiplier_effective_at": null,
+        "volume_24h": null
+      },
+      "token_id": null,
+      "token_instance": null,
+      "value": "4"
+    }
+  ],
+  "next_page_params": null
+}

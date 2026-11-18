@@ -1,0 +1,37 @@
+{
+  "name": "@matchbox/jobs",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "dev": "wrangler dev --test-scheduled",
+    "db:migrate:local": "wrangler d1 migrations apply READ_DB --local",
+    "db:migrate:scan:local": "wrangler d1 migrations apply SCAN_DB --local --config wrangler.scan-local.jsonc",
+    "record:warehouse": "tsx scripts/record-warehouse-fixture.ts && prettier --write test/fixtures/warehouse.json",
+    "test": "vitest run --config vitest.config.ts && vitest run --config vitest.workers.config.ts",
+    "typecheck": "tsc --noEmit",
+    "crosschain:dry-run": "tsx scripts/crosschain-dry-run.ts"
+  },
+  "dependencies": {
+    "@matchbox/api": "workspace:*",
+    "@matchbox/chain": "workspace:*",
+    "@matchbox/contracts": "workspace:*",
+    "@matchbox/domain": "workspace:*",
+    "@matchbox/logger": "workspace:*",
+    "@neondatabase/serverless": "1.2.0",
+    "viem": "2.57.17",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "1.6.0",
+    "@cloudflare/workers-types": "5.20261108.1",
+    "@electric-sql/pglite": "0.5.11",
+    "@types/node": "24.19.2",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "4.1.12",
+    "wrangler": "4.158.0"
+  }
+}

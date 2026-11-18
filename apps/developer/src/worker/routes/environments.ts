@@ -1,0 +1,650 @@
+import {
+  awaitingVerification,
+  consolePaths,
+  environmentReviewListResponseSchema,
+  environmentSchema,
+  oauthStatsQuerySchema,
+  oauthStatsResponseSchema,
+  replaceOriginsRequestSchema,
+  replaceRedirectUrisRequestSchema,
+  submitReviewRequestSchema,
+  submitReviewResponseSchema,
+  updateEnvironmentRequestSchema,
+  updateRequestedScopesRequestSchema,
+} from "@matchbox/contracts/console"
+import type { ErrorIssue } from "@matchbox/contracts/errors"
+import {
+  type AuthorizationRequestDetail,
+  authorizationRequestDetailSchema,
+} from "@matchbox/contracts/identity"
+import {
+  type UrlValidationResult,
+  urlRejectionMessages,
+  validateOrigin,
+  validateRedirectUri,
+} from "@matchbox/contracts/redirects"
+import {
+  claimLabels,
+  normalizeScopes,
+  type OidcClaim,
+  oidcScopeSchema,
+  oidcScopesOf,
+  scopeDefinitions,
+  scopeRequirement,
+  validateOptionalScopes,
+} from "@matchbox/contracts/scopes"
+import {
+  jsonBody,
+  PlatformError,
+  pathParams,
+  queryParams,
+} from "@matchbox/server"
+import type { EnvironmentAccess } from "../access"
+import { assertAppWritable, environmentAccess } from "../access"
+import {
+  audit,
+  type ConsoleApp,
+  type ConsoleContext,
+  deps,
+  logger,
+  nowIso,
+  requireStepUp,
+} from "../context"
+import { type PinLogoResult, pinLogo } from "../logo-pin"
+import {
+  loadEnvironment,
+  respond,
+  toDeveloperReviews,
+  toReview,
+} from "../mappers"
+import {
+  approvalOutcome,
+  environmentReviewState,
+  evaluateSubmission,
+} from "../review-policy"
+import type { EnvironmentRecord } from "../store/console-store"
+import {
+  assertNoOpenLiveReview,
+  withdrawCurrentVerification,
+  withdrawVerification,
+} from "../verification"
+
+function validateAll(
+  values: string[],
+  field: string,
+  validate: (value: string) => UrlValidationResult,
+): string[] {
+  const issues: ErrorIssue[] = []
+  const accepted: string[] = []
+  values.forEach((raw, index) => {
+    const value = raw.trim()
+    const result = validate(value)
+    if (result.ok) {
+      if (!accepted.includes(result.value)) accepted.push(result.value)
+      return
+    }
+    const suggestion =
+      result.suggestion === null ? "" : ` (use ${result.suggestion})`
+    issues.push({
+      path: `${field}.${index}`,
+      message: `${urlRejectionMessages[result.reason]}${suggestion}`,
+    })
+  })
+  if (issues.length > 0) {
+    throw new PlatformError("invalid_request", { issues })
+  }
+  return accepted
+}
+
+function addedValues(existing: string[], next: string[]): string[] {
+  const current = new Set(existing)
+  return next.filter((value) => !current.has(value))
+}
+
+function auditScope(access: EnvironmentAccess) {
+  return {
+    organizationId: access.app.organizationId,
+    appId: access.app.id,
+    environmentId: access.environment.id,
+  }
+}
+
+const previewValues = {
+  sub: "mbx_ExampleSubjectExampleSubject00",
+  wallet_address: "0x0000000000000000000000000000000000000000",
+  wallet_network: null,
+  discord_id: "000000000000000000",
+  discord_username: "example",
+  discord_display_name: "Example",
+  discord_avatar_url: "https://cdn.discordapp.com/embed/avatars/0.png",
+  discord_joined_at: "2024-03-04T00:00:00.000Z",
+} as const satisfies Record<OidcClaim, string | null>
+
+function consentPreview(
+  environment: EnvironmentRecord,
+  app: EnvironmentAccess["app"],
+  redirectUris: string[],
+  now: Date,
+): AuthorizationRequestDetail {
+  const requested = oidcScopesOf(environment.requestedScopes)
+  const scopes = requested.length > 0 ? requested : ["openid" as const]
+  const approved = new Set(environment.approvedScopes)
+  const firstRedirect = redirectUris[0]
+  const consentScopes = scopes.map((scope) => {
+    const definition = scopeDefinitions[scope]
+    const available = approved.has(scope)
+    return {
+      scope,
+      label: definition.label,
+      description: definition.consentDescription,
+      claims: definition.claims.map((claim) => ({
+        claim,
+        label: claimLabels[claim],
+        value:
+          claim === "wallet_network"
+            ? environment.network
+            : previewValues[claim],
+      })),
+      available,
+      unavailableReason: available ? null : ("not-approved" as const),
+      previouslyGranted: false,
+      requirement: scopeRequirement(scope, environment.optionalScopes),
+      previouslyDeclined: false,
+    }
+  })
+  return {
+    id: environment.id,
+    app: {
+      name: app.name,
+      logoUrl: app.logoUrl,
+      websiteUrl: app.websiteUrl,
+      privacyUrl: app.privacyUrl,
+      termsUrl: app.termsUrl,
+      status: app.status === "active" ? "active" : "restricted",
+    },
+    environmentKind: environment.kind,
+    network: environment.network,
+    redirectOrigin:
+      firstRedirect === undefined ? "" : new URL(firstRedirect).origin,
+    scopes: consentScopes,
+    existingGrant: null,
+    diff: {
+      added: normalizeScopes(scopes),
+      removed: [],
+      unchanged: [],
+    },
+    approvable: consentScopes.every((scope) => scope.available),
+    expiresAt: new Date(now.getTime() + 10 * 60_000).toISOString(),
+  }
+}
+
+async function environmentResponse(
+  c: ConsoleContext,
+  environment: EnvironmentRecord,
+) {
+  return loadEnvironment(c, environment)
+}
+
+/**
+ * Stores the submission's logo pin, or why there is none, for the staff
+ * review page; the pinned sha256, or null.
+ */
+async function storeReviewLogo(
+  c: ConsoleContext,
+  reviewId: string,
+  sourceUrl: string,
+  pinned: PinLogoResult,
+  pinnedAt: string,
+): Promise<string | null> {
+  const { store } = deps(c)
+  if (!pinned.ok) {
+    logger(c).warn({ message: "Review logo not pinned", reason: pinned.reason })
+  }
+  try {
+    await store.putReviewLogo(
+      reviewId,
+      pinned.ok
+        ? { status: "pinned", ...pinned.logo, pinnedAt }
+        : { status: "refused", reason: pinned.reason, sourceUrl, pinnedAt },
+    )
+    return pinned.ok ? pinned.logo.sha256 : null
+  } catch (error) {
+    logger(c).error({ message: "Review logo not stored", error })
+  }
+  if (pinned.ok) {
+    // Staff then see "Not pinned · not-stored" rather than "None".
+    try {
+      await store.putReviewLogo(reviewId, {
+        status: "refused",
+        reason: "not-stored",
+        sourceUrl,
+        pinnedAt,
+      })
+    } catch {
+      // Already logged; the page shows "None".
+    }
+  }
+  return null
+}
+
+export default function registerEnvironmentRoutes(app: ConsoleApp): void {
+  app.get("/api/environments/:environmentId", async (c) => {
+    const { environmentId } = pathParams(c, consolePaths.environmentId)
+    const access = await environmentAccess(c, environmentId, "developer")
+    return respond(
+      c,
+      environmentSchema,
+      await environmentResponse(c, access.environment),
+    )
+  })
+
+  app.patch("/api/environments/:environmentId", async (c) => {
+    const { environmentId } = pathParams(c, consolePaths.environmentId)
+    const access = await environmentAccess(c, environmentId, "admin")
+    assertAppWritable(access.app)
+    const body = await jsonBody(c, updateEnvironmentRequestSchema)
+    const { store, now } = deps(c)
+    let environment = access.environment
+    if (body.clientType !== environment.clientType) {
+      requireStepUp(c)
+      // Confidential -> public: tokens minted for the confidential client
+      // stop working and users must re-consent (scope_version bump). Done
+      // before the flip so a failed flip can simply be retried.
+      const revocation =
+        body.clientType === "public"
+          ? await store.revokeEnvironmentTokens(
+              environmentId,
+              "client-type-public",
+            )
+          : null
+      environment = await store.updateEnvironment(environmentId, {
+        clientType: body.clientType,
+      })
+      if (body.clientType === "public") {
+        const at = now()
+        for (const secret of await store.listClientSecrets(environmentId)) {
+          if (secret.revokedAt !== null) continue
+          await store.revokeClientSecret(secret.id, at.toISOString())
+          await audit(c, {
+            ...auditScope(access),
+            action: "client-secret-revoked",
+            targetType: "client-secret",
+            targetId: secret.id,
+            metadata: { reason: "client-type-public" },
+          })
+        }
+      }
+      await audit(c, {
+        ...auditScope(access),
+        action: "environment-updated",
+        targetType: "environment",
+        targetId: environmentId,
+        metadata: {
+          clientType: {
+            from: access.environment.clientType,
+            to: body.clientType,
+          },
+          ...(revocation === null ? {} : { tokensRevoked: revocation }),
+        },
+      })
+    }
+    return respond(
+      c,
+      environmentSchema,
+      await environmentResponse(c, environment),
+    )
+  })
+
+  app.put("/api/environments/:environmentId/redirect-uris", async (c) => {
+    const { environmentId } = pathParams(c, consolePaths.environmentId)
+    const access = await environmentAccess(c, environmentId, "admin")
+    assertAppWritable(access.app)
+    const body = await jsonBody(c, replaceRedirectUrisRequestSchema)
+    const kind = access.environment.kind
+    const uris = validateAll(body.uris, "uris", (value) =>
+      validateRedirectUri(value, kind),
+    )
+    const { store } = deps(c)
+    const added = addedValues(await store.listRedirectUris(environmentId), uris)
+    // Adding a redirect URI can send authorization codes somewhere new, so
+    // it needs a step-up and withdraws staff verification; removing one only
+    // narrows the client.
+    let environment = access.environment
+    if (added.length > 0) {
+      requireStepUp(c)
+      await assertNoOpenLiveReview(c, environment, "redirect URIs")
+      environment = await withdrawVerification(c, environment)
+    }
+    await store.replaceRedirectUris(environmentId, uris)
+    // Again after the write: a staff approval may have landed in between.
+    if (added.length > 0) {
+      environment =
+        (await withdrawCurrentVerification(c, environmentId)) ?? environment
+    }
+    await audit(c, {
+      ...auditScope(access),
+      action: "redirect-uris-updated",
+      targetType: "environment",
+      targetId: environmentId,
+      metadata: { uris, added },
+    })
+    return respond(
+      c,
+      environmentSchema,
+      await environmentResponse(c, environment),
+    )
+  })
+
+  app.put("/api/environments/:environmentId/origins", async (c) => {
+    const { environmentId } = pathParams(c, consolePaths.environmentId)
+    const access = await environmentAccess(c, environmentId, "admin")
+    assertAppWritable(access.app)
+    const body = await jsonBody(c, replaceOriginsRequestSchema)
+    const kind = access.environment.kind
+    const origins = validateAll(body.origins, "origins", (value) =>
+      validateOrigin(value, kind),
+    )
+    const { store } = deps(c)
+    const added = addedValues(await store.listOrigins(environmentId), origins)
+    let environment = access.environment
+    if (added.length > 0) {
+      requireStepUp(c)
+      await assertNoOpenLiveReview(c, environment, "origins")
+      environment = await withdrawVerification(c, environment)
+    }
+    await store.replaceOrigins(environmentId, origins)
+    if (added.length > 0) {
+      environment =
+        (await withdrawCurrentVerification(c, environmentId)) ?? environment
+    }
+    await audit(c, {
+      ...auditScope(access),
+      action: "origins-updated",
+      targetType: "environment",
+      targetId: environmentId,
+      metadata: { origins, added },
+    })
+    return respond(
+      c,
+      environmentSchema,
+      await environmentResponse(c, environment),
+    )
+  })
+
+  app.put("/api/environments/:environmentId/scopes", async (c) => {
+    const { environmentId } = pathParams(c, consolePaths.environmentId)
+    const access = await environmentAccess(c, environmentId, "admin")
+    assertAppWritable(access.app)
+    const body = await jsonBody(c, updateRequestedScopesRequestSchema)
+    const { store } = deps(c)
+    if ((await store.getOpenReview(environmentId)) !== null) {
+      throw new PlatformError("conflict", {
+        message: "Withdraw the open review before changing scopes.",
+      })
+    }
+    const requestedScopes = normalizeScopes(body.requestedScopes)
+    const approvedScopes = access.environment.approvedScopes.filter((scope) =>
+      requestedScopes.includes(scope),
+    )
+    const optionalProblems = validateOptionalScopes({
+      requested: requestedScopes,
+      optional: body.optionalScopes ?? [],
+    })
+    if (optionalProblems.length > 0) {
+      throw new PlatformError("invalid_request", {
+        issues: optionalProblems.map((problem) => ({
+          path: "optionalScopes",
+          message:
+            problem.reason === "always-required"
+              ? `${problem.scope} is always required`
+              : `${problem.scope} is not requested`,
+        })),
+      })
+    }
+    // Removing a requested scope drops it from the optional set too (the
+    // DB keeps optional ⊆ requested); unchanged sets are not written.
+    const optionalScopes = normalizeScopes(
+      (body.optionalScopes ?? access.environment.optionalScopes).filter(
+        (scope) => requestedScopes.includes(scope),
+      ),
+    )
+    const optionalChanged =
+      optionalScopes.join(" ") !==
+      normalizeScopes(access.environment.optionalScopes).join(" ")
+    // Staff verified the requested set they reviewed, not this one.
+    const requestedChanged =
+      requestedScopes.join(" ") !==
+      normalizeScopes(access.environment.requestedScopes).join(" ")
+    const environment = await store.updateEnvironment(environmentId, {
+      requestedScopes,
+      approvedScopes,
+      ...(optionalChanged ? { optionalScopes } : {}),
+      ...(requestedChanged ? { verifiedAt: null } : {}),
+      reviewState: environmentReviewState(approvedScopes, "development"),
+    })
+    await audit(c, {
+      ...auditScope(access),
+      action: "scopes-requested",
+      targetType: "environment",
+      targetId: environmentId,
+      metadata: {
+        requestedScopes,
+        previous: access.environment.requestedScopes,
+        ...(optionalChanged ? { optionalScopes } : {}),
+      },
+    })
+    return respond(
+      c,
+      environmentSchema,
+      await environmentResponse(c, environment),
+    )
+  })
+
+  app.post("/api/environments/:environmentId/submit-review", async (c) => {
+    const { environmentId } = pathParams(c, consolePaths.environmentId)
+    const access = await environmentAccess(c, environmentId, "admin")
+    assertAppWritable(access.app)
+    const body = await jsonBody(c, submitReviewRequestSchema)
+    const { store } = deps(c)
+    const environment = access.environment
+    if (environment.requestedScopes.length === 0) {
+      throw new PlatformError("invalid_request", {
+        message: "Request at least one scope.",
+      })
+    }
+    if ((await store.getOpenReview(environmentId)) !== null) {
+      throw new PlatformError("conflict", { message: "A review is open." })
+    }
+    const evaluation = evaluateSubmission({
+      environment,
+      app: access.app,
+      ownerEmailVerified: await store.organizationHasVerifiedOwner(
+        access.app.organizationId,
+      ),
+    })
+    // With nothing new to approve, a live consent screen can still go to
+    // staff for verification (live OIDC scopes are never auto-approved).
+    if (evaluation.added.length === 0 && !awaitingVerification(environment)) {
+      throw new PlatformError("conflict", {
+        message: "All requested scopes are already approved.",
+      })
+    }
+    const at = nowIso(c)
+    const note =
+      body.note === undefined || body.note.length === 0 ? null : body.note
+    if (evaluation.autoApprove) {
+      const outcome = approvalOutcome({
+        environment,
+        approve: environment.requestedScopes,
+      })
+      const review = await store.createReview({
+        environmentId,
+        requestedScopes: environment.requestedScopes,
+        state: "approved",
+        submitterId: access.account.id,
+        submitterNote: note,
+        reviewerId: null,
+        reviewerNote: "Auto-approved",
+        createdAt: at,
+        decidedAt: at,
+      })
+      const updated = await store.updateEnvironment(environmentId, {
+        approvedScopes: outcome.approvedScopes,
+        scopeVersion: outcome.scopeVersion,
+        reviewState: "approved",
+      })
+      await audit(c, {
+        ...auditScope(access),
+        action: "review-auto-approved",
+        targetType: "review",
+        targetId: review.id,
+        metadata: {
+          approvedScopes: outcome.approvedScopes,
+          scopeVersion: outcome.scopeVersion,
+        },
+      })
+      return respond(c, submitReviewResponseSchema, {
+        environment: await environmentResponse(c, updated),
+        review: toReview(review),
+        autoApproved: true,
+      })
+    }
+    // Staff review this copy of the logo, never the live URL, which could
+    // serve them one image and the Worker another (`logo-pin.ts`).
+    const { logoUrl } = access.app
+    const pinned =
+      logoUrl === null ? null : await pinLogo(deps(c).logoFetch, logoUrl)
+    const review = await store.createReview({
+      environmentId,
+      requestedScopes: environment.requestedScopes,
+      state: "open",
+      submitterId: access.account.id,
+      submitterNote: note,
+      reviewerId: null,
+      reviewerNote: null,
+      decidedAt: null,
+    })
+    const logoSha256 =
+      logoUrl === null || pinned === null
+        ? null
+        : await storeReviewLogo(c, review.id, logoUrl, pinned, at)
+    const updated = await store.updateEnvironment(environmentId, {
+      reviewState: environmentReviewState(
+        environment.approvedScopes,
+        "submitted",
+      ),
+    })
+    await audit(c, {
+      ...auditScope(access),
+      action: "review-submitted",
+      targetType: "review",
+      targetId: review.id,
+      metadata: {
+        requestedScopes: environment.requestedScopes,
+        added: evaluation.added,
+        logoSha256,
+      },
+    })
+    return respond(c, submitReviewResponseSchema, {
+      environment: await environmentResponse(c, updated),
+      review: toReview(review),
+      autoApproved: false,
+    })
+  })
+
+  app.post("/api/environments/:environmentId/withdraw-review", async (c) => {
+    const { environmentId } = pathParams(c, consolePaths.environmentId)
+    const access = await environmentAccess(c, environmentId, "admin")
+    const { store } = deps(c)
+    const review = await store.getOpenReview(environmentId)
+    if (review === null) {
+      throw new PlatformError("conflict", { message: "No open review." })
+    }
+    // Conditional: a staff decision closing it first wins.
+    const withdrawn = await store.closeReview(review.id, {
+      state: "withdrawn",
+      decidedAt: nowIso(c),
+    })
+    if (withdrawn === null) {
+      throw new PlatformError("conflict", { message: "No open review." })
+    }
+    const environment = await store.updateEnvironment(environmentId, {
+      reviewState: environmentReviewState(
+        access.environment.approvedScopes,
+        "development",
+      ),
+    })
+    await audit(c, {
+      ...auditScope(access),
+      action: "review-withdrawn",
+      targetType: "review",
+      targetId: review.id,
+    })
+    return respond(
+      c,
+      environmentSchema,
+      await environmentResponse(c, environment),
+    )
+  })
+
+  // OAuth -----------------------------------------------------------------
+
+  app.get("/api/environments/:environmentId/oauth", async (c) => {
+    const { environmentId } = pathParams(c, consolePaths.environmentId)
+    const access = await environmentAccess(c, environmentId, "developer")
+    const query = queryParams(c, oauthStatsQuerySchema)
+    if (Date.parse(query.from) >= Date.parse(query.to)) {
+      throw new PlatformError("invalid_request", {
+        issues: [{ path: "from", message: "`from` must be before `to`" }],
+      })
+    }
+    const stats = await deps(c).store.oauthStats({
+      environmentId,
+      from: new Date(query.from).toISOString(),
+      to: new Date(query.to).toISOString(),
+      scopeVersion: access.environment.scopeVersion,
+    })
+    const revocationTotal = Object.values(stats.revocationsByReason).reduce(
+      (sum, count) => sum + count,
+      0,
+    )
+    return respond(c, oauthStatsResponseSchema, {
+      activeGrants: stats.activeGrants,
+      grantsCreated: stats.grantsCreated,
+      revocations: {
+        total: revocationTotal,
+        byReason: stats.revocationsByReason,
+      },
+      grantsByScope: oidcScopeSchema.options.map((scope) => ({
+        scope,
+        activeGrants: stats.activeGrantsByScope[scope],
+      })),
+      awaitingReconsent: {
+        count: stats.awaitingReconsent.count,
+        currentScopeVersion: access.environment.scopeVersion,
+        oldestScopeVersion: stats.awaitingReconsent.oldestScopeVersion,
+      },
+    })
+  })
+
+  app.get("/api/environments/:environmentId/reviews", async (c) => {
+    const { environmentId } = pathParams(c, consolePaths.environmentId)
+    await environmentAccess(c, environmentId, "developer")
+    const reviews = await deps(c).store.listEnvironmentReviews(environmentId)
+    return respond(c, environmentReviewListResponseSchema, {
+      data: await toDeveloperReviews(c, reviews),
+    })
+  })
+
+  app.get("/api/environments/:environmentId/consent-preview", async (c) => {
+    const { environmentId } = pathParams(c, consolePaths.environmentId)
+    const access = await environmentAccess(c, environmentId, "developer")
+    const { store, now } = deps(c)
+    const redirectUris = await store.listRedirectUris(environmentId)
+    return respond(
+      c,
+      authorizationRequestDetailSchema,
+      consentPreview(access.environment, access.app, redirectUris, now()),
+    )
+  })
+}

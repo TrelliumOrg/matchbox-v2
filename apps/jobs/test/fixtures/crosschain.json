@@ -1,0 +1,875 @@
+{
+  "recordedAt": "2026-11-12T07:18:48.314Z",
+  "rpc": [
+    {
+      "chain": "ethereum",
+      "method": "eth_blockNumber",
+      "result": "0x192ca84"
+    },
+    {
+      "chain": "base",
+      "method": "eth_blockNumber",
+      "result": "0x35c68ab"
+    },
+    {
+      "chain": "ethereum",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x4903b0d10000000000000000000000000000000000000000000000000000000000000000",
+          "to": "0xb5571e76693ba60110b5811dd650ffefce1c955f"
+        },
+        "0x192ca84"
+      ],
+      "result": "0x000000000000000000000000000000000000000000021b0614fb49b152b77055"
+    },
+    {
+      "chain": "ethereum",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x5e0d443f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000de0b6b3a7640000",
+          "to": "0xb5571e76693ba60110b5811dd650ffefce1c955f"
+        },
+        "0x192ca84"
+      ],
+      "result": "0x0000000000000000000000000000000000000000000000000d86ad0c44df9eea"
+    },
+    {
+      "chain": "ethereum",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x4903b0d10000000000000000000000000000000000000000000000000000000000000001",
+          "to": "0xb5571e76693ba60110b5811dd650ffefce1c955f"
+        },
+        "0x192ca84"
+      ],
+      "result": "0x00000000000000000000000000000000000000000000abe24a6d7ebad682fa51"
+    },
+    {
+      "chain": "ethereum",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0xbb7b8b80",
+          "to": "0x4f493b7de8aac7d55f71853688b1f7c8f0243c85"
+        },
+        "0x192ca84"
+      ],
+      "result": "0x0000000000000000000000000000000000000000000000000e264e17a4f666fc"
+    },
+    {
+      "chain": "base",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x883bdbfd0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000007080000000000000000000000000000000000000000000000000000000000000000",
+          "to": "0xb02fda984eddff593202ed2b5a6de043b9b62ea5"
+        },
+        "0x35c68ab"
+      ],
+      "result": "0x000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000007aa6f506b30000000000000000000000000000000000000000000000000000007ac49c46db00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000828800000007d92d860a5a522f44a16e107b0000000000000000000000000000828800000007d92d868321d8ebfd0724e9db"
+    },
+    {
+      "chain": "base",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x70a08231000000000000000000000000b02fda984eddff593202ed2b5a6de043b9b62ea5",
+          "to": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+        },
+        "0x35c68ab"
+      ],
+      "result": "0x000000000000000000000000000000000000000000000000000000a0fc570349"
+    },
+    {
+      "chain": "base",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x70a08231000000000000000000000000b02fda984eddff593202ed2b5a6de043b9b62ea5",
+          "to": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        },
+        "0x35c68ab"
+      ],
+      "result": "0x000000000000000000000000000000000000000000001b74230b8bf820078b6c"
+    },
+    {
+      "chain": "mezo",
+      "method": "eth_blockNumber",
+      "result": "0xc8fe5f"
+    },
+    {
+      "chain": "mezo",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x883bdbfd0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000007080000000000000000000000000000000000000000000000000000000000000000",
+          "to": "0xcc372b7e15535ab225fe17c1075831d38ef7ac1a"
+        },
+        "0xc8fe5f"
+      ],
+      "result": "0x000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000684f8bfc0e0000000000000000000000000000000000000000000000000000006851666d6d8000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000002406001bfefc3022eda6113d898edc46142500000000000000000000000000002406001bfefc3022ee2e44eab52e51d104fd"
+    },
+    {
+      "chain": "mezo",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x70a08231000000000000000000000000cc372b7e15535ab225fe17c1075831d38ef7ac1a",
+          "to": "0x04671c72aab5ac02a03c1098314b1bb6b560c197"
+        },
+        "0xc8fe5f"
+      ],
+      "result": "0x00000000000000000000000000000000000000000000000000000015c1d9e61a"
+    },
+    {
+      "chain": "mezo",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x70a08231000000000000000000000000cc372b7e15535ab225fe17c1075831d38ef7ac1a",
+          "to": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        },
+        "0xc8fe5f"
+      ],
+      "result": "0x0000000000000000000000000000000000000000000019ec41d03eb3731d24b4"
+    },
+    {
+      "chain": "mezo",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x70a082310000000000000000000000007efb386675d75280d39aae42964a6776de0ee0bd",
+          "to": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        },
+        "0xc8fe5f"
+      ],
+      "result": "0x000000000000000000000000000000000000000000025b392524f9ce2dc9d800"
+    },
+    {
+      "chain": "mezo",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x18160ddd",
+          "to": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        },
+        "0xc8fe5f"
+      ],
+      "result": "0x0000000000000000000000000000000000000000000fb62aee32aa880023c644"
+    },
+    {
+      "chain": "mezo",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x18160ddd",
+          "to": "0x7b7c000000000000000000000000000000000001"
+        },
+        "0xc8fe5f"
+      ],
+      "result": "0x000000000000000000000000000000000000000003b9737dc4d4b26f38ea0742"
+    },
+    {
+      "chain": "base",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x18160ddd",
+          "to": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        },
+        "0x35c68ab"
+      ],
+      "result": "0x000000000000000000000000000000000000000000002d70907414726fdc6c00"
+    },
+    {
+      "chain": "ethereum",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x18160ddd",
+          "to": "0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186"
+        },
+        "0x192ca84"
+      ],
+      "result": "0x000000000000000000000000000000000000000000022c20d05df73e0a469800"
+    },
+    {
+      "chain": "ethereum",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x18160ddd",
+          "to": "0x8e4cbbcc33db6c0a18561fde1f6ba35906d4848b"
+        },
+        "0x192ca84"
+      ],
+      "result": "0x000000000000000000000000000000000000000000066c3b6855ff9d63422400"
+    },
+    {
+      "chain": "base",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x18160ddd",
+          "to": "0x8e4cbbcc33db6c0a18561fde1f6ba35906d4848b"
+        },
+        "0x35c68ab"
+      ],
+      "result": "0x0000000000000000000000000000000000000000013167cb5a867d0d08374000"
+    },
+    {
+      "chain": "bsc",
+      "method": "eth_blockNumber",
+      "result": "0x7ef3beb"
+    },
+    {
+      "chain": "mezo",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x70a082310000000000000000000000005e668d912f69db0762cd0fe00647da9fa6b29591",
+          "to": "0x7b7c000000000000000000000000000000000001"
+        },
+        "0xc8fe5f"
+      ],
+      "result": "0x00000000000000000000000000000000000000000137f1b16136766bc02e9800"
+    },
+    {
+      "chain": "bsc",
+      "method": "eth_call",
+      "params": [
+        {
+          "data": "0x18160ddd",
+          "to": "0x8e4cbbcc33db6c0a18561fde1f6ba35906d4848b"
+        },
+        "0x7ef3beb"
+      ],
+      "result": "0x0000000000000000000000000000000000000000000004b5203382b362901000"
+    }
+  ],
+  "http": [
+    {
+      "url": "https://api.geckoterminal.com/api/v2/networks/mezo/pools/multi/0xcc372b7e15535ab225fe17c1075831d38ef7ac1a,0xed812aec0fecc8fd882ac3eccc43f3aa80a6c356,0x10906a9e9215939561597b4c8e4b98f93c02031a,0x9cbc1537d255768b431488305b1c7efc2ac95022,0x52e604c44417233b6ccedddc0d640a405caacefb,0x1d6e8d24c133535f2d00676f66a0e824f84765ff,0x907d055978943c69cffd5ed969f5603af104acc5",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "attributes": {
+              "address": "0xcc372b7e15535ab225fe17c1075831d38ef7ac1a",
+              "name": "mUSDC / MUSD 0.037%",
+              "reserve_in_usd": "214168.6442",
+              "volume_usd": {
+                "h24": "38051.4902109629"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0xed812aec0fecc8fd882ac3eccc43f3aa80a6c356",
+              "name": "mUSDC / MUSD",
+              "reserve_in_usd": "10737.0742",
+              "volume_usd": {
+                "h24": "70.8666139957"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0x10906a9e9215939561597b4c8e4b98f93c02031a",
+              "name": "mUSDT / MUSD",
+              "reserve_in_usd": "12991.7129",
+              "volume_usd": {
+                "h24": "0.0"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0x9cbc1537d255768b431488305b1c7efc2ac95022",
+              "name": "MUSD / BTC 0.3%",
+              "reserve_in_usd": "34630.2605",
+              "volume_usd": {
+                "h24": "10103.1010212485"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0x52e604c44417233b6ccedddc0d640a405caacefb",
+              "name": "MUSD / BTC",
+              "reserve_in_usd": "70538.88",
+              "volume_usd": {
+                "h24": "1040.6527966078"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0x1d6e8d24c133535f2d00676f66a0e824f84765ff",
+              "name": "mezo / MUSD",
+              "reserve_in_usd": "3966.138",
+              "volume_usd": {
+                "h24": "3313.0949515633"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0x907d055978943c69cffd5ed969f5603af104acc5",
+              "name": "mezo / BTC 1%",
+              "reserve_in_usd": "2387.0275",
+              "volume_usd": {
+                "h24": "1314.0714884333"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/multi/0xb5571e76693ba60110b5811dd650ffefce1c955f,0xa9bf5691768ef950a99efd74d722961ff2df3fec08d77ec784432c619bd283a0,0x0dd11e1def156d20c60de1e7b4f7f4268c411ee9349b5593766579b26ce98183,0x8cc1660e3ea814687e88dfce87e35a8d0745a89f5b7fa0f12d37dc5b420d71db",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "attributes": {
+              "address": "0xb5571e76693ba60110b5811dd650ffefce1c955f",
+              "name": "MUSD / crv2pool",
+              "reserve_in_usd": "3351033.6527",
+              "volume_usd": {
+                "h24": "776.8844592383"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0xa9bf5691768ef950a99efd74d722961ff2df3fec08d77ec784432c619bd283a0",
+              "name": "MUSD / USDC 0.01%",
+              "reserve_in_usd": "56049.6597",
+              "volume_usd": {
+                "h24": "3944.3790476652"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0x0dd11e1def156d20c60de1e7b4f7f4268c411ee9349b5593766579b26ce98183",
+              "name": "tBTC / MUSD 0.05%",
+              "reserve_in_usd": "6827.3749",
+              "volume_usd": {
+                "h24": "0.0"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0x8cc1660e3ea814687e88dfce87e35a8d0745a89f5b7fa0f12d37dc5b420d71db",
+              "name": "MUSD / ETH 0.05%",
+              "reserve_in_usd": "1310.9316",
+              "volume_usd": {
+                "h24": "0.0"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://api.geckoterminal.com/api/v2/networks/base/pools/multi/0xb02fda984eddff593202ed2b5a6de043b9b62ea5,0x7507518c567c185632e95ca80114ce9a660b6943,0xff56d037d948fad1027a1ac82ae610e4b694c641,0xef458a3263d2a8c7f3ed9e949ae2f9b345d08b1f",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "attributes": {
+              "address": "0xb02fda984eddff593202ed2b5a6de043b9b62ea5",
+              "name": "MUSD / USDC 0.05%",
+              "reserve_in_usd": "823295.5623",
+              "volume_usd": {
+                "h24": "65742.1239013592"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0x7507518c567c185632e95ca80114ce9a660b6943",
+              "name": "MEZO / MUSD 0.031%",
+              "reserve_in_usd": "2571.2103",
+              "volume_usd": {
+                "h24": "27858.0543691022"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0xff56d037d948fad1027a1ac82ae610e4b694c641",
+              "name": "MUSD / USDC 0.004%",
+              "reserve_in_usd": "604.0251",
+              "volume_usd": {
+                "h24": "174.6755913086"
+              }
+            }
+          },
+          {
+            "attributes": {
+              "address": "0xef458a3263d2a8c7f3ed9e949ae2f9b345d08b1f",
+              "name": "MEZO / MUSD 0.3%",
+              "reserve_in_usd": "0.0",
+              "volume_usd": {
+                "h24": "0.0"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://yields.llama.fi/chart/515e257a-3a9c-418b-93fc-acabf4021905",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": [
+          {
+            "timestamp": "2026-11-10T23:01:18.152Z",
+            "tvlUsd": 1201724,
+            "apy": 12.79428,
+            "apyBase": 12.79428,
+            "apyReward": null,
+            "il7d": null,
+            "apyBase7d": null,
+            "pricePerShare": null
+          },
+          {
+            "timestamp": "2026-11-11T23:01:17.776Z",
+            "tvlUsd": 1202029,
+            "apy": 12.79946,
+            "apyBase": 12.79946,
+            "apyReward": null,
+            "il7d": null,
+            "apyBase7d": null,
+            "pricePerShare": null
+          },
+          {
+            "timestamp": "2026-11-12T06:01:12.368Z",
+            "tvlUsd": 1194006,
+            "apy": 14.54435,
+            "apyBase": 14.54435,
+            "apyReward": null,
+            "il7d": null,
+            "apyBase7d": null,
+            "pricePerShare": null
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://yields.llama.fi/chart/c27e64f8-21d5-47a5-be7a-7d6382eb43a8",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": [
+          {
+            "timestamp": "2026-11-10T23:01:11.571Z",
+            "tvlUsd": 3407668,
+            "apy": 12.42104,
+            "apyBase": 0.75,
+            "apyReward": 11.67104,
+            "il7d": null,
+            "apyBase7d": null,
+            "pricePerShare": null
+          },
+          {
+            "timestamp": "2026-11-11T23:01:10.672Z",
+            "tvlUsd": 3408157,
+            "apy": 13.35354,
+            "apyBase": 0.04,
+            "apyReward": 13.31354,
+            "il7d": null,
+            "apyBase7d": null,
+            "pricePerShare": null
+          },
+          {
+            "timestamp": "2026-11-12T06:01:11.815Z",
+            "tvlUsd": 3356053,
+            "apy": 8.25417,
+            "apyBase": 0.09,
+            "apyReward": 8.16417,
+            "il7d": null,
+            "apyBase7d": null,
+            "pricePerShare": null
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://yields.llama.fi/chart/8b0dcb2f-9dda-4451-8f5d-1c3dfe1e2a4e",
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": [
+          {
+            "timestamp": "2026-11-10T23:02:34.155Z",
+            "tvlUsd": 61439,
+            "apy": 1.80388,
+            "apyBase": 1.80388,
+            "apyReward": null,
+            "il7d": null,
+            "apyBase7d": 0.60766,
+            "pricePerShare": null
+          },
+          {
+            "timestamp": "2026-11-11T23:02:46.102Z",
+            "tvlUsd": 61441,
+            "apy": 1.94635,
+            "apyBase": 1.94635,
+            "apyReward": null,
+            "il7d": null,
+            "apyBase7d": 0.78093,
+            "pricePerShare": null
+          },
+          {
+            "timestamp": "2026-11-12T07:03:12.829Z",
+            "tvlUsd": 61451,
+            "apy": 0.1213,
+            "apyBase": 0.1213,
+            "apyReward": null,
+            "il7d": null,
+            "apyBase7d": 0.67375,
+            "pricePerShare": null
+          }
+        ]
+      }
+    },
+    {
+      "url": "https://api.curve.finance/v1/getVolumes/ethereum",
+      "status": 200,
+      "body": {
+        "data": {
+          "pools": [
+            {
+              "address": "0xB5571E76693ba60110B5811DD650FFefce1C955f",
+              "type": "factory-stable-ng",
+              "volumeUSD": 64291.5,
+              "latestDailyApyPcent": 0.09,
+              "latestWeeklyApyPcent": 0.27,
+              "includedApyPcentFromLsts": 0,
+              "virtualPrice": 1005850326251504100
+            }
+          ]
+        }
+      }
+    },
+    {
+      "url": "https://api.merkl.xyz/v4/opportunities?search=MUSD&status=LIVE",
+      "status": 200,
+      "body": [
+        {
+          "chainId": 143,
+          "type": "AAVE_NET_LENDING",
+          "identifier": "9b7272ce2572809e",
+          "name": "Lend mUSD on Aave",
+          "apr": 5.6000000000000005,
+          "rewardsRecord": {
+            "breakdowns": [
+              {
+                "token": {
+                  "symbol": "WMON"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "chainId": 1672,
+          "type": "ERC20LOGPROCESSOR",
+          "identifier": "0x047cD0a91E9B92ED979189a6C8A120bf280f02E5",
+          "name": "Supply to RockawayX USDC V2 vault on Morpho on Pharos",
+          "apr": 4.088883550686234,
+          "rewardsRecord": {
+            "breakdowns": [
+              {
+                "token": {
+                  "symbol": "WPROS"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "chainId": 1,
+          "type": "UNISWAP_V4",
+          "identifier": "0xa9bf5691768ef950a99efd74d722961ff2df3fec08d77ec784432c619bd283a0",
+          "name": "Provide liquidity to UniswapV4 USDC-MUSD 0.01%",
+          "apr": 81.54279824523641,
+          "rewardsRecord": {
+            "breakdowns": [
+              {
+                "token": {
+                  "symbol": "veMEZO"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "chainId": 143,
+          "type": "ERC20LOGPROCESSOR",
+          "identifier": "0x41661c2b112263c93FdD9346c4a950476265af7a",
+          "name": "Hold Salt Markets Alpha (smUSD)",
+          "apr": 0.370692858731631,
+          "rewardsRecord": {
+            "breakdowns": [
+              {
+                "token": {
+                  "symbol": "WMON"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "chainId": 1,
+          "type": "ERC20LOGPROCESSOR",
+          "identifier": "0xB5571E76693ba60110B5811DD650FFefce1C955f",
+          "name": "Curve MUSD/USDC/USDT",
+          "apr": 0.11481336952869403,
+          "rewardsRecord": {
+            "breakdowns": [
+              {
+                "token": {
+                  "symbol": "veMEZO"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "chainId": 1,
+          "type": "ERC20LOGPROCESSOR",
+          "identifier": "0x7D6b0D7e8F5E78c0890F9e512eD70F57fd225cac",
+          "name": "Stake into the Curve MUSD/2pool gauge",
+          "apr": 0.11474827618600729,
+          "rewardsRecord": {
+            "breakdowns": [
+              {
+                "token": {
+                  "symbol": "veMEZO"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "chainId": 1,
+          "type": "ERC20LOGPROCESSOR",
+          "identifier": "0x912Ad922be2899c5160bF2cd1Ea62071F387F608",
+          "name": "Stake MUSD/USDC/USDT in Stake DAO Gauge",
+          "apr": 0.09650633107460632,
+          "rewardsRecord": {
+            "breakdowns": [
+              {
+                "token": {
+                  "symbol": "veMEZO"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "chainId": 1,
+          "type": "CONVEX",
+          "identifier": "0xB5571E76693ba60110B5811DD650FFefce1C955f",
+          "name": "Stake MUSD-crv2pool on Convex",
+          "apr": 0.11481162743529147,
+          "rewardsRecord": {
+            "breakdowns": [
+              {
+                "token": {
+                  "symbol": "veMEZO"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "url": "https://api.wormholescan.io/api/v1/native-token-transfer/transfer-by-time?symbol=MUSD&timeSpan=1d&by=notional&from=2026-11-05T00:00:00Z&to=2026-11-13T00:00:00Z",
+      "status": 200,
+      "body": [
+        {
+          "time": "2026-11-05T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "51405.79499325"
+        },
+        {
+          "time": "2026-11-06T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "173170.5390056"
+        },
+        {
+          "time": "2026-11-07T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "194028.33249615"
+        },
+        {
+          "time": "2026-11-08T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "48954.30356313"
+        },
+        {
+          "time": "2026-11-09T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "123659.02827948"
+        },
+        {
+          "time": "2026-11-10T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "693210.54981316"
+        },
+        {
+          "time": "2026-11-11T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "56007.71887643"
+        },
+        {
+          "time": "2026-11-12T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "13778.58599764"
+        }
+      ]
+    },
+    {
+      "url": "https://api.wormholescan.io/api/v1/native-token-transfer/transfer-by-time?symbol=MUSD&timeSpan=1d&by=tx&from=2026-11-05T00:00:00Z&to=2026-11-13T00:00:00Z",
+      "status": 200,
+      "body": [
+        {
+          "time": "2026-11-05T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "15"
+        },
+        {
+          "time": "2026-11-06T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "8"
+        },
+        {
+          "time": "2026-11-07T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "14"
+        },
+        {
+          "time": "2026-11-08T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "14"
+        },
+        {
+          "time": "2026-11-09T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "9"
+        },
+        {
+          "time": "2026-11-10T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "28"
+        },
+        {
+          "time": "2026-11-11T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "4"
+        },
+        {
+          "time": "2026-11-12T00:00:00Z",
+          "symbol": "MUSD",
+          "value": "4"
+        }
+      ]
+    },
+    {
+      "url": "https://api.wormholescan.io/api/v1/native-token-transfer/activity?symbol=MUSD&by=notional",
+      "status": 200,
+      "body": [
+        {
+          "emitterChain": 2,
+          "destinationChain": 30,
+          "symbol": "MUSD",
+          "value": "3925904.8879465"
+        },
+        {
+          "emitterChain": 2,
+          "destinationChain": 50,
+          "symbol": "MUSD",
+          "value": "17864737.769816"
+        },
+        {
+          "emitterChain": 30,
+          "destinationChain": 50,
+          "symbol": "MUSD",
+          "value": "4886520.07013544"
+        },
+        {
+          "emitterChain": 50,
+          "destinationChain": 30,
+          "symbol": "MUSD",
+          "value": "5267535.91081686"
+        },
+        {
+          "emitterChain": 50,
+          "destinationChain": 2,
+          "symbol": "MUSD",
+          "value": "20397670.34216225"
+        },
+        {
+          "emitterChain": 30,
+          "destinationChain": 2,
+          "symbol": "MUSD",
+          "value": "3757883.03398656"
+        }
+      ]
+    },
+    {
+      "url": "https://api.wormholescan.io/api/v1/native-token-transfer/activity?symbol=MUSD&by=tx",
+      "status": 200,
+      "body": [
+        {
+          "emitterChain": 2,
+          "destinationChain": 30,
+          "symbol": "MUSD",
+          "value": "646"
+        },
+        {
+          "emitterChain": 2,
+          "destinationChain": 50,
+          "symbol": "MUSD",
+          "value": "3207"
+        },
+        {
+          "emitterChain": 30,
+          "destinationChain": 50,
+          "symbol": "MUSD",
+          "value": "1439"
+        },
+        {
+          "emitterChain": 50,
+          "destinationChain": 30,
+          "symbol": "MUSD",
+          "value": "2583"
+        },
+        {
+          "emitterChain": 50,
+          "destinationChain": 2,
+          "symbol": "MUSD",
+          "value": "6676"
+        },
+        {
+          "emitterChain": 30,
+          "destinationChain": 2,
+          "symbol": "MUSD",
+          "value": "464"
+        }
+      ]
+    }
+  ]
+}

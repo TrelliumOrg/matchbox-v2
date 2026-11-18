@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "matchbox-docs",
+  "compatibility_date": "2026-11-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./src/server.ts",
+  "observability": { "enabled": true },
+  // Every page is prerendered to static HTML at build time and served from
+  // the assets before the Worker runs: a page view, a client navigation and
+  // the search index cost no Worker CPU. The Worker answers only requests
+  // no asset matches that are not navigations (a navigation miss gets
+  // 404.html from the asset layer, compatibility date after 2025-04-01),
+  // and it never renders a page there: see src/server.ts. No bindings.
+  "assets": {
+    "binding": "ASSETS",
+    "run_worker_first": false,
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  // Production, named and laid out as apps/pro's and apps/scan's live
+  // environment: build with CLOUDFLARE_ENV=preview, then deploy (README,
+  // Deploy). It answers docs.matchbox.markets since 13 Nov 2026.
+  "env": {
+    "preview": {
+      "name": "matchbox-docs-preview",
+      "workers_dev": true,
+      "routes": [{ "pattern": "docs.matchbox.markets", "custom_domain": true }],
+      "assets": {
+        "binding": "ASSETS",
+        "run_worker_first": false,
+        "html_handling": "drop-trailing-slash",
+        "not_found_handling": "404-page"
+      }
+    }
+  }
+}

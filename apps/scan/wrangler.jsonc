@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "matchscan-v2",
+  "compatibility_date": "2026-11-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./src/server.ts",
+  "observability": { "enabled": true },
+  // Scan's only binding: the API Worker. No D1, no KV (scan-plan.md, The
+  // app). The top-level Worker is for local builds and is never deployed.
+  "services": [{ "binding": "API", "service": "matchbox-api-v2-preview" }],
+  "vars": {
+    // "api" reads the API Worker. Local dev sets "fixtures" in .dev.vars.
+    "SCAN_DATA": "api",
+    // Used only when the API binding is missing (local dev).
+    "API_ORIGIN": "https://matchbox-api-v2-preview.mallard.workers.dev"
+  },
+  // Production, named and laid out as apps/pro's live environment: build
+  // with CLOUDFLARE_ENV=preview, then deploy (README, Deploy). Bound to the
+  // same API Worker Pro's live environment binds to, through the API's
+  // InternalApi entrypoint (apps/api README, Internal routes, rule 2).
+  "env": {
+    "preview": {
+      "name": "matchscan-v2-preview",
+      "workers_dev": true,
+      "routes": [{ "pattern": "scan.matchbox.markets", "custom_domain": true }],
+      "services": [
+        {
+          "binding": "API",
+          "service": "matchbox-api-v2-preview",
+          "entrypoint": "InternalApi"
+        }
+      ],
+      "vars": {
+        "SCAN_DATA": "api",
+        "API_ORIGIN": "https://matchbox-api-v2-preview.mallard.workers.dev"
+      }
+    }
+  }
+}

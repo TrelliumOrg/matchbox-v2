@@ -1,0 +1,18 @@
+# Paths in the private repository (MallardLabs/matchbox-v2) that never ship
+# to the public one (TrelliumOrg). `pnpm release:trellium:prepare` removes
+# them from a snapshot and `pnpm check:trellium` fails if one is present.
+# One glob per line: `dir/**`, `*` within a segment, `?`; a pattern without
+# a slash matches that name at any depth.
+#
+# The rule: internal documents live only under internal/. Anything about
+# machines, credentials, production operations, plans or people goes there.
+internal/**
+
+# The private repository's CI runs on the maintainers' own runners. The public
+# repository's workflows live in .github/public-workflows and the prepare
+# script swaps them in (internal/release/README.md).
+.github/workflows/**
+
+# Local release output and agent tool settings.
+.trellium-release/**
+.claude/**

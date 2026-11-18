@@ -1,0 +1,50 @@
+{
+  "name": "@matchbox/og",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./assets": {
+      "types": "./src/assets.tsx",
+      "default": "./src/assets.tsx"
+    },
+    "./palette": {
+      "types": "./src/palette.ts",
+      "default": "./src/palette.ts"
+    },
+    "./render": {
+      "types": "./src/render.ts",
+      "default": "./src/render.ts"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "default": "./src/server.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cf-wasm/resvg": "0.4.0",
+    "@cf-wasm/satori": "0.4.2",
+    "@matchbox/token-icons": "workspace:*",
+    "@matchbox/ui": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261108.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.6",
+    "vitest": "4.1.12"
+  }
+}

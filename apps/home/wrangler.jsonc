@@ -1,0 +1,66 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "matchbox-home",
+  "compatibility_date": "2026-11-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./src/server.ts",
+  "observability": { "enabled": true },
+  // The homepage's only binding: the API Worker, for the live figures. No
+  // D1, no KV: the figures are cached in the Cache API (src/data). The
+  // top-level Worker is for local builds and is never deployed.
+  "services": [{ "binding": "API", "service": "matchbox-api-v2-preview" }],
+  "vars": {
+    // "api" reads the API Worker. Local dev sets "fixtures" in .dev.vars.
+    "HOME_DATA": "api",
+    // Used only when the API binding is missing (local dev).
+    "API_ORIGIN": "https://matchbox-api-v2-preview.mallard.workers.dev"
+  },
+  // Production, named and bound as apps/scan's: build with
+  // CLOUDFLARE_ENV=preview, then deploy (README, Deploy).
+  "env": {
+    "preview": {
+      "name": "matchbox-home-preview",
+      "workers_dev": true,
+      // The homepage answers matchbox.markets (README, Deploy, step 3).
+      // Classic's Worker holds the route matchbox.markets/*, set in the
+      // dashboard. These are the homepage's own paths, and a more specific
+      // route wins, so the homepage takes them and every other path stays
+      // with Classic, which sends it to app.matchbox.markets. Remove them
+      // and deploy to go back.
+      "routes": [
+        { "pattern": "matchbox.markets/", "zone_name": "matchbox.markets" },
+        {
+          "pattern": "matchbox.markets/assets/*",
+          "zone_name": "matchbox.markets"
+        },
+        {
+          "pattern": "matchbox.markets/_serverFn/*",
+          "zone_name": "matchbox.markets"
+        },
+        {
+          "pattern": "matchbox.markets/search*",
+          "zone_name": "matchbox.markets"
+        },
+        {
+          "pattern": "matchbox.markets/live/heads",
+          "zone_name": "matchbox.markets"
+        },
+        {
+          "pattern": "matchbox.markets/favicon.svg",
+          "zone_name": "matchbox.markets"
+        }
+      ],
+      "services": [
+        {
+          "binding": "API",
+          "service": "matchbox-api-v2-preview",
+          "entrypoint": "InternalApi"
+        }
+      ],
+      "vars": {
+        "HOME_DATA": "api",
+        "API_ORIGIN": "https://matchbox-api-v2-preview.mallard.workers.dev"
+      }
+    }
+  }
+}

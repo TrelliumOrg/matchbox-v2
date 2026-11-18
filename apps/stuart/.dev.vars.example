@@ -1,0 +1,17 @@
+# Local secrets for `wrangler dev`. Copy to `.dev.vars` (git-ignored).
+# Production values are set with `wrangler secret put <NAME>`.
+
+# Leave empty to run Stuart deterministic-only (no model calls).
+ANTHROPIC_API_KEY=
+
+# Signs proposal refresh tokens and support drafts (>= 32 random chars).
+# Without it each isolate signs with a random key.
+PROPOSAL_HMAC_SECRET=replace-with-at-least-32-random-characters
+
+# Support report storage. Leave empty and /support-report answers
+# support_unavailable.
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Extra origins allowed to call Stuart from a browser (comma list).
+STUART_ALLOWED_ORIGINS=

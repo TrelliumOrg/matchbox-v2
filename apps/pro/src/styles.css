@@ -1,0 +1,197 @@
+@import "tailwindcss";
+@import "@matchbox/tokens/themes.css";
+@import "@matchbox/tokens/tailwind.css";
+@import "@matchbox/ui/styles.css";
+
+@source "./";
+
+/*
+ * What docks at the foot of the screen, measured once. On a phone the tab
+ * bar is 64px of tabs, a 1px rule and the system's bottom inset (Android's
+ * gesture or button bar, the iPhone home indicator; Chrome on Android reports
+ * it because the viewport is `viewport-fit=cover`). Docked bars sit 11px over
+ * it. From 768px there is no tab bar, and they sit 90px up, 12px over
+ * Stuart's Ctrl K bar (54px, 24px up). `--dock-top` is the top of the ballot
+ * bar (76px tall); what floats over Vote's bar sits 12px above that.
+ */
+:root {
+  --tabbar-inset: env(safe-area-inset-bottom, 0px);
+  --tabbar: calc(65px + var(--tabbar-inset));
+  --dock: calc(var(--tabbar) + 11px);
+  --dock-top: calc(var(--dock) + 76px);
+  --over-dock: calc(var(--dock-top) + 12px);
+  --toast-bottom: var(--dock);
+}
+
+@media (width >= 48rem) {
+  :root {
+    --dock: 90px;
+  }
+}
+
+/* Below 1600px Vote's ballot is a bar; toasts clear it. */
+@media (width < 100rem) {
+  body:has([data-ballot-bar]) {
+    --toast-bottom: var(--over-dock);
+  }
+}
+
+/* Stuart's panel sets this on <html> while it is expanded (DAICnrdo-X). */
+@custom-variant stuart-expanded (html[data-stuart-expanded] &);
+
+/*
+ * The sidebar's 72px icon rail: while Stuart is expanded, and on Vote below
+ * 1280px (the guideline's rail width; from 1280 the full sidebar stays).
+ */
+@custom-variant rail {
+  html[data-stuart-expanded] & {
+    @slot;
+  }
+  @media (width < 80rem) {
+    body:has([data-vote]) & {
+      @slot;
+    }
+  }
+}
+
+/*
+ * Figtree is preloaded (see the root route) and optional, like DM Mono: if it
+ * misses the first frame the fallback stays, so text never reflows after
+ * first paint (a swap moved the top bar and re-timed LCP on slow devices).
+ */
+@font-face {
+  font-family: "Figtree Variable";
+  font-style: normal;
+  font-display: optional;
+  font-weight: 300 900;
+  src: url("../node_modules/@fontsource-variable/figtree/files/figtree-latin-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Figtree Variable";
+  font-style: normal;
+  font-display: optional;
+  font-weight: 300 900;
+  src: url("../node_modules/@fontsource-variable/figtree/files/figtree-latin-ext-wght-normal.woff2")
+    format("woff2-variations");
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* DM Mono only sets the block ticker and addresses: never block on it. */
+@font-face {
+  font-family: "DM Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: optional;
+  src: url("../node_modules/@fontsource/dm-mono/files/dm-mono-latin-400-normal.woff2")
+    format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+html {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100dvh;
+}
+
+/*
+ * Route changes and the gauge card to profile shared element: under 200ms,
+ * and never in the way. Clicks pass through the transition overlay to the
+ * page, and a new navigation skips the running one (lib/view-transitions).
+ */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-group(*) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 140ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none;
+  }
+}
+
+/*
+ * The Classic note never sits on top of a task: it is out of sight while a
+ * sheet, the Account panel or Stuart's panel is open, or Stuart's minimized
+ * pill is up (it docks on the same spot), and back when they close (Doop
+ * frame bUZzLubGKg).
+ */
+body:has([role="dialog"], .stuart-pill:not([data-state="closed"]))
+  [data-classic-note] {
+  visibility: hidden;
+}
+
+/*
+ * Icons that open a tooltip (a gauge's type, a pool's type, the allocation
+ * mark) are all `role="img"` with `tabindex="0"`. Two things kept a finger,
+ * and on gauge cards a mouse too, from reaching them. Both are fixed here
+ * in CSS and not with an attribute on each icon, so no script grows.
+ *
+ * On a gauge card the name's link is stretched over the whole card (z 1),
+ * so the icon under it never got the pointer and a tap on it opened the
+ * profile. The icon now sits above that link, below the pick button (20).
+ *
+ * The icons are 14 to 18px. Under a finger each gets the same 44 by 44 hit
+ * area as a `data-tap` control (see @matchbox/ui/styles.css), centred on
+ * it, without changing how it looks.
+ */
+@layer base {
+  article [role="img"][tabindex="0"] {
+    position: relative;
+    z-index: 15;
+  }
+
+  @media (pointer: coarse) {
+    [role="img"][tabindex="0"] {
+      position: relative;
+    }
+
+    [role="img"][tabindex="0"]::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+/*
+ * Stuart's minimized pill docks where the ballot bar does on Vote below
+ * 1600px, so there it sits above the bar instead.
+ */
+@media (width < 100rem) {
+  body:has([data-ballot-bar]) .stuart-pill {
+    bottom: var(--over-dock);
+  }
+}

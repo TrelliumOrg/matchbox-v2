@@ -1,0 +1,16 @@
+export {
+  type Align,
+  Body,
+  Cell,
+  type CellProps,
+  Column,
+  type ColumnProps,
+  Empty,
+  Header,
+  type PhonePlace,
+  phoneCollisions,
+  type Reflow,
+  Root,
+  type RootProps,
+  Row,
+} from "./data-table"

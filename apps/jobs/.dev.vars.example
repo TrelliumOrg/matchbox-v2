@@ -1,0 +1,9 @@
+# Local secrets for `wrangler dev`. Copy to `.dev.vars` (git-ignored).
+ENVIRONMENT=development
+
+# A Neon DEV branch only (never production). Read-only queries.
+# WAREHOUSE_DATABASE_URL=postgresql://matchbox_api_ro:...@.../neondb?sslmode=require
+
+# Optional overrides.
+# MEZO_RPC_URLS=https://mainnet.mezo.public.validationcloud.io,https://rpc-internal.mezo.org
+# BASE_RPC_URL=

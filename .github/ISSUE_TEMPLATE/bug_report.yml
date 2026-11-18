@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in one of the apps or packages does not work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems go to a private report, never an issue: see SECURITY.md.
+        Do not paste wallet seeds, private keys, API keys or session cookies.
+  - type: dropdown
+    id: app
+    attributes:
+      label: Where
+      options:
+        - Matchbox Pro
+        - Matchscan
+        - Matchbox ID
+        - Matchbox Developer
+        - Docs
+        - Homepage
+        - Stuart
+        - API
+        - Indexer or jobs
+        - SDK
+        - A package or the build
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The page or route, and what you did. For a local run, the command and which fixtures or store.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, device or Node version

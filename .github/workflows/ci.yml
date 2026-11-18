@@ -1,0 +1,126 @@
+# The public repository's CI. In the private repository this file lives in
+# .github/public-workflows, where GitHub never runs it; the release snapshot
+# script copies it to .github/workflows in the public snapshot, in place of
+# the private workflows (which use the maintainers' own runners).
+#
+# Anyone can open a pull request here, so:
+# - GitHub-hosted runners only (ubuntu-latest), never self-hosted;
+# - the token is read-only, and no job reads a secret, so a pull request
+#   from a fork has nothing to steal;
+# - no pull_request_target or workflow_run (both run with the base
+#   repository's secrets);
+# - every action is pinned to a full commit SHA;
+# - nothing deploys.
+# `pnpm check:trellium` fails the release if any of that changes.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # For the indexer tests that need two connections at once (PGlite has
+    # one). Postgres 18, throwaway, so trust auth.
+    services:
+      postgres:
+        image: postgres:18.4
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: No secrets in tracked files
+        run: node scripts/check-secrets.mjs
+      - name: Public boundary (no private addresses, paths or emails)
+        run: |
+          node --test "scripts/lib/*.test.mjs"
+          node scripts/check-trellium-boundary.mjs
+      - run: pnpm lint
+      - run: pnpm turbo run typecheck
+      - run: pnpm turbo run test
+      - name: Indexer tests on a real Postgres
+        run: pnpm --filter @matchbox/indexer exec vitest run test/row-seq/concurrency.pg.test.ts
+        env:
+          MATCHBOX_TEST_DATABASE_URL: postgres://postgres@localhost:5432/postgres
+          MATCHBOX_REQUIRE_PG_TESTS: "1"
+      # Pro serves the Epoch 47 fixtures instead of the API Worker.
+      - run: cp apps/pro/.dev.vars.example apps/pro/.dev.vars
+      - run: pnpm turbo run build
+      - name: Pro initial JS per route under 120 kB brotli
+        working-directory: apps/pro
+        run: |
+          pnpm preview > preview.log 2>&1 &
+          for attempt in $(seq 1 120); do
+            curl -sf -o /dev/null http://localhost:4173/favicon.svg && break
+            sleep 1
+          done
+          status=0
+          node scripts/measure.mjs || status=$?
+          kill %1 2>/dev/null || true
+          if [ "$status" -ne 0 ]; then tail -20 preview.log; fi
+          exit "$status"
+
+  # Browser tests against local fixtures and in-memory stores. No secrets:
+  # every app below runs from its .dev.vars.example.
+  e2e:
+    name: End to end (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [pro, scan, id, developer]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Local config (fixtures or the memory store)
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          cp .dev.vars.example .dev.vars
+          if [ "${{ matrix.app }}" = "id" ]; then
+            echo "OIDC_SIGNING_KEYS=$(pnpm --silent keys:generate)" >> .dev.vars
+          fi
+      - run: pnpm turbo run build --filter=@matchbox/${{ matrix.app }}
+      - run: pnpm --filter @matchbox/${{ matrix.app }} exec playwright install --with-deps chromium
+      - run: pnpm --filter @matchbox/${{ matrix.app }} e2e
+      - if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: e2e-${{ matrix.app }}
+          path: apps/${{ matrix.app }}/test-results
+          if-no-files-found: ignore

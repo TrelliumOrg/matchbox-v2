@@ -1,0 +1,75 @@
+{
+  "items": [
+    {
+      "address": {
+        "ens_domain_name": null,
+        "hash": "0x73245Eff485aB3AAc1158B3c4d8f4b23797B0e32",
+        "implementations": [
+          {
+            "address_hash": "0xfabb48f4C541bd97CF1EB85540acD7aA8103361f",
+            "name": "StabilityPool"
+          }
+        ],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "TransparentUpgradeableProxy",
+        "private_tags": [],
+        "proxy_type": "eip1967",
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "token_id": null,
+      "value": "14172031977066897384115018"
+    },
+    {
+      "address": {
+        "ens_domain_name": null,
+        "hash": "0x7efb386675d75280D39Aae42964A6776DE0ee0bD",
+        "implementations": [
+          {
+            "address_hash": "0xd0Cbe9BE1AB548eb93E5557649B236305874d4D0",
+            "name": "NttManager"
+          }
+        ],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "ERC1967Proxy",
+        "private_tags": [],
+        "proxy_type": "eip1967",
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "token_id": null,
+      "value": "2912172460904740000000000"
+    },
+    {
+      "address": {
+        "ens_domain_name": null,
+        "hash": "0x0C0944713c185ea3e64F5609ECee3fB3C054a295",
+        "implementations": [],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "IdleStrategy",
+        "private_tags": [],
+        "proxy_type": null,
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "token_id": null,
+      "value": "1297021411954725025224301"
+    }
+  ],
+  "next_page_params": {
+    "value": "1045123614599352974238",
+    "address_hash": "0x1d6e8d24c133535f2d00676f66a0e824f84765ff"
+  }
+}

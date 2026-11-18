@@ -1,0 +1,152 @@
+{
+  "lighthouseVersion": "13.6.0",
+  "requestedUrl": "http://localhost:4174/tokens/mezo",
+  "mainDocumentUrl": "http://localhost:4174/tokens/mezo",
+  "finalUrl": "http://localhost:4174/tokens/mezo",
+  "finalDisplayedUrl": "http://localhost:4174/tokens/mezo",
+  "fetchTime": "2026-11-11T00:35:36.405Z",
+  "runWarnings": [],
+  "configSettings": {
+    "formFactor": "mobile",
+    "throttlingMethod": "simulate",
+    "onlyCategories": ["performance"]
+  },
+  "categories": {
+    "performance": {
+      "id": "performance",
+      "title": "Performance",
+      "score": 1,
+      "auditRefs": []
+    }
+  },
+  "audits": {
+    "first-contentful-paint": {
+      "id": "first-contentful-paint",
+      "title": "First Contentful Paint",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 792.8140000000001,
+      "numericUnit": "millisecond",
+      "displayValue": "0.8 s"
+    },
+    "largest-contentful-paint": {
+      "id": "largest-contentful-paint",
+      "title": "Largest Contentful Paint",
+      "score": 0.99,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 1649.9244999999996,
+      "numericUnit": "millisecond",
+      "displayValue": "1.6 s"
+    },
+    "interactive": {
+      "id": "interactive",
+      "title": "Time to Interactive",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 1656.35415,
+      "numericUnit": "millisecond",
+      "displayValue": "1.7 s"
+    },
+    "cumulative-layout-shift": {
+      "id": "cumulative-layout-shift",
+      "title": "Cumulative Layout Shift",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 0,
+      "numericUnit": "unitless",
+      "displayValue": "0"
+    },
+    "speed-index": {
+      "id": "speed-index",
+      "title": "Speed Index",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 929.3484165495049,
+      "numericUnit": "millisecond",
+      "displayValue": "0.9 s"
+    },
+    "total-blocking-time": {
+      "id": "total-blocking-time",
+      "title": "Total Blocking Time",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 0,
+      "numericUnit": "millisecond",
+      "displayValue": "0 ms"
+    },
+    "metrics": {
+      "id": "metrics",
+      "score": null,
+      "scoreDisplayMode": "informative",
+      "details": {
+        "type": "debugdata",
+        "items": [
+          {
+            "firstContentfulPaint": 793,
+            "largestContentfulPaint": 1650,
+            "interactive": 1656,
+            "observedFirstContentfulPaint": 282,
+            "observedFirstContentfulPaintTs": 16834598224,
+            "observedLargestContentfulPaint": 282,
+            "observedLargestContentfulPaintTs": 16834598224,
+            "observedNavigationStart": 0,
+            "observedNavigationStartTs": 16834316694
+          }
+        ]
+      }
+    },
+    "lcp-breakdown-insight": {
+      "id": "lcp-breakdown-insight",
+      "score": null,
+      "scoreDisplayMode": "informative",
+      "details": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 15.944000001907348
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 19.460999998092653
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 19.92800000190735
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 226.19699999809265
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "nodeLabel": "MEZO",
+            "snippet": "<img src=\"/assets/mezo-DRmbibRe.svg\" alt=\"MEZO\" width=\"64\" height=\"64\" decoding=\"async\" style=\"width:64px;height:64px;border-radius:50%;flex:none;display:block\">",
+            "selector": "div.flex > main#main > header.mt-10 > img"
+          }
+        ]
+      }
+    }
+  }
+}

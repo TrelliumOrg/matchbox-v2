@@ -1,0 +1,3408 @@
+{
+  "capturedAt": "2026-11-16T23:31:38.935Z",
+  "sources": {
+    "transfers": "https://api.explorer.mezo.org/api/v2/addresses/<address>/token-transfers?type=ERC-20",
+    "payers": "https://rpc-internal.mezo.org ve(), stakingToken(), rewardToken()"
+  },
+  "slices": {
+    "0x4da9e77114ee66d64ca9457da1fca94d4b06fb99": {
+      "from": 1786795200,
+      "to": 1794571200
+    },
+    "0xdc887b3d44bdf789d60d2d427d5e8db6e4ed6ad1": {
+      "from": 1791504000,
+      "to": 1791849600
+    }
+  },
+  "transfers": {
+    "0x4da9e77114ee66d64ca9457da1fca94d4b06fb99": [
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 58,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "222771851", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 56,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "607798839694314651966871",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 52,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_burning",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x0000000000000000000000000000000000000000",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "10510364048467038261489892",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 44,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x33b8B1162F0b86d68CAd418D96246Ee2c5164a01",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "10870271213490477033180",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 42,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0xFf3b49CCBf3bBeCC7942f2aE4AF2e5950EC7c422",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "143389726321492534855",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 40,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0xFf3b49CCBf3bBeCC7942f2aE4AF2e5950EC7c422",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "175487906", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 37,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xB33C3f97BF3B7df59417D114c694353E42929e87",
+              "name": "MUSDSavingsRate"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5250000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 36,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_burning",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x0000000000000000000000000000000000000000",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+          "name": "MUSD Savings Rate",
+          "symbol": "sMUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5250000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 32,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xB33C3f97BF3B7df59417D114c694353E42929e87",
+              "name": "MUSDSavingsRate"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "26831129288171250000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 23,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x677817bF3e44b90E8F95222F75e2950b7904a401",
+          "name": "VaultGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+          "name": "MUSD Savings Rate",
+          "symbol": "sMUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5250000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 20,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x677817bF3e44b90E8F95222F75e2950b7904a401",
+          "name": "VaultGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "594574203263227241250000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 15,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0xCC372B7E15535aB225fe17c1075831D38ef7aC1a",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5249999999999999999996674",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x700d3236668334b91299d3ea1bd7252fcdd941a02869589fc78b8ab1f1816605",
+        "block_number": 13022717,
+        "log_index": 0,
+        "timestamp": "2026-11-05T16:50:03.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x6d446E27505c71EE39D632488cE849fEF6aFFc57",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x8f11a90265f7a784B46fe326638Ec37a5CC29c33",
+              "name": "CLGauge"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "74649093788708100216871",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x6bd5c6789e8cc606eb26c8fce2eeb03ae47ea7096037fa86ee194ee5fb25100c",
+        "block_number": 12978711,
+        "log_index": 0,
+        "timestamp": "2026-11-03T20:23:49.000000Z",
+        "type": "token_transfer",
+        "method": "0xa9059cbb",
+        "from": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "2000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x38d361b0915152c1ea67cb4a8f54a8cf72cbcc6bbd5d6977f574cf3485975201",
+        "block_number": 12665359,
+        "log_index": 35,
+        "timestamp": "2026-10-21T15:35:12.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "0", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x38d361b0915152c1ea67cb4a8f54a8cf72cbcc6bbd5d6977f574cf3485975201",
+        "block_number": 12665359,
+        "log_index": 32,
+        "timestamp": "2026-10-21T15:35:12.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "9130673870103575027207",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x38d361b0915152c1ea67cb4a8f54a8cf72cbcc6bbd5d6977f574cf3485975201",
+        "block_number": 12665359,
+        "log_index": 29,
+        "timestamp": "2026-10-21T15:35:12.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "742753982944852152843121",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x38d361b0915152c1ea67cb4a8f54a8cf72cbcc6bbd5d6977f574cf3485975201",
+        "block_number": 12665359,
+        "log_index": 16,
+        "timestamp": "2026-10-21T15:35:12.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x33b8B1162F0b86d68CAd418D96246Ee2c5164a01",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "4485884604301221510668",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x38d361b0915152c1ea67cb4a8f54a8cf72cbcc6bbd5d6977f574cf3485975201",
+        "block_number": 12665359,
+        "log_index": 14,
+        "timestamp": "2026-10-21T15:35:12.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0xFf3b49CCBf3bBeCC7942f2aE4AF2e5950EC7c422",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "75444619288766546961",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x38d361b0915152c1ea67cb4a8f54a8cf72cbcc6bbd5d6977f574cf3485975201",
+        "block_number": 12665359,
+        "log_index": 12,
+        "timestamp": "2026-10-21T15:35:12.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0xFf3b49CCBf3bBeCC7942f2aE4AF2e5950EC7c422",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "24735190", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x38d361b0915152c1ea67cb4a8f54a8cf72cbcc6bbd5d6977f574cf3485975201",
+        "block_number": 12665359,
+        "log_index": 8,
+        "timestamp": "2026-10-21T15:35:12.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x677817bF3e44b90E8F95222F75e2950b7904a401",
+          "name": "VaultGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "466929213842598228750000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x38d361b0915152c1ea67cb4a8f54a8cf72cbcc6bbd5d6977f574cf3485975201",
+        "block_number": 12665359,
+        "log_index": 4,
+        "timestamp": "2026-10-21T15:35:12.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x6d446E27505c71EE39D632488cE849fEF6aFFc57",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x8f11a90265f7a784B46fe326638Ec37a5CC29c33",
+              "name": "CLGauge"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "896308360873332843121",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x73cfba2ebc6f5e03ae81828703f4ad0ca386f5ef07a6cd59ed0d7a806c1af30f",
+        "block_number": 12396371,
+        "log_index": 33,
+        "timestamp": "2026-10-09T14:13:43.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "118409716", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x73cfba2ebc6f5e03ae81828703f4ad0ca386f5ef07a6cd59ed0d7a806c1af30f",
+        "block_number": 12396371,
+        "log_index": 30,
+        "timestamp": "2026-10-09T14:13:43.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "13099669990817612400507",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x73cfba2ebc6f5e03ae81828703f4ad0ca386f5ef07a6cd59ed0d7a806c1af30f",
+        "block_number": 12396371,
+        "log_index": 27,
+        "timestamp": "2026-10-09T14:13:43.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "555999013601597286000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x73cfba2ebc6f5e03ae81828703f4ad0ca386f5ef07a6cd59ed0d7a806c1af30f",
+        "block_number": 12396371,
+        "log_index": 14,
+        "timestamp": "2026-10-09T14:13:43.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x33b8B1162F0b86d68CAd418D96246Ee2c5164a01",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "13557951704694950769776",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x73cfba2ebc6f5e03ae81828703f4ad0ca386f5ef07a6cd59ed0d7a806c1af30f",
+        "block_number": 12396371,
+        "log_index": 12,
+        "timestamp": "2026-10-09T14:13:43.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0xFf3b49CCBf3bBeCC7942f2aE4AF2e5950EC7c422",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "266194454844096810063",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x73cfba2ebc6f5e03ae81828703f4ad0ca386f5ef07a6cd59ed0d7a806c1af30f",
+        "block_number": 12396371,
+        "log_index": 10,
+        "timestamp": "2026-10-09T14:13:43.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0xFf3b49CCBf3bBeCC7942f2aE4AF2e5950EC7c422",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "159897754", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x73cfba2ebc6f5e03ae81828703f4ad0ca386f5ef07a6cd59ed0d7a806c1af30f",
+        "block_number": 12396371,
+        "log_index": 6,
+        "timestamp": "2026-10-09T14:13:43.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x677817bF3e44b90E8F95222F75e2950b7904a401",
+          "name": "VaultGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "809893308896916468000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x96a3c9c07f28a503cf3a3abb20c521fd844495f702a9af1b4c7c1d424971fc30",
+        "block_number": 12198029,
+        "log_index": 24,
+        "timestamp": "2026-09-30T15:38:42.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xCC372B7E15535aB225fe17c1075831D38ef7aC1a",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5249999999999999999996675",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x96a3c9c07f28a503cf3a3abb20c521fd844495f702a9af1b4c7c1d424971fc30",
+        "block_number": 12198029,
+        "log_index": 18,
+        "timestamp": "2026-09-30T15:38:42.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x677817bF3e44b90E8F95222F75e2950b7904a401",
+          "name": "VaultGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+          "name": "MUSD Savings Rate",
+          "symbol": "sMUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5250000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x96a3c9c07f28a503cf3a3abb20c521fd844495f702a9af1b4c7c1d424971fc30",
+        "block_number": 12198029,
+        "log_index": 9,
+        "timestamp": "2026-09-30T15:38:42.000000Z",
+        "type": "token_minting",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x0000000000000000000000000000000000000000",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+          "name": "MUSD Savings Rate",
+          "symbol": "sMUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5250000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x96a3c9c07f28a503cf3a3abb20c521fd844495f702a9af1b4c7c1d424971fc30",
+        "block_number": 12198029,
+        "log_index": 8,
+        "timestamp": "2026-09-30T15:38:42.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xB33C3f97BF3B7df59417D114c694353E42929e87",
+              "name": "MUSDSavingsRate"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5250000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x9f7344b2ebaed58680a4503e0496b863e2e000257ec6ec68b5bca70429035106",
+        "block_number": 12197992,
+        "log_index": 6,
+        "timestamp": "2026-09-30T15:36:07.000000Z",
+        "type": "token_minting",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x0000000000000000000000000000000000000000",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "10500000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x9e34e95e0cdbaf23a2db527503d78af04b69eacce84d502c2233504621a21a79",
+        "block_number": 12175698,
+        "log_index": 4,
+        "timestamp": "2026-09-29T14:13:16.000000Z",
+        "type": "token_burning",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x0000000000000000000000000000000000000000",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "10526155131522207848210435",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xfd2a708d3220fbd67added1b17a22ba8810508bd637a0a2db9090e77378713fc",
+        "block_number": 12175663,
+        "log_index": 24,
+        "timestamp": "2026-09-29T14:10:50.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xB33C3f97BF3B7df59417D114c694353E42929e87",
+              "name": "MUSDSavingsRate"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5250000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xfd2a708d3220fbd67added1b17a22ba8810508bd637a0a2db9090e77378713fc",
+        "block_number": 12175663,
+        "log_index": 23,
+        "timestamp": "2026-09-29T14:10:50.000000Z",
+        "type": "token_burning",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x0000000000000000000000000000000000000000",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+          "name": "MUSD Savings Rate",
+          "symbol": "sMUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5250000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xfd2a708d3220fbd67added1b17a22ba8810508bd637a0a2db9090e77378713fc",
+        "block_number": 12175663,
+        "log_index": 18,
+        "timestamp": "2026-09-29T14:10:50.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x677817bF3e44b90E8F95222F75e2950b7904a401",
+          "name": "VaultGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xb4D498029af77680cD1eF828b967f010d06C51CC",
+          "name": "MUSD Savings Rate",
+          "symbol": "sMUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5250000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xfd2a708d3220fbd67added1b17a22ba8810508bd637a0a2db9090e77378713fc",
+        "block_number": 12175663,
+        "log_index": 13,
+        "timestamp": "2026-09-29T14:10:50.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0xCC372B7E15535aB225fe17c1075831D38ef7aC1a",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5249999999999999999997356",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xafd7d3912f19a66b9ecb79b416825ec69c7e7c8dbffaf5f8159b48c3641eb109",
+        "block_number": 12069662,
+        "log_index": 0,
+        "timestamp": "2026-09-24T15:08:59.000000Z",
+        "type": "token_transfer",
+        "method": "0xa9059cbb",
+        "from": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "30000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x2a1875d811612d325351e6faa8bc1ea172c79d4679ce260c810d7a0e285af0d8",
+        "block_number": 11932219,
+        "log_index": 33,
+        "timestamp": "2026-09-18T12:18:36.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "1043138587", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x2a1875d811612d325351e6faa8bc1ea172c79d4679ce260c810d7a0e285af0d8",
+        "block_number": 11932219,
+        "log_index": 30,
+        "timestamp": "2026-09-18T12:18:36.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "42893238095477233764355",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x2a1875d811612d325351e6faa8bc1ea172c79d4679ce260c810d7a0e285af0d8",
+        "block_number": 11932219,
+        "log_index": 27,
+        "timestamp": "2026-09-18T12:18:36.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x40f3b4B768dD1680Fe3484321f2c589fa5603844",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "3055886183219306134704485",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x2a1875d811612d325351e6faa8bc1ea172c79d4679ce260c810d7a0e285af0d8",
+        "block_number": 11932219,
+        "log_index": 14,
+        "timestamp": "2026-09-18T12:18:36.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x33b8B1162F0b86d68CAd418D96246Ee2c5164a01",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "4451870719256100306807",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x2a1875d811612d325351e6faa8bc1ea172c79d4679ce260c810d7a0e285af0d8",
+        "block_number": 11932219,
+        "log_index": 12,
+        "timestamp": "2026-09-18T12:18:36.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0xFf3b49CCBf3bBeCC7942f2aE4AF2e5950EC7c422",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "66539455631948741613",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x2a1875d811612d325351e6faa8bc1ea172c79d4679ce260c810d7a0e285af0d8",
+        "block_number": 11932219,
+        "log_index": 10,
+        "timestamp": "2026-09-18T12:18:36.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0xFf3b49CCBf3bBeCC7942f2aE4AF2e5950EC7c422",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "89144998", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x2a1875d811612d325351e6faa8bc1ea172c79d4679ce260c810d7a0e285af0d8",
+        "block_number": 11932219,
+        "log_index": 6,
+        "timestamp": "2026-09-18T12:18:36.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x677817bF3e44b90E8F95222F75e2950b7904a401",
+          "name": "VaultGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "137496537782953718250000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x01584f2a481196226699b52687f385ad835b4801f0a341b6f7e3bf793c5c54d3",
+        "block_number": 11870606,
+        "log_index": 49,
+        "timestamp": "2026-09-15T18:33:46.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x3D4b1b884A7a1E59fE8589a3296EC8f8cBB6f279",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x41d0d67648bEc455052e17264CE1FC2314B75aE3",
+              "name": "VeBTC"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "500068558309125804169",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x01584f2a481196226699b52687f385ad835b4801f0a341b6f7e3bf793c5c54d3",
+        "block_number": 11870606,
+        "log_index": 43,
+        "timestamp": "2026-09-15T18:33:46.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x3D4b1b884A7a1E59fE8589a3296EC8f8cBB6f279",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x41d0d67648bEc455052e17264CE1FC2314B75aE3",
+              "name": "VeBTC"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "500068558309125804169",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x01584f2a481196226699b52687f385ad835b4801f0a341b6f7e3bf793c5c54d3",
+        "block_number": 11870606,
+        "log_index": 25,
+        "timestamp": "2026-09-15T18:33:46.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x677817bF3e44b90E8F95222F75e2950b7904a401",
+          "name": "VaultGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "1507659296991251454750000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x01584f2a481196226699b52687f385ad835b4801f0a341b6f7e3bf793c5c54d3",
+        "block_number": 11870606,
+        "log_index": 20,
+        "timestamp": "2026-09-15T18:33:46.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0xb58477e074265BdC7F7ca6100eD0f7De264F74A2",
+          "name": "RewardsDistributor",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "1169107289177266",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x01584f2a481196226699b52687f385ad835b4801f0a341b6f7e3bf793c5c54d3",
+        "block_number": 11870606,
+        "log_index": 13,
+        "timestamp": "2026-09-15T18:33:46.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0x33b8B1162F0b86d68CAd418D96246Ee2c5164a01",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "21561150000634096822451",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x01584f2a481196226699b52687f385ad835b4801f0a341b6f7e3bf793c5c54d3",
+        "block_number": 11870606,
+        "log_index": 8,
+        "timestamp": "2026-09-15T18:33:46.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0xFf3b49CCBf3bBeCC7942f2aE4AF2e5950EC7c422",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "501304907051609660614",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x01584f2a481196226699b52687f385ad835b4801f0a341b6f7e3bf793c5c54d3",
+        "block_number": 11870606,
+        "log_index": 6,
+        "timestamp": "2026-09-15T18:33:46.000000Z",
+        "type": "token_transfer",
+        "method": "0xe38335e5",
+        "from": {
+          "hash": "0xFf3b49CCBf3bBeCC7942f2aE4AF2e5950EC7c422",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "362945643", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x281d11082c549999279bcf50af0739ac4861828c0d609a92e91d529ece509618",
+        "block_number": 11839199,
+        "log_index": 2,
+        "timestamp": "2026-09-14T09:02:50.000000Z",
+        "type": "token_transfer",
+        "method": "0x134008d3",
+        "from": {
+          "hash": "0x4da9e77114EE66d64Ca9457DA1FcA94d4B06fB99",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xf74D1bDdC4c37cbC1b1d8A74480dDfF30af6273d",
+              "name": "Enclave"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0x3D4b1b884A7a1E59fE8589a3296EC8f8cBB6f279",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x41d0d67648bEc455052e17264CE1FC2314B75aE3",
+              "name": "VeBTC"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "10000000000", "decimals": "18", "token_id": null }
+      }
+    ],
+    "0xdc887b3d44bdf789d60d2d427d5e8db6e4ed6ad1": [
+      {
+        "transaction_hash": "0x2af1ddfee289b9c30a5b85a93e9235d12cb27f85af54ff2ef12c0a4efb0e3012",
+        "block_number": 12448686,
+        "log_index": 1,
+        "timestamp": "2026-10-11T22:19:24.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x9CBc1537d255768b431488305b1C7EFc2ac95022",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "1106358579918335479978",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x2af1ddfee289b9c30a5b85a93e9235d12cb27f85af54ff2ef12c0a4efb0e3012",
+        "block_number": 12448686,
+        "log_index": 0,
+        "timestamp": "2026-10-11T22:19:24.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0x9CBc1537d255768b431488305b1C7EFc2ac95022",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "13086730063431025",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xdcbda6337edec2d89826d44b805bee3820d37f7774c71bb9e35463578310ea5b",
+        "block_number": 12448668,
+        "log_index": 1,
+        "timestamp": "2026-10-11T22:18:14.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x9CBc1537d255768b431488305b1C7EFc2ac95022",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "1000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xdcbda6337edec2d89826d44b805bee3820d37f7774c71bb9e35463578310ea5b",
+        "block_number": 12448668,
+        "log_index": 0,
+        "timestamp": "2026-10-11T22:18:14.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0x9CBc1537d255768b431488305b1C7EFc2ac95022",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "11840192320070121",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xd00ed4bd66826e96b5002be4b6326a1339e006916577739bb4fd514a89152df3",
+        "block_number": 12448660,
+        "log_index": 1,
+        "timestamp": "2026-10-11T22:17:45.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x9CBc1537d255768b431488305b1C7EFc2ac95022",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "1000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xd00ed4bd66826e96b5002be4b6326a1339e006916577739bb4fd514a89152df3",
+        "block_number": 12448660,
+        "log_index": 0,
+        "timestamp": "2026-10-11T22:17:45.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0x9CBc1537d255768b431488305b1C7EFc2ac95022",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "11851166182617404",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xf9fc57af89b6ac395d6772e0ff0c063431e1ef250edc611a9ca1af4d2757ebe3",
+        "block_number": 12445553,
+        "log_index": 1,
+        "timestamp": "2026-10-11T18:58:02.000000Z",
+        "type": "token_transfer",
+        "method": "0xb5007d1f",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x96185a2f430C1183C1A01c0931bfe528af6d7Cc0",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "5544485354939345",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xf9fc57af89b6ac395d6772e0ff0c063431e1ef250edc611a9ca1af4d2757ebe3",
+        "block_number": 12445553,
+        "log_index": 0,
+        "timestamp": "2026-10-11T18:58:02.000000Z",
+        "type": "token_transfer",
+        "method": "0xb5007d1f",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x96185a2f430C1183C1A01c0931bfe528af6d7Cc0",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "1334817756", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x0ce85e5719f95036c62b6358e8cf7e88d9ed27fea57d5262fdc4e185b04638cf",
+        "block_number": 12445042,
+        "log_index": 0,
+        "timestamp": "2026-10-11T18:25:09.000000Z",
+        "type": "token_transfer",
+        "method": "0xf9f031df",
+        "from": {
+          "hash": "0xdE3593718dCF024dAa1e76FCba80e5ce99cD0ea9",
+          "name": null,
+          "is_contract": true,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "38743948692802073662713",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x6ab268e388fda6717010dd4bf0e4da0f9a4c8f6f21c26753fac9d618f76f66ab",
+        "block_number": 12445036,
+        "log_index": 0,
+        "timestamp": "2026-10-11T18:24:47.000000Z",
+        "type": "token_transfer",
+        "method": "0x02d13b18",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0xe99a9ad5Ed26BD30e4DB25397f378817e9b9515a",
+          "name": "TransparentUpgradeableProxy",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xd96f2ec7750573BCac3Ff49B1AC4F03fAEE2F157",
+              "name": "ValidatorsVoter"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "150000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xdfe72ad8eb14d855f4b43723829e9ac6a39d5387299d6a828d89b020ed5648dc",
+        "block_number": 12444949,
+        "log_index": 3,
+        "timestamp": "2026-10-11T18:19:12.000000Z",
+        "type": "token_transfer",
+        "method": "borrow",
+        "from": {
+          "hash": "0x565834cE7E40b8987BC20EbF83E2159467bDA311",
+          "name": "Morpho",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x04671C72Aab5AC02A03c1098314b1BB6B560c197",
+          "name": "Mezo Circle USDC",
+          "symbol": "mUSDC",
+          "decimals": "6",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": { "value": "17000000000", "decimals": "6", "token_id": null }
+      },
+      {
+        "transaction_hash": "0x57441f22d2bc472b32cdc32eec1de42e6a6926dd0acc2a450dec310bb73ba6d0",
+        "block_number": 12444944,
+        "log_index": 1,
+        "timestamp": "2026-10-11T18:18:54.000000Z",
+        "type": "token_transfer",
+        "method": "supplyCollateral",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x565834cE7E40b8987BC20EbF83E2159467bDA311",
+          "name": "Morpho",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "340000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xb889a19c1b3a0816e75b1bccceb8c767ff275d6c5feae87fae562bf69244c33c",
+        "block_number": 12444908,
+        "log_index": 7,
+        "timestamp": "2026-10-11T18:16:34.000000Z",
+        "type": "token_burning",
+        "method": "closeTrove",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x0000000000000000000000000000000000000000",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "2000320148627241119189",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x28739ffb039bd7d108999460cc5a7b66151625dfa18534347431be68ff8db0a9",
+        "block_number": 12444853,
+        "log_index": 0,
+        "timestamp": "2026-10-11T18:13:01.000000Z",
+        "type": "token_transfer",
+        "method": "0xa9059cbb",
+        "from": {
+          "hash": "0xC6f0F6E69b07Db21aE188F10ba4d71De234c14cC",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "200600000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x004a54c201be452c6d9842a3365ee2d11e26eb3aaf32e89f524f39e22f00c776",
+        "block_number": 12444811,
+        "log_index": 0,
+        "timestamp": "2026-10-11T18:10:18.000000Z",
+        "type": "token_transfer",
+        "method": "0xa9059cbb",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0xC6f0F6E69b07Db21aE188F10ba4d71De234c14cC",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "39706000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x067f27ef56cd108c1b63966fdfe3a34b80570e269ed0ad7e4dffac3e871f010f",
+        "block_number": 12444790,
+        "log_index": 4,
+        "timestamp": "2026-10-11T18:08:57.000000Z",
+        "type": "token_transfer",
+        "method": "removeLiquidity",
+        "from": {
+          "hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+          "name": "Volatile AMM - BTC/MUSD",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+              "name": "Pool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "44648707378269806602567",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x067f27ef56cd108c1b63966fdfe3a34b80570e269ed0ad7e4dffac3e871f010f",
+        "block_number": 12444790,
+        "log_index": 3,
+        "timestamp": "2026-10-11T18:08:57.000000Z",
+        "type": "token_transfer",
+        "method": "removeLiquidity",
+        "from": {
+          "hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+          "name": "Volatile AMM - BTC/MUSD",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+              "name": "Pool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "530503919949967214",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x067f27ef56cd108c1b63966fdfe3a34b80570e269ed0ad7e4dffac3e871f010f",
+        "block_number": 12444790,
+        "log_index": 1,
+        "timestamp": "2026-10-11T18:08:57.000000Z",
+        "type": "token_transfer",
+        "method": "removeLiquidity",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+          "name": "Volatile AMM - BTC/MUSD",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+              "name": "Pool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+          "name": "Volatile AMM - BTC/MUSD",
+          "symbol": "vAMM-BTC/MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "153903569260612297530",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x9032e8ad7303b29d5221db387a5a0d729f500e068fa4607527f6a6643bd50d48",
+        "block_number": 12444777,
+        "log_index": 0,
+        "timestamp": "2026-10-11T18:08:09.000000Z",
+        "type": "token_transfer",
+        "method": "0xf9f031df",
+        "from": {
+          "hash": "0x8Be20a5fF57E381025aE5E3A121B697269569AaF",
+          "name": "PoolGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "19107346445167239134",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x08046c2cd05fc89149e01ad727c7b3488b38a30177913860c55d214ed95f4962",
+        "block_number": 12444769,
+        "log_index": 0,
+        "timestamp": "2026-10-11T18:07:36.000000Z",
+        "type": "token_transfer",
+        "method": "0x2e1a7d4d",
+        "from": {
+          "hash": "0x8Be20a5fF57E381025aE5E3A121B697269569AaF",
+          "name": "PoolGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+          "name": "Volatile AMM - BTC/MUSD",
+          "symbol": "vAMM-BTC/MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "153903569260612297530",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xd080244811e07e52d8b1eff3aaeec0caf9fd618995c90c486f6bd00d01bcf50c",
+        "block_number": 12444742,
+        "log_index": 0,
+        "timestamp": "2026-10-11T18:05:53.000000Z",
+        "type": "token_transfer",
+        "method": "0xf9f031df",
+        "from": {
+          "hash": "0x8Be20a5fF57E381025aE5E3A121B697269569AaF",
+          "name": "PoolGauge",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "53288462005441954334686",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x585c0e5dcb51ba2c9091fffafed8e5bfadc39a85b4ed331cf0bdd4bfa73d5cb2",
+        "block_number": 12444733,
+        "log_index": 5,
+        "timestamp": "2026-10-11T18:05:21.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+          "name": "Volatile AMM - BTC/MUSD",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+              "name": "Pool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "414187104898172",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x585c0e5dcb51ba2c9091fffafed8e5bfadc39a85b4ed331cf0bdd4bfa73d5cb2",
+        "block_number": 12444733,
+        "log_index": 1,
+        "timestamp": "2026-10-11T18:05:21.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x1D6e8D24c133535F2d00676F66a0e824f84765ff",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "10000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x353de7dd8c462852182d007633bd7a89886cc4f386bf5de1b4bc7886e2d9c91b",
+        "block_number": 12444724,
+        "log_index": 5,
+        "timestamp": "2026-10-11T18:04:44.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+          "name": "Volatile AMM - BTC/MUSD",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+              "name": "Pool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "414552346599826",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x353de7dd8c462852182d007633bd7a89886cc4f386bf5de1b4bc7886e2d9c91b",
+        "block_number": 12444724,
+        "log_index": 1,
+        "timestamp": "2026-10-11T18:04:44.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x1D6e8D24c133535F2d00676F66a0e824f84765ff",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "10000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x7fa21e7aac1b9fda9ada22f6995fb4507c106ea48bf530339cb1c04bc7d5afb3",
+        "block_number": 12444717,
+        "log_index": 5,
+        "timestamp": "2026-10-11T18:04:18.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+          "name": "Volatile AMM - BTC/MUSD",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+              "name": "Pool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "414918071635014",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x7fa21e7aac1b9fda9ada22f6995fb4507c106ea48bf530339cb1c04bc7d5afb3",
+        "block_number": 12444717,
+        "log_index": 1,
+        "timestamp": "2026-10-11T18:04:18.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x1D6e8D24c133535F2d00676F66a0e824f84765ff",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "10000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xb1e2ed43a8ee15f6e33c93f871627e8380786f46b23cae845e4159d98a8c9657",
+        "block_number": 12444710,
+        "log_index": 5,
+        "timestamp": "2026-10-11T18:03:52.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0x52e604c44417233b6CcEDDDc0d640A405Caacefb",
+          "name": "Volatile AMM - BTC/MUSD",
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+              "name": "Pool"
+            }
+          ]
+        },
+        "to": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0x7b7C000000000000000000000000000000000000",
+          "name": "BTC",
+          "symbol": "BTC",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "415284280856925",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0xb1e2ed43a8ee15f6e33c93f871627e8380786f46b23cae845e4159d98a8c9657",
+        "block_number": 12444710,
+        "log_index": 1,
+        "timestamp": "2026-10-11T18:03:52.000000Z",
+        "type": "token_transfer",
+        "method": "0x3593564c",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x1D6e8D24c133535F2d00676F66a0e824f84765ff",
+          "name": null,
+          "is_contract": true,
+          "is_verified": true,
+          "implementations": [
+            {
+              "address_hash": "0x819CfAdd7F5bc0854FA3B7F5749ea0410a943E5F",
+              "name": "CLPool"
+            }
+          ]
+        },
+        "token": {
+          "address_hash": "0x7B7c000000000000000000000000000000000001",
+          "name": "MEZO",
+          "symbol": "MEZO",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "10000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      },
+      {
+        "transaction_hash": "0x384254ccbf1321e4fd291f813ac329a95570a41c73224116eebcd2e05020f02e",
+        "block_number": 12385302,
+        "log_index": 0,
+        "timestamp": "2026-10-09T02:16:22.000000Z",
+        "type": "token_transfer",
+        "method": "0xa9059cbb",
+        "from": {
+          "hash": "0xDc887b3D44bdf789d60D2d427d5E8dB6e4ED6aD1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "to": {
+          "hash": "0x6B6792F376CF02C3E1Fc74B2Ef73095a8EEac8c1",
+          "name": null,
+          "is_contract": false,
+          "is_verified": false,
+          "implementations": []
+        },
+        "token": {
+          "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+          "name": "Mezo USD",
+          "symbol": "MUSD",
+          "decimals": "18",
+          "type": "ERC-20",
+          "icon_url": null
+        },
+        "total": {
+          "value": "3000000000000000000000",
+          "decimals": "18",
+          "token_id": null
+        }
+      }
+    ]
+  },
+  "rewardEscrows": {
+    "0x33b8b1162f0b86d68cad418d96246ee2c5164a01": "veBTC",
+    "0xff3b49ccbf3bbecc7942f2ae4af2e5950ec7c422": "veBTC",
+    "0xb58477e074265bdc7f7ca6100ed0f7de264f74a2": "veBTC"
+  },
+  "gauges": {
+    "0x677817bf3e44b90e8f95222f75e2950b7904a401": {
+      "stakingToken": "0xb4d498029af77680cd1ef828b967f010d06c51cc",
+      "rewardToken": "0x7b7c000000000000000000000000000000000001"
+    },
+    "0x6d446e27505c71ee39d632488ce849fef6affc57": {
+      "stakingToken": null,
+      "rewardToken": "0x7b7c000000000000000000000000000000000001"
+    },
+    "0xde3593718dcf024daa1e76fcba80e5ce99cd0ea9": {
+      "stakingToken": null,
+      "rewardToken": "0x7b7c000000000000000000000000000000000001"
+    },
+    "0x8be20a5ff57e381025ae5e3a121b697269569aaf": {
+      "stakingToken": "0x52e604c44417233b6ccedddc0d640a405caacefb",
+      "rewardToken": "0x7b7c000000000000000000000000000000000001"
+    }
+  }
+}

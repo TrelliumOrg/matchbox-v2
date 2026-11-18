@@ -1,0 +1,46 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "matchbox-pro-v2",
+  "compatibility_date": "2026-11-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./src/server.ts",
+  "observability": { "enabled": true },
+  "vars": {
+    // "api" reads the API Worker. Local dev sets "fixtures" in .dev.vars.
+    "PRO_DATA": "api",
+    "API_ORIGIN": "https://api.matchbox.markets"
+  },
+  // Preview on workers.dev, bound to the v2 preview API. Build with
+  // CLOUDFLARE_ENV=preview, then deploy. The live Worker is matchbox-pro and
+  // is never deployed from this config.
+  "env": {
+    "preview": {
+      "name": "matchbox-pro-v2-preview",
+      "workers_dev": true,
+      // Live since 9 Nov 2026: pro.matchbox.markets (moved from the old
+      // matchbox-pro Worker, which stays deployed for rollback) and the beta.
+      "routes": [
+        { "pattern": "pro.matchbox.markets", "custom_domain": true },
+        { "pattern": "beta.matchbox.markets", "custom_domain": true }
+      ],
+      "services": [{ "binding": "API", "service": "matchbox-api-v2-preview" }],
+      "vars": {
+        "PRO_DATA": "api",
+        "API_ORIGIN": "https://matchbox-api-v2-preview.mallard.workers.dev",
+        // "enforce" or "report-only": the Content Security Policy rollback
+        // switch (see README). Declared here so a deploy never drops it.
+        "PRO_CSP": "enforce"
+      }
+    },
+    // Local only, for the Anvil fork tests (e2e-fork): data from the mock
+    // read-model API, wallet reads from Anvil. Never deployed.
+    "fork": {
+      "name": "matchbox-pro-v2-fork",
+      "vars": {
+        "PRO_DATA": "api",
+        "API_ORIGIN": "http://127.0.0.1:8799",
+        "MEZO_RPC_URL": "http://127.0.0.1:8545"
+      }
+    }
+  }
+}

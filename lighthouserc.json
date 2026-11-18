@@ -1,0 +1,39 @@
+{
+  "ci": {
+    "collect": {
+      "startServerCommand": "node scripts/compressing-proxy.mjs 4174 4173 --with-preview",
+      "startServerReadyPattern": "compressing proxy on",
+      "startServerReadyTimeout": 60000,
+      "url": [
+        "http://localhost:4174/",
+        "http://localhost:4174/0x7c21095156ab25e989c3c084bcb06037c6539e0b",
+        "http://localhost:4174/0x7c21095156ab25e989c3c084bcb06037c6539e0b/vote",
+        "http://localhost:4174/0x7c21095156ab25e989c3c084bcb06037c6539e0b/rewards",
+        "http://localhost:4174/0x7c21095156ab25e989c3c084bcb06037c6539e0b/activity",
+        "http://localhost:4174/protocol",
+        "http://localhost:4174/gauges/0x4da4c05483324ea9cfc951510a5e77cc79541159"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "onlyCategories": ["performance"],
+        "chromeFlags": "--headless=new --no-sandbox"
+      }
+    },
+    "assert": {
+      "assertions": {
+        "largest-contentful-paint": [
+          "error",
+          { "maxNumericValue": 1500, "aggregationMethod": "median-run" }
+        ],
+        "cumulative-layout-shift": [
+          "error",
+          { "maxNumericValue": 0, "aggregationMethod": "pessimistic" }
+        ]
+      }
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": ".lighthouseci"
+    }
+  }
+}

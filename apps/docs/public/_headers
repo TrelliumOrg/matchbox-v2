@@ -1,0 +1,18 @@
+# Cloudflare static asset headers. Every docs page is a static asset, so
+# these are the only response headers a page view gets (the Worker never
+# runs for it). Each page's script CSP is a <meta> with the hashes of its
+# own inline scripts (scripts/postbuild.mjs); the header CSP below adds what
+# a meta tag cannot carry. Both apply.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()
+  Cross-Origin-Opener-Policy: same-origin
+  Content-Security-Policy: frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'self'
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Hashed build assets never change.
+/assets/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable

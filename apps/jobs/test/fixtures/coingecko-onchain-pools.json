@@ -1,0 +1,419 @@
+{
+  "recordedAt": "2026-11-12T15:33:00Z",
+  "note": "Pool depth for the four tracked Base pools. recorded: GeckoTerminal keyless (api.geckoterminal.com/api/v2/networks/base/pools/multi/...), the data CoinGecko serves under /api/v3/onchain in the same documented shape; no keyed answer could be recorded without a key. documented: the example response of CoinGecko Demo API Multiple Pools Data by Pool Addresses (docs.coingecko.com, read 12 Nov 2026), trimmed.",
+  "network": "base",
+  "addresses": [
+    "0xb02fda984eddff593202ed2b5a6de043b9b62ea5",
+    "0x7507518c567c185632e95ca80114ce9a660b6943",
+    "0xff56d037d948fad1027a1ac82ae610e4b694c641",
+    "0xef458a3263d2a8c7f3ed9e949ae2f9b345d08b1f"
+  ],
+  "recorded": {
+    "data": [
+      {
+        "id": "base_0xb02fda984eddff593202ed2b5a6de043b9b62ea5",
+        "type": "pool",
+        "attributes": {
+          "base_token_price_usd": "0.996898648528817",
+          "base_token_price_native_currency": "0.000498106480016809782289387480549143621815053",
+          "quote_token_price_usd": "1.00393830530569",
+          "quote_token_price_native_currency": "0.000501372519354811",
+          "base_token_price_quote_token": "0.993485803",
+          "quote_token_price_base_token": "1.00655691",
+          "address": "0xb02fda984eddff593202ed2b5a6de043b9b62ea5",
+          "name": "MUSD / USDC 0.05%",
+          "pool_name": "MUSD / USDC",
+          "pool_fee_percentage": "0.05",
+          "pool_created_at": "2026-10-22T03:10:51Z",
+          "fdv_usd": "213561.493682073",
+          "market_cap_usd": "18929979.7041349",
+          "price_change_percentage": {
+            "m5": "-0.1",
+            "m15": "0.572",
+            "m30": "-0.001",
+            "h1": "0.05",
+            "h6": "0.588",
+            "h24": "0.325"
+          },
+          "transactions": {
+            "m5": {
+              "buys": 1,
+              "sells": 2,
+              "buyers": 1,
+              "sellers": 1
+            },
+            "m15": {
+              "buys": 1,
+              "sells": 3,
+              "buyers": 1,
+              "sellers": 2
+            },
+            "m30": {
+              "buys": 1,
+              "sells": 5,
+              "buyers": 1,
+              "sellers": 3
+            },
+            "h1": {
+              "buys": 4,
+              "sells": 13,
+              "buyers": 3,
+              "sellers": 5
+            },
+            "h6": {
+              "buys": 29,
+              "sells": 57,
+              "buyers": 8,
+              "sellers": 10
+            },
+            "h24": {
+              "buys": 172,
+              "sells": 333,
+              "buyers": 35,
+              "sellers": 40
+            }
+          },
+          "volume_usd": {
+            "m5": "422.5694892145",
+            "m15": "448.9334313974",
+            "m30": "489.5917749144",
+            "h1": "1522.952922089",
+            "h6": "6352.2126634635",
+            "h24": "45592.5238923012"
+          },
+          "reserve_in_usd": "823783.4422",
+          "locked_liquidity_percentage": null
+        },
+        "relationships": {
+          "base_token": {
+            "data": {
+              "id": "base_0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+              "type": "token"
+            }
+          },
+          "quote_token": {
+            "data": {
+              "id": "base_0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+              "type": "token"
+            }
+          },
+          "dex": {
+            "data": {
+              "id": "aero-slipstream-base",
+              "type": "dex"
+            }
+          }
+        }
+      },
+      {
+        "id": "base_0x7507518c567c185632e95ca80114ce9a660b6943",
+        "type": "pool",
+        "attributes": {
+          "base_token_price_usd": "0.00402368483162749",
+          "base_token_price_native_currency": "0.00000199764088550422959975405089956282394846455295",
+          "quote_token_price_usd": "0.996693888100876",
+          "quote_token_price_native_currency": "0.00049785666398016579781739459185",
+          "base_token_price_quote_token": "0.004012481965",
+          "quote_token_price_base_token": "249.2223039651",
+          "address": "0x7507518c567c185632e95ca80114ce9a660b6943",
+          "name": "MEZO / MUSD 0.031%",
+          "pool_name": "MEZO / MUSD",
+          "pool_fee_percentage": "0.031",
+          "pool_created_at": "2026-10-29T14:30:13Z",
+          "fdv_usd": "1486296.99875986",
+          "market_cap_usd": "2011842.416",
+          "price_change_percentage": {
+            "m5": "-0.161",
+            "m15": "-0.383",
+            "m30": "-0.33",
+            "h1": "-6.616",
+            "h6": "-13.734",
+            "h24": "2.138"
+          },
+          "transactions": {
+            "m5": {
+              "buys": 1,
+              "sells": 2,
+              "buyers": 1,
+              "sellers": 1
+            },
+            "m15": {
+              "buys": 1,
+              "sells": 3,
+              "buyers": 1,
+              "sellers": 2
+            },
+            "m30": {
+              "buys": 1,
+              "sells": 5,
+              "buyers": 1,
+              "sellers": 3
+            },
+            "h1": {
+              "buys": 4,
+              "sells": 13,
+              "buyers": 3,
+              "sellers": 5
+            },
+            "h6": {
+              "buys": 37,
+              "sells": 60,
+              "buyers": 12,
+              "sellers": 11
+            },
+            "h24": {
+              "buys": 214,
+              "sells": 321,
+              "buyers": 39,
+              "sellers": 54
+            }
+          },
+          "volume_usd": {
+            "m5": "329.5246867447",
+            "m15": "354.728740775",
+            "m30": "406.9192562203",
+            "h1": "1454.592902576",
+            "h6": "6285.1924686108",
+            "h24": "37333.7713234063"
+          },
+          "reserve_in_usd": "4276.6103",
+          "locked_liquidity_percentage": null
+        },
+        "relationships": {
+          "base_token": {
+            "data": {
+              "id": "base_0x8e4cbbcc33db6c0a18561fde1f6ba35906d4848b",
+              "type": "token"
+            }
+          },
+          "quote_token": {
+            "data": {
+              "id": "base_0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+              "type": "token"
+            }
+          },
+          "dex": {
+            "data": {
+              "id": "aero-slipstream-base",
+              "type": "dex"
+            }
+          }
+        }
+      },
+      {
+        "id": "base_0xff56d037d948fad1027a1ac82ae610e4b694c641",
+        "type": "pool",
+        "attributes": {
+          "base_token_price_usd": "0.995508383317027",
+          "base_token_price_native_currency": "0.000492641629663798101338117887105365646762857",
+          "quote_token_price_usd": "1.00160426019596",
+          "quote_token_price_native_currency": "0.00049592471056953",
+          "base_token_price_quote_token": "0.9933798804",
+          "quote_token_price_base_token": "1.0066642377",
+          "address": "0xff56d037d948fad1027a1ac82ae610e4b694c641",
+          "name": "MUSD / USDC 0.004%",
+          "pool_name": "MUSD / USDC",
+          "pool_fee_percentage": "0.004",
+          "pool_created_at": "2026-04-16T05:13:54Z",
+          "fdv_usd": "213263.662891377",
+          "market_cap_usd": "18903580.1377809",
+          "price_change_percentage": {
+            "m5": "0",
+            "m15": "0",
+            "m30": "0",
+            "h1": "0",
+            "h6": "0.536",
+            "h24": "0.714"
+          },
+          "transactions": {
+            "m5": {
+              "buys": 0,
+              "sells": 0,
+              "buyers": 0,
+              "sellers": 0
+            },
+            "m15": {
+              "buys": 0,
+              "sells": 0,
+              "buyers": 0,
+              "sellers": 0
+            },
+            "m30": {
+              "buys": 0,
+              "sells": 0,
+              "buyers": 0,
+              "sellers": 0
+            },
+            "h1": {
+              "buys": 0,
+              "sells": 0,
+              "buyers": 0,
+              "sellers": 0
+            },
+            "h6": {
+              "buys": 4,
+              "sells": 4,
+              "buyers": 3,
+              "sellers": 3
+            },
+            "h24": {
+              "buys": 19,
+              "sells": 27,
+              "buyers": 14,
+              "sellers": 19
+            }
+          },
+          "volume_usd": {
+            "m5": "0.0",
+            "m15": "0.0",
+            "m30": "0.0",
+            "h1": "0.0",
+            "h6": "28.984171419",
+            "h24": "146.3589140585"
+          },
+          "reserve_in_usd": "601.56",
+          "locked_liquidity_percentage": null
+        },
+        "relationships": {
+          "base_token": {
+            "data": {
+              "id": "base_0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+              "type": "token"
+            }
+          },
+          "quote_token": {
+            "data": {
+              "id": "base_0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+              "type": "token"
+            }
+          },
+          "dex": {
+            "data": {
+              "id": "aerodrome-slipstream-3",
+              "type": "dex"
+            }
+          }
+        }
+      },
+      {
+        "id": "base_0xef458a3263d2a8c7f3ed9e949ae2f9b345d08b1f",
+        "type": "pool",
+        "attributes": {
+          "base_token_price_usd": "0.00400438492870084",
+          "base_token_price_native_currency": "0.0000020025228806257207185751069471218535418818491",
+          "quote_token_price_usd": "0.985650254183881",
+          "quote_token_price_native_currency": "0.0004929064566572886524670867201",
+          "base_token_price_quote_token": "0.004062683403",
+          "quote_token_price_base_token": "246.1427339613",
+          "address": "0xef458a3263d2a8c7f3ed9e949ae2f9b345d08b1f",
+          "name": "MEZO / MUSD 0.3%",
+          "pool_name": "MEZO / MUSD",
+          "pool_fee_percentage": "0.3",
+          "pool_created_at": "2026-04-16T07:03:16Z",
+          "fdv_usd": "1479167.86486818",
+          "market_cap_usd": "2002192.4645",
+          "price_change_percentage": {
+            "m5": "0",
+            "m15": "0",
+            "m30": "-2.147",
+            "h1": "-4.762",
+            "h6": "-30.759",
+            "h24": "-30.759"
+          },
+          "transactions": {
+            "m5": {
+              "buys": 0,
+              "sells": 0,
+              "buyers": 0,
+              "sellers": 0
+            },
+            "m15": {
+              "buys": 0,
+              "sells": 1,
+              "buyers": 0,
+              "sellers": 1
+            },
+            "m30": {
+              "buys": 0,
+              "sells": 4,
+              "buyers": 0,
+              "sellers": 2
+            },
+            "h1": {
+              "buys": 13,
+              "sells": 20,
+              "buyers": 1,
+              "sellers": 4
+            },
+            "h6": {
+              "buys": 41,
+              "sells": 49,
+              "buyers": 5,
+              "sellers": 5
+            },
+            "h24": {
+              "buys": 41,
+              "sells": 49,
+              "buyers": 5,
+              "sellers": 5
+            }
+          },
+          "volume_usd": {
+            "m5": "0.0",
+            "m15": "1.3127195474",
+            "m30": "5.7410183809",
+            "h1": "39.8399631973",
+            "h6": "116.2480289377",
+            "h24": "116.2480289377"
+          },
+          "reserve_in_usd": "1849.1362",
+          "locked_liquidity_percentage": null
+        },
+        "relationships": {
+          "base_token": {
+            "data": {
+              "id": "base_0x8e4cbbcc33db6c0a18561fde1f6ba35906d4848b",
+              "type": "token"
+            }
+          },
+          "quote_token": {
+            "data": {
+              "id": "base_0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186",
+              "type": "token"
+            }
+          },
+          "dex": {
+            "data": {
+              "id": "aerodrome-slipstream-3",
+              "type": "dex"
+            }
+          }
+        }
+      }
+    ]
+  },
+  "documented": {
+    "data": [
+      {
+        "id": "solana_E6RbuozUjZshXH3sRKgCaoXPzfc7EMFiyu4HRxf6ERrH",
+        "type": "pool",
+        "attributes": {
+          "base_token_price_usd": "0.00006785892126",
+          "address": "E6RbuozUjZshXH3sRKgCaoXPzfc7EMFiyu4HRxf6ERrH",
+          "name": "WOJAK / SOL",
+          "pool_fee_percentage": null,
+          "volume_usd": {
+            "m5": "0.0",
+            "m15": "0.0",
+            "m30": "0.0",
+            "h1": "0.0",
+            "h6": "0.0",
+            "h24": "0.0"
+          },
+          "reserve_in_usd": "13843.8176",
+          "locked_liquidity_percentage": null
+        }
+      }
+    ]
+  }
+}

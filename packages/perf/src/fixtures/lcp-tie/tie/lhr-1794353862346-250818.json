@@ -1,0 +1,142 @@
+{
+  "lighthouseVersion": "13.6.0",
+  "requestedUrl": "http://localhost:4174/",
+  "mainDocumentUrl": "http://localhost:4174/",
+  "finalUrl": "http://localhost:4174/",
+  "finalDisplayedUrl": "http://localhost:4174/",
+  "fetchTime": "2026-11-10T23:37:33.019Z",
+  "runWarnings": [],
+  "configSettings": {
+    "formFactor": "mobile",
+    "throttlingMethod": "simulate",
+    "onlyCategories": ["performance"]
+  },
+  "categories": {
+    "performance": {
+      "id": "performance",
+      "title": "Performance",
+      "score": 1,
+      "auditRefs": []
+    }
+  },
+  "audits": {
+    "first-contentful-paint": {
+      "id": "first-contentful-paint",
+      "title": "First Contentful Paint",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 783.2534,
+      "numericUnit": "millisecond",
+      "displayValue": "0.8 s"
+    },
+    "largest-contentful-paint": {
+      "id": "largest-contentful-paint",
+      "title": "Largest Contentful Paint",
+      "score": 0.99,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 1592.0068,
+      "numericUnit": "millisecond",
+      "displayValue": "1.6 s"
+    },
+    "interactive": {
+      "id": "interactive",
+      "title": "Time to Interactive",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 1602.7941300000002,
+      "numericUnit": "millisecond",
+      "displayValue": "1.6 s"
+    },
+    "cumulative-layout-shift": {
+      "id": "cumulative-layout-shift",
+      "title": "Cumulative Layout Shift",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 0,
+      "numericUnit": "unitless",
+      "displayValue": "0"
+    },
+    "speed-index": {
+      "id": "speed-index",
+      "title": "Speed Index",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 1072.642845385676,
+      "numericUnit": "millisecond",
+      "displayValue": "1.1 s"
+    },
+    "total-blocking-time": {
+      "id": "total-blocking-time",
+      "title": "Total Blocking Time",
+      "score": 1,
+      "scoreDisplayMode": "numeric",
+      "numericValue": 0,
+      "numericUnit": "millisecond",
+      "displayValue": "0 ms"
+    },
+    "metrics": {
+      "id": "metrics",
+      "score": null,
+      "scoreDisplayMode": "informative",
+      "details": {
+        "type": "debugdata",
+        "items": [
+          {
+            "firstContentfulPaint": 783,
+            "largestContentfulPaint": 1592,
+            "interactive": 1603,
+            "observedFirstContentfulPaint": 238,
+            "observedFirstContentfulPaintTs": 8520481385,
+            "observedLargestContentfulPaint": 238,
+            "observedLargestContentfulPaintTs": 8520481386,
+            "observedNavigationStart": 0,
+            "observedNavigationStartTs": 8520243720
+          }
+        ]
+      }
+    },
+    "lcp-breakdown-insight": {
+      "id": "lcp-breakdown-insight",
+      "score": null,
+      "scoreDisplayMode": "informative",
+      "details": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 62.78100000190735
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 174.88499999809264
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "nodeLabel": "Explore Mezo",
+            "snippet": "<h1 class=\"text-[44px] leading-tight font-[650] tracking-[-0.025em] max-xl:text-[32px]\">",
+            "selector": "div.flex > main#main > section.flex > h1.text-[44px]"
+          }
+        ]
+      }
+    }
+  }
+}

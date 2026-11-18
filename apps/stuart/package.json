@@ -1,0 +1,36 @@
+{
+  "name": "@matchbox/stuart",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "dev": "wrangler dev",
+    "test": "vitest run && vitest run --config bench/vitest.config.ts --exclude bench/run.test.ts",
+    "bench": "vitest run --config bench/vitest.config.ts",
+    "bench:matrix": "tsx bench/matrix/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.3.0",
+    "@matchbox/chain": "workspace:*",
+    "@matchbox/contracts": "workspace:*",
+    "@matchbox/docs": "workspace:*",
+    "@matchbox/domain": "workspace:*",
+    "@matchbox/logger": "workspace:*",
+    "@matchbox/server": "workspace:*",
+    "@matchbox/stuart-ui": "workspace:*",
+    "hono": "4.13.5",
+    "viem": "2.57.17",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261108.1",
+    "@types/node": "24.19.2",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "vitest": "4.1.12",
+    "wrangler": "4.158.0"
+  }
+}

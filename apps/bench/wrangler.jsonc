@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Production: the Worker matchbox-bench on bench.matchbox.markets, built
+  // with no CLOUDFLARE_ENV (README, Deploy). Wrangler creates the custom
+  // domain's DNS record on the first deploy.
+  "name": "matchbox-bench",
+  "compatibility_date": "2026-11-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./src/server.ts",
+  "observability": { "enabled": true },
+  "workers_dev": false,
+  "routes": [{ "pattern": "bench.matchbox.markets", "custom_domain": true }],
+  // Every page is prerendered to static HTML at build time from
+  // data/results.json and served from the assets before the Worker runs.
+  // The Worker answers only requests no asset matches that are not
+  // navigations, and never renders a page there (src/server.ts). No
+  // bindings, no API calls.
+  "assets": {
+    "binding": "ASSETS",
+    "run_worker_first": false,
+    "html_handling": "drop-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "env": {
+    // The workers.dev copy for checking a build before production: built
+    // with CLOUDFLARE_ENV=preview. No custom domain.
+    "preview": {
+      "name": "matchbox-bench-preview",
+      "workers_dev": true,
+      "routes": [],
+      "assets": {
+        "binding": "ASSETS",
+        "run_worker_first": false,
+        "html_handling": "drop-trailing-slash",
+        "not_found_handling": "404-page"
+      }
+    }
+  }
+}

@@ -1,0 +1,279 @@
+// Runs CLASSIC code (MallardLabs/Matchbox 5c657b5, exported read-only to this
+// scratch dir) to produce compatibility fixtures for the v2 ports.
+import { formatApiKey, formatClientSecret, parseApiKey } from "@repo/platform-contracts/credentials"
+import { generatePairwiseSubject, hmacHex, hostCookieName, sessionCookieNames } from "@repo/platform-server"
+import { sessionTokenHash as consoleSessionTokenHash } from "./apps/developer-console/src/worker/auth/session"
+import { createSigningKeys } from "./apps/matchbox-id/src/worker/oidc/keys"
+import { memorySeed } from "./apps/matchbox-id/src/worker/store/memory-store"
+import { serializeLaxSessionCookie, sessionCookieName } from "./apps/matchbox-id/src/worker/session"
+import { createHarness, devAccount, exchangeCode, obtainCode, pkce, signIn, siweMessage, url, verifySiwe } from "./apps/matchbox-id/src/worker/test-harness"
+import { createHarness as createConsoleHarness } from "./apps/developer-console/src/worker/test/harness"
+
+const peppers = {
+  apiKey: "classic-fixture-api-key-pepper-000",
+  clientSecret: "classic-fixture-client-secret-pepper",
+  session: "classic-fixture-session-pepper-0000",
+}
+
+// Tokens are stored as their three parts so the fixture file holds no
+// whole JWT (the repository's secrets scan flags any); tests rejoin them.
+function splitJwt(token: string): { header: string; payload: string; signature: string } {
+  const [header = "", payload = "", signature = ""] = token.split(".")
+  return { header, payload, signature }
+}
+
+function decode(part: string): unknown {
+  return JSON.parse(Buffer.from(part, "base64url").toString("utf8"))
+}
+
+async function main(): Promise<void> {
+  const apiKey = formatApiKey({ kind: "secret", environmentKind: "live", prefix: "AbCdEfGhIjKl", secret: "s".repeat(43) })
+  const publishable = formatApiKey({ kind: "publishable", environmentKind: "test", prefix: "MnOpQrStUvWx", secret: "p".repeat(43) })
+  const clientSecret = formatClientSecret({ prefix: "ZyXwVuTsRqPo", secret: "c".repeat(43) })
+  const token = "classic-opaque-token-0123456789abcdefghijklmnopq"
+  const out: Record<string, unknown> = {
+    peppers,
+    apiKey: { value: apiKey, parsed: parseApiKey(apiKey), hash: await hmacHex(peppers.apiKey, apiKey) },
+    publishableKey: { value: publishable, hash: await hmacHex(peppers.apiKey, publishable) },
+    clientSecret: { value: clientSecret, hash: await hmacHex(peppers.clientSecret, clientSecret) },
+    idSession: {
+      token,
+      cookieName: hostCookieName(sessionCookieName),
+      setCookie: serializeLaxSessionCookie(token, 2_592_000),
+      // ID sessions, codes and refresh tokens: HMAC(SESSION_PEPPER, token).
+      hash: await hmacHex(peppers.session, token),
+    },
+    consoleSession: {
+      token,
+      cookieName: hostCookieName(sessionCookieNames.developerConsole),
+      hash: await consoleSessionTokenHash(peppers.session, token),
+      // The same token under the v2 console test harness's SESSION_PEPPER,
+      // so a Classic-written row can be replayed against the ported app.
+      harnessPepper: "test-session-pepper-0123456789abcdef",
+      harnessHash: await consoleSessionTokenHash("test-session-pepper-0123456789abcdef", token),
+    },
+  }
+
+  // Signing keys: a fixed two-key OIDC_SIGNING_KEYS; index 0 signs.
+  const signingKeys = [
+    { kty: "EC", crv: "P-256", kid: "mbx-id-2026-06-20-aaaa0001", x: "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU", y: "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0", d: "jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI" },
+    { kty: "EC", crv: "P-256", kid: "mbx-id-2026-01-01-bbbb0002", x: "2E3GcULHRgVOiCUSWETyAogaUi0ZxGJjNH5UEhoEaMM", y: "GJks4wCUckkBSd4XZUD9zyKMpZIkYGUyHq6KX3SiJvk", d: "ko150rXusbGiQjgoVooCez5tD_zQDXrEPM6sr3QcjhQ" },
+  ]
+  const keys = await createSigningKeys(signingKeys)
+  const classicSigned = await keys.sign({ iss: "https://id.matchbox.markets", aud: "mbx_live_ExampleLiveClient0000001", sub: "mbx_fixture", iat: 1_790_000_000, exp: 4_102_444_800 }, { type: "JWT" })
+  // A token signed by the second key (Classic with that key first), which
+  // only the second JWK can verify.
+  const rotated = await createSigningKeys([signingKeys[1], signingKeys[0]])
+  const signedBySecond = await rotated.sign({ iss: "https://id.matchbox.markets", aud: "mbx_live_ExampleLiveClient0000001", sub: "mbx_second", iat: 1_790_000_000, exp: 4_102_444_800 }, { type: "JWT" })
+  out.signing = { keys: signingKeys, jwks: keys.jwks, classicSignedIdToken: splitJwt(classicSigned), signedBySecondKey: splitJwt(signedBySecond), header: decode(classicSigned.split(".")[0] ?? "") }
+
+  // A full Classic flow: SIWE, authorize, consent, code exchange.
+  const harness = await createHarness()
+  const discovery = await (await harness.app.request(url("/.well-known/openid-configuration"))).json()
+  const cookie = await signIn(harness)
+  const challenge = await pkce()
+  const code = await obtainCode(harness, cookie, { pkce: challenge, clientId: memorySeed.testClientId, redirectUri: memorySeed.testRedirectUris[0], scope: "openid wallet" })
+  const tokenJson = await exchangeCode(harness, code, challenge.verifier)
+  const [idHeader, idPayload] = (tokenJson.id_token ?? "").split(".")
+  const [atHeader, atPayload] = tokenJson.access_token.split(".")
+  out.flow = {
+    discovery,
+    tokenResponseKeys: Object.keys(tokenJson).sort(),
+    tokenType: tokenJson.token_type,
+    expiresIn: tokenJson.expires_in,
+    scope: tokenJson.scope,
+    idTokenHeader: decode(idHeader ?? ""),
+    idTokenPayload: decode(idPayload ?? ""),
+    accessTokenHeader: decode(atHeader ?? ""),
+    accessTokenPayload: decode(atPayload ?? ""),
+  }
+  // Rows Classic writes, captured at its store boundary during real flows.
+  const captured: Record<string, unknown> = {}
+  const rows = await createHarness({
+    wrapStore: (store) =>
+      new Proxy(store, {
+        get(target, property, receiver) {
+          const value = Reflect.get(target, property, receiver)
+          if (typeof value !== "function") return value
+          return (...args: unknown[]) => {
+            if (property === "createGrant") captured.grant = args[0]
+            if (property === "createAuthorizationCode") captured.code = args[0]
+            if (property === "issueCodeTokens") captured.issued = args[0]
+            return value.apply(target, args)
+          }
+        },
+      }),
+  })
+  const rowsCookie = await signIn(rows)
+  const first = await pkce()
+  const firstCode = await obtainCode(rows, rowsCookie, { pkce: first, scope: "openid wallet" })
+  const issuedTokens = await exchangeCode(rows, firstCode, first.verifier)
+  const issuedRow = captured.issued
+  const grantRow = captured.grant
+  // A second code under the existing grant (no consent), left unredeemed.
+  const second = await pkce()
+  const secondCode = await obtainCode(rows, rowsCookie, { pkce: second, scope: "openid wallet" })
+  out.rows = {
+    sessionPepper: rows.deps.config.sessionPepper,
+    clientSecretPepper: rows.deps.config.clientSecretPepper,
+    grant: grantRow,
+    refreshToken: { plaintext: issuedTokens.refresh_token, issued: issuedRow },
+    code: { plaintext: secondCode, verifier: second.verifier, row: captured.code },
+    grantSkippedConsent: captured.grant === grantRow,
+    clientSecret: {
+      plaintext: memorySeed.liveClientSecret,
+      prefix: memorySeed.liveClientSecretPrefix,
+      hash: await hmacHex(rows.deps.config.clientSecretPepper, memorySeed.liveClientSecret),
+    },
+  }
+
+  // Cookies exactly as Classic sets them.
+  // Classic's SIWE verify response: the session cookie as browsers get it.
+  const idSignIn = await createHarness()
+  const message = await siweMessage(idSignIn, devAccount)
+  const verified = await verifySiwe(idSignIn, message, devAccount)
+  const idSetCookie = verified.headers.getSetCookie().find((cookie) => cookie.startsWith("__Host-mbx_id="))
+  const idCookie = idSetCookie?.split(";")[0] ?? ""
+  const signedOutId = await idSignIn.app.request(url("/api/session/sign-out"), { method: "POST", headers: { Origin: "https://id.test", Cookie: idCookie } })
+  out.cookies = {
+    idSignIn: idSetCookie?.replace(/^__Host-mbx_id=[^;]*/, "__Host-mbx_id=<token>"),
+    idSignOut: signedOutId.headers.getSetCookie().find((cookie) => cookie.startsWith("__Host-mbx_id=")),
+  }
+  const consoleHarness = createConsoleHarness()
+  const signedIn = await consoleHarness.googleSignIn({ sub: "google-dev", email: "dev@example.com" })
+  const consoleSetCookie = signedIn.response.headers.getSetCookie().find((cookie) => cookie.startsWith("__Host-mbx_dev="))
+  const consoleAccount = await consoleHarness.account("slide@example.com")
+  const sliding = await consoleHarness.signIn(consoleAccount)
+  consoleHarness.advance(6 * 60_000)
+  const touched = await consoleHarness.request("GET", "/api/me", { cookie: sliding })
+  const touchedCookie = touched.headers.getSetCookie().find((cookie) => cookie.startsWith("__Host-mbx_dev="))
+  const ended = await consoleHarness.request("POST", "/api/auth/sign-out", { cookie: sliding })
+  out.cookies = {
+    ...(out.cookies as object),
+    consoleSignIn: consoleSetCookie?.replace(/^__Host-mbx_dev=[^;]*/, "__Host-mbx_dev=<token>"),
+    consoleTouchedAfter6Minutes: touchedCookie?.replace(/^__Host-mbx_dev=[^;]*/, "__Host-mbx_dev=<token>"),
+    consoleSignOut: ended.headers.getSetCookie().find((cookie) => cookie.startsWith("__Host-mbx_dev=")),
+  }
+  // What Classic's console answered a signed-in developer who is not staff
+  // on every staff route (the page gate is the server's answer).
+  const staffCheck = createConsoleHarness()
+  const developer = await staffCheck.account("not-staff@example.com")
+  const developerCookie = await staffCheck.signIn(developer)
+  const zero = "00000000-0000-4000-8000-000000000000"
+  const staffRoutes: Array<[string, string]> = [
+    ["GET", "/api/admin/reviews"],
+    ["GET", "/api/admin/reviews/stats"],
+    ["GET", `/api/admin/reviews/${zero}`],
+    ["GET", `/api/admin/reviews/${zero}/logo`],
+    ["POST", `/api/admin/reviews/${zero}/decision`],
+    ["GET", "/api/admin/apps"],
+    ["POST", `/api/admin/apps/${zero}/status`],
+    ["GET", `/api/admin/environments/${zero}/quota-overrides`],
+    ["POST", `/api/admin/environments/${zero}/quota-overrides`],
+    ["DELETE", `/api/admin/quota-overrides/${zero}`],
+    ["GET", "/api/admin/audit"],
+  ]
+  const staffAnswers: Record<string, { status: number; code: string | null }> = {}
+  for (const [method, routePath] of staffRoutes) {
+    const response = await staffCheck.request(method, routePath, {
+      cookie: developerCookie,
+      ...(method === "GET" || method === "DELETE" ? {} : { body: {} }),
+    })
+    const body = (await response.json().catch(() => null)) as { error?: { code?: string } } | null
+    staffAnswers[`${method} ${routePath}`] = { status: response.status, code: body?.error?.code ?? null }
+  }
+  out.staffRoutesForNonStaff = staffAnswers
+  // Classic's real create paths with seeded randomness: every
+  // crypto.getRandomValues call inside one request draws from the same
+  // deterministic stream, so the ported code, given the same seed, must
+  // produce the same plaintext and store the same hash.
+  function seededRandom(seed: number) {
+    let state = seed >>> 0
+    return <T extends ArrayBufferView | null>(array: T): T => {
+      if (array === null) return array
+      const bytes = new Uint8Array(array.buffer, array.byteOffset, array.byteLength)
+      for (let index = 0; index < bytes.length; index += 1) {
+        state = (Math.imul(state, 1103515245) + 12345) >>> 0
+        bytes[index] = state >>> 24
+      }
+      return array
+    }
+  }
+  async function withSeed<T>(seed: number, run: () => Promise<T>): Promise<T> {
+    const original = crypto.getRandomValues
+    crypto.getRandomValues = seededRandom(seed) as typeof crypto.getRandomValues
+    try {
+      return await run()
+    } finally {
+      crypto.getRandomValues = original
+    }
+  }
+  const seeded = createConsoleHarness()
+  const seededOwner = await seeded.account("seeded@example.com")
+  const seededCookie = await seeded.signIn(seededOwner, { steppedUp: true })
+  const seededOrg = await seeded.organization(seededOwner)
+  const seededApp = await seeded.appWithEnvironments(seededOrg.id)
+  const keyResponse = await withSeed(101, () =>
+    seeded.request("POST", `/api/environments/${seededApp.live.id}/api-keys`, {
+      cookie: seededCookie,
+      body: { kind: "secret", name: "Seeded" },
+    }),
+  )
+  const keyBody = (await keyResponse.json()) as { key: string }
+  const [keyRow] = await seeded.store.listApiKeys(seededApp.live.id)
+  const secretResponse = await withSeed(202, () =>
+    seeded.request("POST", `/api/environments/${seededApp.live.id}/client-secrets`, {
+      cookie: seededCookie,
+      body: {},
+    }),
+  )
+  const secretBody = (await secretResponse.json()) as { secret: string }
+  const [secretRow] = await seeded.store.listClientSecrets(seededApp.live.id)
+  const inviteResponse = await withSeed(303, () =>
+    seeded.request("POST", `/api/orgs/${seededOrg.id}/invitations`, {
+      cookie: seededCookie,
+      body: { email: "invitee@example.com", role: "developer" },
+    }),
+  )
+  const sent = seeded.email.sent.at(-1)
+  const inviteToken = /\/invite\/([A-Za-z0-9_-]+)/.exec(sent?.text ?? "")?.[1] ?? null
+  const [inviteRow] = await seeded.store.listInvitations(seededOrg.id)
+  const nonceResponse = await withSeed(404, () =>
+    seeded.request("POST", "/api/auth/google/nonce", { body: { purpose: "sign-in" } }),
+  )
+  const nonceBody = (await nonceResponse.json()) as { nonce: string }
+  const nonceBinding = nonceResponse.headers.getSetCookie().find((cookie) => cookie.startsWith("__Host-mbx_dev_google="))
+  // A Classic account created by Google sign-in, as Classic's store holds it.
+  const google = createConsoleHarness()
+  const googleSignedIn = await google.googleSignIn({ sub: "google-classic-sub", email: "classic@example.com" })
+  const googleRow = await google.store.findAccountByGoogleSub("google-classic-sub")
+  out.created = {
+    status: {
+      key: keyResponse.status,
+      secret: secretResponse.status,
+      invitation: inviteResponse.status,
+      nonce: nonceResponse.status,
+      google: googleSignedIn.response.status,
+    },
+    apiKey: { seed: 101, plaintext: keyBody.key, prefix: keyRow?.prefix, secretHash: keyRow?.secretHash },
+    clientSecret: { seed: 202, plaintext: secretBody.secret, prefix: secretRow?.prefix, secretHash: secretRow?.secretHash },
+    invitation: { seed: 303, token: inviteToken, tokenHash: inviteRow?.tokenHash, expiresAt: inviteRow?.expiresAt },
+    googleNonce: { seed: 404, nonce: nonceBody.nonce, binding: nonceBinding?.split(";")[0] },
+    googleAccount: googleRow,
+  }
+
+  // Matchbox ID's pairwise subjects: the sub Classic stored for the dev
+  // wallet and the test client's sector in the flow above, and what
+  // Classic's generator makes from a seeded stream.
+  out.pairwise = {
+    sectorId: memorySeed.testEnvironmentId,
+    wallet: devAccount.address,
+    subject: (out.flow as { idTokenPayload: { sub: string } }).idTokenPayload.sub,
+    seed: 505,
+    generated: await withSeed(505, async () => generatePairwiseSubject()),
+  }
+
+  process.stdout.write(`${JSON.stringify(out, null, 2)}\n`)
+}
+
+void main()

@@ -1,0 +1,8 @@
+PRO_DATA=fixtures
+# api mode only: salt for the end-user key sent to the API (at least 32
+# bytes, else no key is sent and one line is logged). A wrangler secret on
+# deployed environments.
+# BLOCKSCOUT_CALLER_SALT=
+# "report-only" sends the Content Security Policy as report-only (framing
+# stays enforced) and logs what it would block. Unset, it is enforced.
+# PRO_CSP=report-only

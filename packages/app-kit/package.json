@@ -1,0 +1,102 @@
+{
+  "name": "@matchbox/app-kit",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": [
+    "./src/query-runtime.ts"
+  ],
+  "exports": {
+    "./ids": {
+      "types": "./src/ids.ts",
+      "default": "./src/ids.ts"
+    },
+    "./island": {
+      "types": "./src/island.tsx",
+      "default": "./src/island.tsx"
+    },
+    "./live-query": {
+      "types": "./src/live-query.ts",
+      "default": "./src/live-query.ts"
+    },
+    "./loading": {
+      "types": "./src/loading.tsx",
+      "default": "./src/loading.tsx"
+    },
+    "./pending": {
+      "types": "./src/pending.tsx",
+      "default": "./src/pending.tsx"
+    },
+    "./query-runtime": {
+      "types": "./src/query-runtime.ts",
+      "default": "./src/query-runtime.ts"
+    },
+    "./read-model": {
+      "types": "./src/read-model.server.ts",
+      "default": "./src/read-model.server.ts"
+    },
+    "./return-path": {
+      "types": "./src/return-path.ts",
+      "default": "./src/return-path.ts"
+    },
+    "./root-document": {
+      "types": "./src/root-document.tsx",
+      "default": "./src/root-document.tsx"
+    },
+    "./security": {
+      "types": "./src/security.ts",
+      "default": "./src/security.ts"
+    },
+    "./serve-page": {
+      "types": "./src/serve-page.ts",
+      "default": "./src/serve-page.ts"
+    },
+    "./server-entry": {
+      "types": "./src/server-entry.ts",
+      "default": "./src/server-entry.ts"
+    },
+    "./states": {
+      "types": "./src/states.tsx",
+      "default": "./src/states.tsx"
+    },
+    "./theme-sync": {
+      "types": "./src/theme-sync.tsx",
+      "default": "./src/theme-sync.tsx"
+    },
+    "./view-transitions": {
+      "types": "./src/view-transitions.ts",
+      "default": "./src/view-transitions.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@matchbox/logger": "workspace:*",
+    "@matchbox/motion": "workspace:*",
+    "@matchbox/tokens": "workspace:*",
+    "@matchbox/ui": "workspace:*",
+    "@tanstack/query-core": "5.107.1",
+    "@tanstack/react-router": "1.170.46",
+    "zod": "4.6.7"
+  },
+  "peerDependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261108.1",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "happy-dom": "21.0.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.6",
+    "vitest": "4.1.12"
+  }
+}

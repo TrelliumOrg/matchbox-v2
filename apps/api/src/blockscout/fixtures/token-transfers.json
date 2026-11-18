@@ -1,0 +1,144 @@
+{
+  "items": [
+    {
+      "block_hash": "0xd367a46489410e22855a4154186411c789549a39536ff28beefc8c2447c556db",
+      "block_number": 13118064,
+      "from": {
+        "ens_domain_name": null,
+        "hash": "0xEd812AEc0Fecc8fD882Ac3eccC43f3aA80A6c356",
+        "implementations": [
+          {
+            "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+            "name": "Pool"
+          }
+        ],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "Stable AMM - mUSDC/MUSD",
+        "private_tags": [],
+        "proxy_type": "eip1167",
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "log_index": 1,
+      "method": "0x24856bc3",
+      "timestamp": "2026-11-09T21:51:16.000000Z",
+      "to": {
+        "ens_domain_name": null,
+        "hash": "0x4582A89e307387293c7F93C11a095a8DD3d3F901",
+        "implementations": [],
+        "is_contract": false,
+        "is_scam": false,
+        "is_verified": false,
+        "metadata": null,
+        "name": null,
+        "private_tags": [],
+        "proxy_type": null,
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "token": {
+        "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+        "circulating_market_cap": null,
+        "circulating_supply": null,
+        "decimals": "18",
+        "exchange_rate": null,
+        "holders_count": "29242",
+        "icon_url": "https://storage.googleapis.com/mezo-production-explorer-logos-bucket/musd-token.png",
+        "name": "Mezo USD",
+        "new_ui_multiplier": null,
+        "reputation": "ok",
+        "symbol": "MUSD",
+        "total_supply": "19009212613409522617586413",
+        "type": "ERC-20",
+        "ui_multiplier": null,
+        "ui_multiplier_effective_at": null,
+        "volume_24h": null
+      },
+      "token_type": "ERC-20",
+      "total": {
+        "decimals": "18",
+        "ui_multiplier": null,
+        "value": "5042176961077758777"
+      },
+      "transaction_hash": "0x45e0962d6c0fa8ae9d30ba18cf7351ac0fcf3c0487fd231107510ebb0db66988",
+      "type": "token_transfer"
+    },
+    {
+      "block_hash": "0x0f6faa1e9f6ea9588c4cd243f582956db0ce5f0e42df0f55f8b8238ed615e39d",
+      "block_number": 13118008,
+      "from": {
+        "ens_domain_name": null,
+        "hash": "0xEd812AEc0Fecc8fD882Ac3eccC43f3aA80A6c356",
+        "implementations": [
+          {
+            "address_hash": "0xee8287b903cbBa2DEa6a9CfDa296A05ADA1A6cEF",
+            "name": "Pool"
+          }
+        ],
+        "is_contract": true,
+        "is_scam": false,
+        "is_verified": true,
+        "metadata": null,
+        "name": "Stable AMM - mUSDC/MUSD",
+        "private_tags": [],
+        "proxy_type": "eip1167",
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "log_index": 1,
+      "method": "0x24856bc3",
+      "timestamp": "2026-11-09T21:47:41.000000Z",
+      "to": {
+        "ens_domain_name": null,
+        "hash": "0x4582A89e307387293c7F93C11a095a8DD3d3F901",
+        "implementations": [],
+        "is_contract": false,
+        "is_scam": false,
+        "is_verified": false,
+        "metadata": null,
+        "name": null,
+        "private_tags": [],
+        "proxy_type": null,
+        "public_tags": [],
+        "reputation": "ok",
+        "watchlist_names": []
+      },
+      "token": {
+        "address_hash": "0xdD468A1DDc392dcdbEf6db6e34E89AA338F9F186",
+        "circulating_market_cap": null,
+        "circulating_supply": null,
+        "decimals": "18",
+        "exchange_rate": null,
+        "holders_count": "29242",
+        "icon_url": "https://storage.googleapis.com/mezo-production-explorer-logos-bucket/musd-token.png",
+        "name": "Mezo USD",
+        "new_ui_multiplier": null,
+        "reputation": "ok",
+        "symbol": "MUSD",
+        "total_supply": "19009212613409522617586413",
+        "type": "ERC-20",
+        "ui_multiplier": null,
+        "ui_multiplier_effective_at": null,
+        "volume_24h": null
+      },
+      "token_type": "ERC-20",
+      "total": {
+        "decimals": "18",
+        "ui_multiplier": null,
+        "value": "5042872732082536905"
+      },
+      "transaction_hash": "0x725a261f99f8c9fbccac5bc5899337915bab48ea1eed08ebba3b209599bae25e",
+      "type": "token_transfer"
+    }
+  ],
+  "next_page_params": {
+    "index": 4,
+    "block_number": 13114961
+  }
+}

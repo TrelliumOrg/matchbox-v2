@@ -1,0 +1,358 @@
+{
+  "peppers": {
+    "apiKey": "classic-fixture-api-key-pepper-000",
+    "clientSecret": "classic-fixture-client-secret-pepper",
+    "session": "classic-fixture-session-pepper-0000"
+  },
+  "apiKey": {
+    "value": "mbx_sk_live_AbCdEfGhIjKl_sssssssssssssssssssssssssssssssssssssssssss",
+    "parsed": {
+      "kind": "secret",
+      "environmentKind": "live",
+      "prefix": "AbCdEfGhIjKl",
+      "secret": "sssssssssssssssssssssssssssssssssssssssssss"
+    },
+    "hash": "033b620fdf00f37534a9b33f04cf92a8bcda8124c327186730280c5ceabc8a16"
+  },
+  "publishableKey": {
+    "value": "mbx_pk_test_MnOpQrStUvWx_ppppppppppppppppppppppppppppppppppppppppppp",
+    "hash": "ec47d4e5f1ee1cfa77e55ae26b8b67243ffc0d13d3155a8638aea51998f048b3"
+  },
+  "clientSecret": {
+    "value": "mbx_cs_ZyXwVuTsRqPo_ccccccccccccccccccccccccccccccccccccccccccc",
+    "hash": "2dd3858333dd5c7544b26161b601558b95fde20e5cf11094506a06f4310ae57f"
+  },
+  "idSession": {
+    "token": "classic-opaque-token-0123456789abcdefghijklmnopq",
+    "cookieName": "__Host-mbx_id",
+    "setCookie": "__Host-mbx_id=classic-opaque-token-0123456789abcdefghijklmnopq; Max-Age=2592000; Path=/; Secure; HttpOnly; SameSite=Lax",
+    "hash": "07d966e3f1cac340930f49ede1dbcc5fce357f3cc8ba4ef2c3729cded24d2ee4"
+  },
+  "consoleSession": {
+    "token": "classic-opaque-token-0123456789abcdefghijklmnopq",
+    "cookieName": "__Host-mbx_dev",
+    "hash": "600cee8aa2f2805b4aa93d46e60871a8ec47252af8a59391f95d7271caa3874b",
+    "harnessPepper": "test-session-pepper-0123456789abcdef",
+    "harnessHash": "a321d7bf9aacc9b79c892204202a3da6207b775bdd54b20ce275be0221e65746"
+  },
+  "signing": {
+    "keys": [
+      {
+        "kty": "EC",
+        "crv": "P-256",
+        "kid": "mbx-id-2026-06-20-aaaa0001",
+        "x": "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+        "y": "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+        "d": "jpsQnnGQmL-YBIffH1136cspYG6-0iY7X1fCE9-E9LI"
+      },
+      {
+        "kty": "EC",
+        "crv": "P-256",
+        "kid": "mbx-id-2026-01-01-bbbb0002",
+        "x": "2E3GcULHRgVOiCUSWETyAogaUi0ZxGJjNH5UEhoEaMM",
+        "y": "GJks4wCUckkBSd4XZUD9zyKMpZIkYGUyHq6KX3SiJvk",
+        "d": "ko150rXusbGiQjgoVooCez5tD_zQDXrEPM6sr3QcjhQ"
+      }
+    ],
+    "jwks": {
+      "keys": [
+        {
+          "kty": "EC",
+          "crv": "P-256",
+          "x": "f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+          "y": "x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0",
+          "kid": "mbx-id-2026-06-20-aaaa0001",
+          "alg": "ES256",
+          "use": "sig"
+        },
+        {
+          "kty": "EC",
+          "crv": "P-256",
+          "x": "2E3GcULHRgVOiCUSWETyAogaUi0ZxGJjNH5UEhoEaMM",
+          "y": "GJks4wCUckkBSd4XZUD9zyKMpZIkYGUyHq6KX3SiJvk",
+          "kid": "mbx-id-2026-01-01-bbbb0002",
+          "alg": "ES256",
+          "use": "sig"
+        }
+      ]
+    },
+    "classicSignedIdToken": {
+      "header": "eyJhbGciOiJFUzI1NiIsImtpZCI6Im1ieC1pZC0yMDI2LTA2LTIwLWFhYWEwMDAxIiwidHlwIjoiSldUIn0",
+      "payload": "eyJpc3MiOiJodHRwczovL2lkLm1hdGNoYm94Lm1hcmtldHMiLCJhdWQiOiJtYnhfbGl2ZV9FeGFtcGxlTGl2ZUNsaWVudDAwMDAwMDEiLCJzdWIiOiJtYnhfZml4dHVyZSIsImlhdCI6MTc5MDAwMDAwMCwiZXhwIjo0MTAyNDQ0ODAwfQ",
+      "signature": "YbkDln5p7xLuhuVwGQ1VUxUEmybhWRQU2CKUuO_p9t0z0YVpUSsLrKqWn8Q-JiM1umLCoyGnYqUy6fB6E323iQ"
+    },
+    "signedBySecondKey": {
+      "header": "eyJhbGciOiJFUzI1NiIsImtpZCI6Im1ieC1pZC0yMDI2LTAxLTAxLWJiYmIwMDAyIiwidHlwIjoiSldUIn0",
+      "payload": "eyJpc3MiOiJodHRwczovL2lkLm1hdGNoYm94Lm1hcmtldHMiLCJhdWQiOiJtYnhfbGl2ZV9FeGFtcGxlTGl2ZUNsaWVudDAwMDAwMDEiLCJzdWIiOiJtYnhfc2Vjb25kIiwiaWF0IjoxNzkwMDAwMDAwLCJleHAiOjQxMDI0NDQ4MDB9",
+      "signature": "T0McERsWIzQWksGXiF66B2vRfvPEcfx3AOcrIfXFQOVDrAl6KgN_3c23IHqdbScwjtiPSiz3CCy-YoRvU7k1KQ"
+    },
+    "header": {
+      "alg": "ES256",
+      "kid": "mbx-id-2026-06-20-aaaa0001",
+      "typ": "JWT"
+    }
+  },
+  "flow": {
+    "discovery": {
+      "issuer": "https://id.test",
+      "authorization_endpoint": "https://id.test/oauth/authorize",
+      "token_endpoint": "https://id.test/oauth/token",
+      "userinfo_endpoint": "https://id.test/oauth/userinfo",
+      "jwks_uri": "https://id.test/oauth/jwks",
+      "revocation_endpoint": "https://id.test/oauth/revoke",
+      "scopes_supported": [
+        "openid",
+        "wallet",
+        "discord:id",
+        "discord:profile",
+        "discord:membership"
+      ],
+      "response_types_supported": ["code"],
+      "response_modes_supported": ["query"],
+      "grant_types_supported": ["authorization_code", "refresh_token"],
+      "subject_types_supported": ["pairwise"],
+      "id_token_signing_alg_values_supported": ["ES256"],
+      "token_endpoint_auth_methods_supported": [
+        "client_secret_basic",
+        "client_secret_post",
+        "none"
+      ],
+      "revocation_endpoint_auth_methods_supported": [
+        "client_secret_basic",
+        "client_secret_post",
+        "none"
+      ],
+      "code_challenge_methods_supported": ["S256"],
+      "claims_supported": [
+        "iss",
+        "aud",
+        "sub",
+        "iat",
+        "exp",
+        "auth_time",
+        "nonce",
+        "azp",
+        "wallet_address",
+        "wallet_network",
+        "discord_id",
+        "discord_username",
+        "discord_display_name",
+        "discord_avatar_url",
+        "discord_joined_at"
+      ],
+      "prompt_values_supported": ["none", "login", "consent"],
+      "claims_parameter_supported": false,
+      "request_parameter_supported": false,
+      "request_uri_parameter_supported": false,
+      "authorization_response_iss_parameter_supported": true,
+      "service_documentation": "https://developer.matchbox.markets/docs/oidc"
+    },
+    "tokenResponseKeys": [
+      "access_token",
+      "expires_in",
+      "id_token",
+      "refresh_token",
+      "scope",
+      "token_type"
+    ],
+    "tokenType": "Bearer",
+    "expiresIn": 600,
+    "scope": "openid wallet",
+    "idTokenHeader": {
+      "alg": "ES256",
+      "kid": "test-key",
+      "typ": "JWT"
+    },
+    "idTokenPayload": {
+      "iss": "https://id.test",
+      "aud": "mbx_test_ExampleTestClient0000001",
+      "sub": "mbx_e_Haooua2hg-kAmanP55lm8bokSE7u1c",
+      "iat": 1790769600,
+      "exp": 1790770200,
+      "auth_time": 1790769600,
+      "azp": "mbx_test_ExampleTestClient0000001",
+      "wallet_address": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "wallet_network": "mezo-testnet"
+    },
+    "accessTokenHeader": {
+      "alg": "ES256",
+      "kid": "test-key",
+      "typ": "at+jwt"
+    },
+    "accessTokenPayload": {
+      "iss": "https://id.test",
+      "aud": "mbx_test_ExampleTestClient0000001",
+      "sub": "mbx_e_Haooua2hg-kAmanP55lm8bokSE7u1c",
+      "client_id": "mbx_test_ExampleTestClient0000001",
+      "scope": "openid wallet",
+      "jti": "cccb0b29aa475765f7f473caaf02d75dQACLKO7YiVFMgisdnY5jGg",
+      "iat": 1790769600,
+      "exp": 1790770200
+    }
+  },
+  "rows": {
+    "sessionPepper": "test-session-pepper-0000",
+    "clientSecretPepper": "test-client-secret-pepper",
+    "grant": {
+      "accountId": "97cd294d-0737-4ac9-a244-887e3c497cda",
+      "appId": "00000000-0000-4000-8000-000000000010",
+      "environmentId": "00000000-0000-4000-8000-000000000200",
+      "scopes": ["openid", "wallet"],
+      "declinedScopes": [],
+      "scopeVersion": 1,
+      "claimsSnapshot": [
+        {
+          "claim": "sub",
+          "label": "Sign-in ID"
+        },
+        {
+          "claim": "wallet_address",
+          "label": "Wallet address"
+        },
+        {
+          "claim": "wallet_network",
+          "label": "Wallet network"
+        }
+      ],
+      "discordUserId": null
+    },
+    "refreshToken": {
+      "plaintext": "Yn_8Nb2AV_M_mLnNgBvy67c3ggPDZ3IyOHJK18FcFJY",
+      "issued": {
+        "familyId": "7ac4ca34-36c2-24dd-15b6-1bd51f22f6bc",
+        "grantId": "be377423-95a6-40f6-beb1-f3b976c57afd",
+        "refreshTokenId": "4fc7926a-10d7-41cb-b070-08d7c8cf8efd",
+        "refreshTokenHash": "f5d5fa2d2cdcbd3dee624dae4028c36489109ba5b3d0cdb549d6b4ad89f2f104",
+        "scopes": ["openid", "wallet"],
+        "authTime": "2026-09-30T12:00:00.000Z",
+        "refreshExpiresAt": "2026-10-30T12:00:00.000Z",
+        "accessJti": "7ac4ca3436c224dd15b61bd51f22f6bcr51X6BCVW9O8xGRU6zC9GA",
+        "accessExpiresAt": "2026-09-30T12:10:00.000Z",
+        "now": "2026-09-30T12:00:00.000Z"
+      }
+    },
+    "code": {
+      "plaintext": "P2B6FnK0OMsHBugPKqzwfbtxRonDe5GhPlXyOGAqO-0",
+      "verifier": "KDyYjLf2jll4pcJCvB91b2RE3kVyDAUeGkcUvoUWiVWHJDb6Jsf4Ke7vn7LdLZZ8",
+      "row": {
+        "codeHash": "10eecafbd2c31c5d6d20c32dd25818e35cbe7deceb6e1179876f36ffb0ae64fd",
+        "grantId": "be377423-95a6-40f6-beb1-f3b976c57afd",
+        "environmentId": "00000000-0000-4000-8000-000000000200",
+        "redirectUri": "http://localhost:5174/callback",
+        "codeChallenge": "vHxtzSkmng6sa2ksFZKNKVknv1eUSas57-JkYF-S6ZA",
+        "nonce": null,
+        "scopes": ["openid", "wallet"],
+        "authTime": "2026-09-30T12:00:00.000Z",
+        "expiresAt": "2026-09-30T12:01:00.000Z"
+      }
+    },
+    "grantSkippedConsent": true,
+    "clientSecret": {
+      "plaintext": "mbx_cs_DevSecret001_local-dev-client-secret-do-not-use-in-prod0",
+      "prefix": "DevSecret001",
+      "hash": "6826ac8294caa9f78aac8c5bb76584c2215ab1b457a597b2ff607d9d8a1948ff"
+    }
+  },
+  "cookies": {
+    "idSignIn": "__Host-mbx_id=<token>; Max-Age=604800; Path=/; Secure; HttpOnly; SameSite=Lax",
+    "idSignOut": "__Host-mbx_id=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Lax",
+    "consoleSignIn": "__Host-mbx_dev=<token>; Max-Age=43200; Path=/; Secure; HttpOnly; SameSite=Strict",
+    "consoleTouchedAfter6Minutes": "__Host-mbx_dev=<token>; Max-Age=43200; Path=/; Secure; HttpOnly; SameSite=Strict",
+    "consoleSignOut": "__Host-mbx_dev=; Max-Age=0; Path=/; Secure; HttpOnly; SameSite=Strict"
+  },
+  "staffRoutesForNonStaff": {
+    "GET /api/admin/reviews": {
+      "status": 403,
+      "code": "forbidden"
+    },
+    "GET /api/admin/reviews/stats": {
+      "status": 403,
+      "code": "forbidden"
+    },
+    "GET /api/admin/reviews/00000000-0000-4000-8000-000000000000": {
+      "status": 403,
+      "code": "forbidden"
+    },
+    "GET /api/admin/reviews/00000000-0000-4000-8000-000000000000/logo": {
+      "status": 403,
+      "code": "forbidden"
+    },
+    "POST /api/admin/reviews/00000000-0000-4000-8000-000000000000/decision": {
+      "status": 403,
+      "code": "forbidden"
+    },
+    "GET /api/admin/apps": {
+      "status": 403,
+      "code": "forbidden"
+    },
+    "POST /api/admin/apps/00000000-0000-4000-8000-000000000000/status": {
+      "status": 403,
+      "code": "forbidden"
+    },
+    "GET /api/admin/environments/00000000-0000-4000-8000-000000000000/quota-overrides": {
+      "status": 403,
+      "code": "forbidden"
+    },
+    "POST /api/admin/environments/00000000-0000-4000-8000-000000000000/quota-overrides": {
+      "status": 403,
+      "code": "forbidden"
+    },
+    "DELETE /api/admin/quota-overrides/00000000-0000-4000-8000-000000000000": {
+      "status": 403,
+      "code": "forbidden"
+    },
+    "GET /api/admin/audit": {
+      "status": 403,
+      "code": "forbidden"
+    }
+  },
+  "created": {
+    "status": {
+      "key": 201,
+      "secret": 201,
+      "invitation": 201,
+      "nonce": 200,
+      "google": 200
+    },
+    "apiKey": {
+      "seed": 101,
+      "plaintext": "mbx_sk_live_p9VJyJy5sAV1_dAWVZZsf48Obbs4CY_SxytscbanmteHyXVntdNgXpU8",
+      "prefix": "p9VJyJy5sAV1",
+      "secretHash": "379c799e8d70132de7972efb7cd83627b2edf84e68519d08734946b4762a576d"
+    },
+    "clientSecret": {
+      "seed": 202,
+      "plaintext": "mbx_cs_VvGrFDjTb2Bq_2ZFFEm88TPKK_MAbsI5cFbOjW_zHTPFRR_psKRzKSzk",
+      "prefix": "VvGrFDjTb2Bq",
+      "secretHash": "591b00cf3643a7e419cb5a7884237f146e3778c94b194e3fcc4520c65f0aceaf"
+    },
+    "invitation": {
+      "seed": 303,
+      "token": "xiN11JvJ37GIvXPclbrAw6tCzA0rDi6-Px71wEJYtSA",
+      "tokenHash": "45b0e90e820fe203b50746c41a4cd47a9cd8148aedaebb25281cfbc84ff0a1b6",
+      "expiresAt": "2026-10-07T12:00:00.000Z"
+    },
+    "googleNonce": {
+      "seed": 404,
+      "nonce": "eyJwdXJwb3NlIjoic2lnbi1pbiIsImV4cGlyZXNBdCI6MTc5MDc3MDIwMDAwMCwiaWQiOiJhQmlrUzBuRXNhMWpzemVpaVhrUURobzhhcE9rTUpZTmRsZFNYcUZZWVVNIn0.563cbf4e2f73b0b847ff599fedff2b37b7bae7dde21a9e45ab4fbea7dd7d8bf1",
+      "binding": "__Host-mbx_dev_google=8ZEgNKtHVAcxOV_K0ErRURNBpoE1qzBDpKqlbRV1Hk8"
+    },
+    "googleAccount": {
+      "id": "7d78a545-539c-4ce1-9aee-7f281e6127a8",
+      "email": "classic@example.com",
+      "emailVerifiedAt": "2026-09-30T12:00:00.000Z",
+      "googleSub": "google-classic-sub",
+      "avatarUrl": null,
+      "displayName": "classic",
+      "createdAt": "2026-09-30T12:00:00.000Z",
+      "disabledAt": null
+    }
+  },
+  "pairwise": {
+    "sectorId": "00000000-0000-4000-8000-000000000200",
+    "wallet": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    "subject": "mbx_Ei936swJlDP468EALsfV0BA5f5TajHj7",
+    "seed": 505,
+    "generated": "mbx_wMYfYd6vatkzz-NWeWMlsef9Na6r3Y30"
+  }
+}

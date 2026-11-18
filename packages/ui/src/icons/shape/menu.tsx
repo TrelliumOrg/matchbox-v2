@@ -1,0 +1,11 @@
+import type { ReactElement } from "react"
+
+export function menu(): ReactElement {
+  return (
+    <>
+      <path d="M4 12h16" />
+      <path d="M4 18h16" />
+      <path d="M4 6h16" />
+    </>
+  )
+}

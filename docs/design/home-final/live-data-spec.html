@@ -1,0 +1,295 @@
+<!doctype html><html data-theme="paper"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..700&family=DM+Mono:wght@400;500&family=Martian+Mono:wdth,wght@75..112.5,100..800&display=block" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root,[data-theme="paper"]{color-scheme:light;--bg:#FFFFFF;--soft:#F2F2F0;--soft2:#E9E9E6;--line:#E9E9E6;--ink:#0E0F0C;--ink2:#3B3D39;--sec:#6A6C68;--mut:#9C9E99;--acc:#F7931A;--onAcc:#1A1206;--accSoft:#FDEBD3;--accInk:#9A4F0C;--mezo:#D23A61;--track:#E4E4E0;--raise:#FFFFFF;--tPro:#D23A61;--tScan:#FDEBD3;--fillO:.14;--kiln:#2B2A6B}
+html,body{background:var(--bg);color:var(--ink);font-family:Figtree,sans-serif;-webkit-font-smoothing:antialiased}
+body{width:2960px;padding:80px 80px 96px}
+a{color:inherit;text-decoration:none}
+.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none;display:block}
+.mono{font-family:'DM Mono',monospace}
+[data-live],[data-computed],.tn{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+h1{font-size:48px;font-weight:650;letter-spacing:-.03em}
+.lead{font-size:19px;line-height:28px;color:var(--sec);margin-top:12px;max-width:1300px}
+.sec{margin-top:88px}
+h2{font-size:32px;font-weight:650;letter-spacing:-.02em}
+.sub{font-size:17px;line-height:25px;color:var(--sec);margin-top:8px;max-width:1400px}
+/* table */
+table{width:100%;border-collapse:collapse;margin-top:28px}
+th{font-size:14px;font-weight:600;color:var(--sec);text-align:left;padding:0 24px 12px 0;border-bottom:1px solid var(--ink)}
+td{font-size:15px;line-height:22px;color:var(--ink2);padding:16px 24px 16px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td:first-child b{display:block;font-size:16px;font-weight:650;color:var(--ink)}
+td:first-child .mono{display:block;font-size:13px;color:var(--sec);margin-top:4px}
+td .eg{display:inline-block;font-weight:650;color:var(--ink)}
+td .loc{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:12px;background:var(--accSoft);color:var(--accInk);font-size:13.5px;font-weight:650;margin-bottom:6px}
+tr.grp td{padding:28px 0 10px;border-bottom:0;font-size:18px;font-weight:650;color:var(--ink)}
+/* card states */
+.states{display:grid;grid-template-columns:repeat(4,672px);gap:32px;margin-top:32px;align-items:start}
+.cap{min-height:96px}
+.cap b{display:block;font-size:19px;font-weight:650}
+.cap p{font-size:15.5px;line-height:23px;color:var(--sec);margin-top:6px;max-width:620px}
+.nt{font-size:15px;line-height:22px;color:var(--ink2);margin-top:18px;max-width:640px}
+.nt b{font-weight:650;color:var(--ink)}
+/* the cards, same markup and sizes as Home final, desktop */
+.mbx-lockup{--mbx-h:22px;--c:calc(var(--mbx-h) / 1.51);display:inline-flex;align-items:center;flex:none;color:var(--ink);line-height:1}
+.mbx-icon{position:relative;flex:none;overflow:hidden;width:calc(var(--c) * 3.657);height:calc(var(--c) * 1.51)}
+.mbx-icon img{position:absolute;display:block;max-width:none;width:calc(var(--c) * 4.019);height:calc(var(--c) * 4.019);left:calc(var(--c) * -.2067);top:calc(var(--c) * -1.2573)}
+.mbx-text{display:flex;align-items:center;flex:none;margin-left:calc(var(--c) * .66);font-family:'Martian Mono',monospace;font-weight:380;font-stretch:112.5%;font-variation-settings:"wdth" 112.5;font-size:calc(var(--c) * 1.3);letter-spacing:.03em;line-height:1;white-space:nowrap}
+.mbx-word:not(:last-child){margin-right:1ch}
+.mbx-product{color:var(--sec)}
+.pill{height:44px;padding:0 22px;border-radius:22px;display:inline-flex;align-items:center;gap:8px;font-size:16px;font-weight:600;white-space:nowrap}
+.p1{background:var(--acc);color:var(--onAcc)}
+.strip{height:8px;flex:none}.s-pro{background:var(--tPro)}.s-scan{background:var(--tScan)}
+.hc{width:672px;background:var(--soft);border-radius:24px;overflow:hidden;display:flex;flex-direction:column}
+.hc .bd{padding:40px 36px 0}
+.line{font-size:20px;line-height:28px;color:var(--ink2);margin-top:18px}
+.act{height:56px;display:flex;align-items:center;margin-top:26px}
+.sf{width:100%;height:56px;border-radius:28px;background:var(--raise);display:flex;align-items:center;gap:14px;padding:0 6px 0 22px;font-size:17px;color:var(--sec)}
+.sf .ic{width:20px;height:20px;stroke-width:2}
+.sf kbd{margin-left:auto;width:44px;height:44px;border-radius:22px;background:var(--soft);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:15px;color:var(--ink2)}
+.scr{margin:36px 16px 0;height:428px;border-radius:20px 20px 0 0;background:var(--bg);overflow:hidden;padding:20px 20px 0}
+.lh{display:flex;justify-content:space-between;align-items:center;height:22px;font-size:14px;color:var(--sec)}
+.asof{visibility:hidden}
+.asof.on{visibility:visible}
+.ep{background:var(--soft);border-radius:24px 24px 0 0;height:100%;overflow:hidden}
+.rt{height:54px;background:var(--mezo);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:15px;font-weight:650}
+.rt>span{display:flex;align-items:center;gap:10px;white-space:pre}
+.rt img{width:22px;height:22px;border-radius:50%;box-shadow:0 0 0 2px #fff;display:block}
+.rt .cd{font-weight:500;gap:0}.rt .cd b{font-weight:650}
+.rb{padding:22px 22px 0}
+.k{font-size:15px;color:var(--sec)}
+.bf{font-size:44px;font-weight:650;letter-spacing:-.025em;line-height:52px;margin-top:2px;height:52px}
+.bf.na{font-size:20px;font-weight:600;color:var(--sec);letter-spacing:0}
+.ep .lh{margin-top:24px;margin-bottom:4px}
+.gr{display:grid;grid-template-columns:40px 1fr auto;column-gap:14px;align-items:center;height:62px}
+.gr+.gr{border-top:1px solid var(--track)}
+.pic{width:40px;height:40px;position:relative;flex:none}
+.pic.pair img{position:absolute;width:27px;height:27px;border-radius:50%;display:block}
+.pic.pair img:first-child{left:0;top:0}
+.pic.pair img:last-child{right:0;bottom:0;box-shadow:0 0 0 2px var(--soft)}
+.pic.kl{border-radius:12px;background:var(--kiln);display:flex;align-items:center;justify-content:center}
+.pic.kl svg{width:28px;height:28px}
+.nm{font-size:16px;font-weight:600;line-height:21px}
+.ss{display:flex;align-items:center;gap:6px;font-size:14.5px;color:var(--sec);margin-top:2px;line-height:19px}
+.ss .ic{width:15px;height:15px}
+.iv{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600}
+.cs{display:flex}.cs img{width:20px;height:20px;border-radius:50%;display:block;box-shadow:0 0 0 2px var(--soft)}.cs img+img{margin-left:-6px}
+.nal{font-size:15px;font-weight:500;color:var(--sec);padding-top:12px}
+.ms{padding:18px 18px 0}
+.sts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.st{background:var(--soft);border-radius:24px;padding:18px 20px 58px;position:relative;overflow:hidden}
+.st .h{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--sec)}
+.st .h span{width:32px;height:32px;border-radius:50%;background:var(--raise);display:flex;align-items:center;justify-content:center;color:var(--ink2)}
+.st .h img{width:32px;height:32px;display:block}
+.st .h .ic{width:16px;height:16px;stroke-width:1.9}
+.st .v{font-size:30px;font-weight:650;letter-spacing:-.02em;line-height:36px;height:36px;margin-top:12px}
+.st .v.na{font-size:17px;font-weight:600;color:var(--sec);letter-spacing:0}
+.st .s{font-size:14.5px;color:var(--sec);margin-top:2px;height:20px}
+.st .sp{position:absolute;left:0;right:0;bottom:0;width:100%;height:44px;display:block}
+.blk{background:var(--soft);border-radius:24px 24px 0 0;margin-top:14px;padding:14px 20px 0}
+.blk .lh{margin-bottom:2px}
+.br{display:grid;grid-template-columns:auto 1fr auto;align-items:center;column-gap:14px;height:56px}
+.br+.br{border-top:1px solid var(--track)}
+.bi{width:36px;height:36px;border-radius:12px;background:var(--raise);display:flex;align-items:center;justify-content:center;color:var(--ink2)}
+.bi .ic{width:16px;height:16px}
+.br .n{font-size:15.5px;font-weight:600;line-height:20px}.br .s{font-size:14px;color:var(--sec);line-height:18px}
+.br .a{font-size:14.5px;font-weight:600;color:var(--ink2)}
+/* a digit caught mid-roll: old digit above, new below (rolling down: new above), masked at top and bottom */
+.fx{display:inline-flex;line-height:1.15em;height:1.15em;vertical-align:top}
+.rl{display:block;height:1.15em;overflow:hidden;-webkit-mask-image:linear-gradient(transparent,#000 16%,#000 84%,transparent);mask-image:linear-gradient(transparent,#000 16%,#000 84%,transparent)}
+.states .rl i[style*="-.69em"]{translate:0 -.29em}
+.states .rl i[style*="-.46em"]{translate:0 .29em}
+.rl i{display:flex;flex-direction:column;font-style:normal}
+.rl i span{display:block;height:1.15em}
+.hl{box-shadow:0 0 0 2px var(--acc);border-radius:6px}
+/* motion panels */
+.pn{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:32px}
+.pb{background:var(--soft);border-radius:24px;padding:28px 30px 30px}
+.pb b.t{display:block;font-size:19px;font-weight:650}
+.pb ul{list-style:none;margin-top:14px}
+.pb li{font-size:15.5px;line-height:23px;color:var(--ink2);padding:7px 0}
+.pb li+li{border-top:1px solid var(--track)}
+.pb code{font-family:'DM Mono',monospace;font-size:13.5px;color:var(--accInk)}
+.tl{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}
+.tl div{background:var(--bg);border-radius:16px;padding:16px 16px 12px}
+.tl .f{font-size:30px;font-weight:650;letter-spacing:-.02em;height:36px;line-height:36px}
+.tl small{display:block;font-family:'DM Mono',monospace;font-size:12.5px;color:var(--sec);margin-top:8px}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+<symbol id="i-drops" viewBox="0 0 24 24"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></symbol>
+<symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></symbol>
+<symbol id="g-kiln" viewBox="0 0 40 40"><path d="M9 31V20a11 11 0 0 1 22 0v11z" fill="#fff"/><rect x="16" y="22" width="8" height="9" rx="1.5" fill="#2B2A6B"/></symbol>
+<symbol id="sp-b" viewBox="0 0 300 44"><path d="M0 40 H10 V26 H96 V23 H122 V15 H300 V44 H0Z" style="fill:var(--ink);opacity:calc(var(--fillO) * .45)"/><path d="M0 40 H10 V26 H96 V23 H122 V15 H300" fill="none" style="stroke:var(--ink2)" stroke-width="1.8" vector-effect="non-scaling-stroke"/></symbol>
+<symbol id="sp-v" viewBox="0 0 300 44"><path d="M0 40 L31 36 L62 33 L93 31 L124 30 L155 27 L186 24 L217 21 L248 17 L279 13 L300 10 L300 44 L0 44Z" fill="#F7931A" style="opacity:var(--fillO)"/><path d="M0 40 L31 36 L62 33 L93 31 L124 30 L155 27 L186 24 L217 21 L248 17 L279 13 L300 10" fill="none" stroke="#F7931A" stroke-width="1.8" vector-effect="non-scaling-stroke"/></symbol>
+</defs></svg>
+<header data-doop-id="spec-head"><h1>Home final, live data spec</h1><p class="lead">Every live figure on the homepage. First paint shows the cached snapshot, finished and at full contrast. Fresh values swap in a moment later, and only the figures that changed move. Example values below come from the approved Pro and Matchscan frames.</p></header>
+<section class="sec" data-doop-id="spec-table"><h2>Every live figure</h2><p class="sub">Keys match the data-live and data-computed attributes in the desktop, phone and dark frames. ID, Developer, Docs, Stuart and Classic are static and have no live figures.</p>
+<table>
+<colgroup><col style="width:330px"><col style="width:360px"><col style="width:640px"><col style="width:430px"><col style="width:480px"><col></colgroup>
+<thead><tr><th>Figure</th><th>Where</th><th>Unit and format</th><th>First paint, from cache</th><th>What triggers a swap</th><th>Animation</th></tr></thead>
+<tbody>
+<tr class="grp"><td colspan="6">Matchbox Pro card</td></tr>
+<tr><td><b>Epoch number</b><span class="mono">epoch.number</span></td><td>Pink tab, left, after the MEZO coin</td><td><span class="eg tn">Epoch 47</span>. Integer, no separator.</td><td><span class="loc">Computed locally</span><br>Never fetched. Server renders it, the browser recomputes on load: floor((now − Thu 11 Dec 2025 00:00 UTC) ÷ 7 days).</td><td>Epoch boundary, Thu 00:00 UTC.</td><td>Changed digits roll, 300ms.</td></tr>
+<tr><td><b>Epoch countdown</b><span class="mono">epoch.countdown</span></td><td>Pink tab, right, after "Closes in"</td><td><span class="eg tn">3d 12h</span> from 1 day ("3d" when hours are 0), <span class="eg tn">11h 20m</span> under 1 day, <span class="eg tn">42m</span> under 1 hour, never below <span class="eg tn">1m</span>.</td><td><span class="loc">Computed locally</span><br>Never fetched. Counts to the next Thu 00:00 UTC.</td><td>Recomputed every 60000ms, on the minute. At the boundary it shows <span class="tn">7d</span> and the Pro figures refetch.</td><td>Changed digits roll, 300ms.</td></tr>
+<tr><td><b>Incentives this epoch</b><span class="mono">pro.incentivesTotal</span></td><td>Headline figure, 44/650</td><td>USD, whole dollars, thousands separators: <span class="eg tn">$14,820</span>. From $1,000,000 compact with 2 decimals: <span class="eg tn">$1.24M</span>.</td><td>Snapshot value, in place, full contrast.</td><td>Fresh request after first paint, then every 60000ms.</td><td>Changed digits roll, 300ms.</td></tr>
+<tr><td><b>Gauge, rows 1 to 3</b><span class="mono">pro.gauge1..3.name</span></td><td>"Most incentives" rows, ranked by incentives this epoch, highest first</td><td>Name as Pro shows it. Pool gauges by pair (<span class="eg">BTC/MUSD</span>), never an address. Picture: profile picture, pair of official coins, or initials. Type icon with tooltip (droplets pool, lock veBTC gauge, globe MEZO gauge, server validator).</td><td>Snapshot ranking.</td><td>Fresh ranking differs.</td><td>Name: text morph, 300ms. Picture and type icon: crossfade, 200ms. Rows never reorder or slide: each slot takes its new gauge in place.</td></tr>
+<tr><td><b>Gauge votes</b><span class="mono">pro.gauge1..3.votes</span></td><td>Row subline, after the type icon</td><td>Escrow unit, never "votes". veBTC 2 decimals: <span class="eg tn">112.40 veBTC</span>. veMEZO compact, 2 decimals: <span class="eg tn">5.88M veMEZO</span>, <span class="eg tn">22.15k veMEZO</span>, whole below 1,000: <span class="eg tn">840 veMEZO</span>.</td><td>Snapshot value.</td><td>Fresh value differs.</td><td>Changed digits roll, 300ms. The unit never animates.</td></tr>
+<tr><td><b>Gauge incentives</b><span class="mono">pro.gauge1..3.incentives</span></td><td>Row value, right, with the incentive coins</td><td>USD, whole dollars: <span class="eg tn">$4,210</span>. Coin stack of the incentive tokens, official icons, 20px (18px phone).</td><td>Snapshot value and coins.</td><td>Fresh value differs.</td><td>Changed digits roll, 300ms. Coin stack crossfades, 200ms, only if the tokens change.</td></tr>
+<tr class="grp"><td colspan="6">Matchscan card</td></tr>
+<tr><td><b>Borrowed</b><span class="mono">scan.borrowed</span></td><td>Stat 1, 30/650 (26/650 phone)</td><td>USD, whole dollars, full digits: <span class="eg tn">$4,130,114</span>.</td><td>Snapshot value.</td><td>Fresh request after first paint, then every 60000ms.</td><td>Changed digits roll, 300ms.</td></tr>
+<tr><td><b>Enclaves share</b><span class="mono">scan.borrowedEnclaves</span></td><td>Stat 1 subline, before "Enclaves"</td><td>Percent, 1 decimal: <span class="eg tn">97.2%</span>.</td><td>Snapshot value.</td><td>With Borrowed.</td><td>Changed digits roll, 300ms.</td></tr>
+<tr><td><b>veBTC locked</b><span class="mono">scan.vebtcLocked</span></td><td>Stat 2, 30/650 (26/650 phone)</td><td>BTC, 2 decimals, thousands separators: <span class="eg tn">1,404.32 BTC</span>.</td><td>Snapshot value.</td><td>With Borrowed.</td><td>Changed digits roll, 300ms.</td></tr>
+<tr><td><b>veBTC locked, USD</b><span class="mono">scan.vebtcLockedUsd</span></td><td>Stat 2 subline</td><td>USD compact, 2 decimals, from $1,000,000: <span class="eg tn">$148.45M</span>. Below that whole dollars: <span class="eg tn">$86,420</span>.</td><td>Snapshot value.</td><td>With Borrowed.</td><td>Changed digits roll, 300ms.</td></tr>
+<tr><td><b>Sparklines</b><span class="mono">scan.borrowedSeries<br>scan.vebtcSeries</span></td><td>Bottom of each stat, 44px (38px phone)</td><td>30 daily points, the last one today. Borrowed a step line in ink, veBTC locked an orange line.</td><td>Snapshot series, drawn at once, no draw-in.</td><td>With Borrowed.</td><td>None. The path is replaced in place.</td></tr>
+<tr><td><b>Latest blocks, rows 1 to 3</b><span class="mono">scan.block1..3.number</span></td><td>"Latest blocks" rows. Row 1 is the latest block.</td><td>Integer, thousands separators: <span class="eg tn">13,078,795</span>.</td><td>Snapshot blocks.</td><td>Fresh request after first paint, then every 30000ms.</td><td>Changed digits roll, 300ms. Rows never insert, slide or reorder: each slot takes the values of its new block in place.</td></tr>
+<tr><td><b>Block proposer</b><span class="mono">scan.block1..3.validator</span></td><td>Row subline</td><td>Validator name as Matchscan shows it: <span class="eg">Northfield Nodes</span>.</td><td>Snapshot value.</td><td>With the blocks.</td><td>Text morph, 300ms.</td></tr>
+<tr><td><b>Block transactions</b><span class="mono">scan.block1..3.txns</span></td><td>Row value, right</td><td><span class="eg tn">5 txns</span>, <span class="eg tn">1 txn</span>, <span class="eg tn">0 txns</span>.</td><td>Snapshot value.</td><td>With the blocks.</td><td>Digits roll, 300ms. "txn" and "txns" switch without animation.</td></tr>
+<tr class="grp"><td colspan="6">Both cards</td></tr>
+<tr><td><b>As of note</b><span class="mono">pro.asOf<br>scan.asOf</span></td><td>Right end of the "Most incentives" and "Latest blocks" label rows, 14/400 secondary</td><td><span class="eg tn">As of 14:05</span>, the snapshot time in the visitor's time zone, 24 hour. Older than 24 hours: <span class="eg tn">As of Thu 5 Nov, 14:05</span>.</td><td>Hidden. Its space is always reserved, so it never shifts anything.</td><td>Shown only when the fresh request failed or took more than 5000ms and the snapshot is older than 300000ms (5 minutes). Hidden again when fresh data lands.</td><td>Opacity, 200ms in and out.</td></tr>
+</tbody></table></section>
+<section class="sec" data-doop-id="spec-pro-states"><h2>Matchbox Pro card, three states</h2><p class="sub">At card size, 672 wide, as on the 1440 page. A fourth drawing shows a slot with no cached value at all.</p>
+<div class="states">
+<div><div class="cap"><b>First paint, from cache</b><p>The snapshot rendered into the page. Every figure is in place at full contrast. No skeleton, spinner or loading text.</p></div>
+<article class="hc"><div class="strip s-pro"></div><div class="bd"><div class="mbx-lockup" style="--mbx-h:32px" role="img" aria-label="Matchbox Pro"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">MATCHBOX</span><span class="mbx-word mbx-product">PRO</span></span></div><p class="line">Lock, vote on gauges and claim rewards.</p><div class="act"><a class="pill p1">Open Pro</a></div></div>
+<div class="scr"><div class="ep"><div class="rt"><span><img src="https://doop.design/a/HpuzH08trU.svg" alt="MEZO"><b>Epoch <span data-computed="epoch.number">47</span></b></span><span class="cd">Closes in <b data-computed="epoch.countdown">3d 12h</b></span></div>
+<div class="rb"><div class="k">Incentives this epoch</div><div class="bf" data-live="pro.incentivesTotal">$14,820</div><div class="lh"><span>Most incentives</span><span class="asof">As of 14:05</span></div>
+<div class="gr"><span class="pic pair"><img src="https://doop.design/a/y69en5OxBa.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><div><div class="nm">BTC/MUSD</div><div class="ss"><svg class="ic"><use href="#i-drops"/></svg><span class="tn">112.40 veBTC</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/HpuzH08trU.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><span class="tn">$4,210</span></div></div>
+<div class="gr"><span class="pic pair"><img src="https://doop.design/a/6GXiH2WbJO.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><div><div class="nm">mUSDC/MUSD</div><div class="ss"><svg class="ic"><use href="#i-drops"/></svg><span class="tn">79.30 veBTC</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><span class="tn">$2,480</span></div></div>
+<div class="gr"><span class="pic kl"><svg viewBox="0 0 40 40"><use href="#g-kiln"/></svg></span><div><div class="nm">Kiln Labs</div><div class="ss"><svg class="ic"><use href="#i-lock"/></svg><span class="tn">5.88M veMEZO</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/HpuzH08trU.svg" alt=""></span><span class="tn">$1,180</span></div></div>
+</div></div></div></article>
+<p class="nt"><b>Epoch 47</b> and <b>3d 12h</b> are computed in the browser and never wait for data.</p></div>
+
+<div><div class="cap"><b>Fresh data arrives</b><p>Only figures that changed move. Here a cached $13,950 rolls to the fresh $14,820, caught mid-roll. The gauge rows did not change, so they stay still.</p></div>
+<article class="hc"><div class="strip s-pro"></div><div class="bd"><div class="mbx-lockup" style="--mbx-h:32px" role="img" aria-label="Matchbox Pro"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">MATCHBOX</span><span class="mbx-word mbx-product">PRO</span></span></div><p class="line">Lock, vote on gauges and claim rewards.</p><div class="act"><a class="pill p1">Open Pro</a></div></div>
+<div class="scr"><div class="ep"><div class="rt"><span><img src="https://doop.design/a/HpuzH08trU.svg" alt="MEZO"><b>Epoch 47</b></span><span class="cd">Closes in <b>3d 12h</b></span></div>
+<div class="rb"><div class="k">Incentives this epoch</div><div class="bf tn" aria-label="$14,820"><span class="fx">$1<span class="rl"><i style="transform:translateY(-.69em)"><span>3</span><span>4</span></i></span>,<span class="rl"><i style="transform:translateY(-.69em)"><span>9</span><span>8</span></i></span><span class="rl"><i style="transform:translateY(-.69em)"><span>5</span><span>2</span></i></span>0</span></div><div class="lh"><span>Most incentives</span><span class="asof">As of 14:05</span></div>
+<div class="gr"><span class="pic pair"><img src="https://doop.design/a/y69en5OxBa.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><div><div class="nm">BTC/MUSD</div><div class="ss"><svg class="ic"><use href="#i-drops"/></svg><span class="tn">112.40 veBTC</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/HpuzH08trU.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><span class="tn">$4,210</span></div></div>
+<div class="gr"><span class="pic pair"><img src="https://doop.design/a/6GXiH2WbJO.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><div><div class="nm">mUSDC/MUSD</div><div class="ss"><svg class="ic"><use href="#i-drops"/></svg><span class="tn">79.30 veBTC</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><span class="tn">$2,480</span></div></div>
+<div class="gr"><span class="pic kl"><svg viewBox="0 0 40 40"><use href="#g-kiln"/></svg></span><div><div class="nm">Kiln Labs</div><div class="ss"><svg class="ic"><use href="#i-lock"/></svg><span class="tn">5.88M veMEZO</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/HpuzH08trU.svg" alt=""></span><span class="tn">$1,180</span></div></div>
+</div></div></div></article>
+<p class="nt">Changed digits: <b>3 to 4</b>, <b>9 to 8</b>, <b>5 to 2</b>, all rolling up together because the value grew. "$1", "," and "0" never move. Same colour throughout.</p></div>
+
+<div><div class="cap"><b>Fresh data unavailable</b><p>The request failed or took more than 5000ms. The cached figures stay. The snapshot is older than 5 minutes, so "As of 14:05" fades in on the label row.</p></div>
+<article class="hc"><div class="strip s-pro"></div><div class="bd"><div class="mbx-lockup" style="--mbx-h:32px" role="img" aria-label="Matchbox Pro"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">MATCHBOX</span><span class="mbx-word mbx-product">PRO</span></span></div><p class="line">Lock, vote on gauges and claim rewards.</p><div class="act"><a class="pill p1">Open Pro</a></div></div>
+<div class="scr"><div class="ep"><div class="rt"><span><img src="https://doop.design/a/HpuzH08trU.svg" alt="MEZO"><b>Epoch 47</b></span><span class="cd">Closes in <b>3d 12h</b></span></div>
+<div class="rb"><div class="k">Incentives this epoch</div><div class="bf tn">$14,820</div><div class="lh"><span>Most incentives</span><span class="asof on tn">As of 14:05</span></div>
+<div class="gr"><span class="pic pair"><img src="https://doop.design/a/y69en5OxBa.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><div><div class="nm">BTC/MUSD</div><div class="ss"><svg class="ic"><use href="#i-drops"/></svg><span class="tn">112.40 veBTC</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/HpuzH08trU.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><span class="tn">$4,210</span></div></div>
+<div class="gr"><span class="pic pair"><img src="https://doop.design/a/6GXiH2WbJO.svg" alt=""><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><div><div class="nm">mUSDC/MUSD</div><div class="ss"><svg class="ic"><use href="#i-drops"/></svg><span class="tn">79.30 veBTC</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/be1DrI6IjG.svg" alt=""></span><span class="tn">$2,480</span></div></div>
+<div class="gr"><span class="pic kl"><svg viewBox="0 0 40 40"><use href="#g-kiln"/></svg></span><div><div class="nm">Kiln Labs</div><div class="ss"><svg class="ic"><use href="#i-lock"/></svg><span class="tn">5.88M veMEZO</span></div></div><div class="iv"><span class="cs"><img src="https://doop.design/a/HpuzH08trU.svg" alt=""></span><span class="tn">$1,180</span></div></div>
+</div></div></div></article>
+<p class="nt">Snapshot under 5 minutes old: no note, the card looks exactly like first paint. The next refresh retries. The countdown keeps counting.</p></div>
+
+<div><div class="cap"><b>No cached value</b><p>Neither a snapshot nor fresh data. Each live slot reads "Not available" in secondary text at its own line height, so the card keeps its size. Never $0, never a dash.</p></div>
+<article class="hc"><div class="strip s-pro"></div><div class="bd"><div class="mbx-lockup" style="--mbx-h:32px" role="img" aria-label="Matchbox Pro"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span class="mbx-word">MATCHBOX</span><span class="mbx-word mbx-product">PRO</span></span></div><p class="line">Lock, vote on gauges and claim rewards.</p><div class="act"><a class="pill p1">Open Pro</a></div></div>
+<div class="scr"><div class="ep"><div class="rt"><span><img src="https://doop.design/a/HpuzH08trU.svg" alt="MEZO"><b>Epoch 47</b></span><span class="cd">Closes in <b>3d 12h</b></span></div>
+<div class="rb"><div class="k">Incentives this epoch</div><div class="bf na">Not available</div><div class="lh"><span>Most incentives</span><span class="asof">As of 14:05</span></div>
+<div class="nal" style="height:186px">Not available</div>
+</div></div></div></article>
+<p class="nt">The epoch and countdown still show, because they are computed locally. Open Pro still works. When data arrives later, values replace "Not available" with a 200ms fade, no roll.</p></div>
+</div></section>
+<section class="sec" data-doop-id="spec-scan-states"><h2>Matchscan card, three states</h2><p class="sub">Same rules. The search field is the card's action and works in every state.</p>
+<div class="states">
+<div><div class="cap"><b>First paint, from cache</b><p>Borrowed, veBTC locked and the three latest blocks from the snapshot, in place at full contrast. Sparklines drawn at once, no draw-in.</p></div>
+<article class="hc"><div class="strip s-scan"></div><div class="bd"><div class="mbx-lockup" style="--mbx-h:32px" role="img" aria-label="Matchscan"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span>MATCH</span><span class="mbx-product">SCAN</span></span></div><p class="line">Every block, lock and loan on Mezo.</p><div class="act"><div class="sf"><svg class="ic"><use href="#i-search"/></svg>Address or transaction<kbd>/</kbd></div></div></div>
+<div class="scr ms"><div class="sts">
+<div class="st"><div class="h"><img src="https://doop.design/a/be1DrI6IjG.svg" alt="">Borrowed</div><div class="v tn">$4,130,114</div><div class="s"><span class="tn">97.2%</span> Enclaves</div><svg class="sp" viewBox="0 0 300 44" preserveAspectRatio="none"><use href="#sp-b" width="300" height="44"/></svg></div>
+<div class="st"><div class="h"><span><svg class="ic"><use href="#i-lock"/></svg></span>veBTC locked</div><div class="v tn">1,404.32 BTC</div><div class="s tn">$148.45M</div><svg class="sp" viewBox="0 0 300 44" preserveAspectRatio="none"><use href="#sp-v" width="300" height="44"/></svg></div>
+</div><div class="blk"><div class="lh"><span>Latest blocks</span><span class="asof">As of 14:05</span></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n tn">13,078,795</div><div class="s">Northfield Nodes</div></div><div class="a tn">5 txns</div></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n tn">13,078,794</div><div class="s">Harbor Stake</div></div><div class="a tn">2 txns</div></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n tn">13,078,793</div><div class="s">Copperline</div></div><div class="a tn">1 txn</div></div>
+</div></div></article>
+<p class="nt">Row 1 is always the latest block. Ages are left out on the homepage so nothing ticks every second.</p></div>
+
+<div><div class="cap"><b>Fresh data arrives</b><p>A new block landed. Each row slot rolls to its new block in place, caught mid-roll, and validator names morph. Borrowed and veBTC locked did not change, so they stay still.</p></div>
+<article class="hc"><div class="strip s-scan"></div><div class="bd"><div class="mbx-lockup" style="--mbx-h:32px" role="img" aria-label="Matchscan"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span>MATCH</span><span class="mbx-product">SCAN</span></span></div><p class="line">Every block, lock and loan on Mezo.</p><div class="act"><div class="sf"><svg class="ic"><use href="#i-search"/></svg>Address or transaction<kbd>/</kbd></div></div></div>
+<div class="scr ms"><div class="sts">
+<div class="st"><div class="h"><img src="https://doop.design/a/be1DrI6IjG.svg" alt="">Borrowed</div><div class="v tn">$4,130,114</div><div class="s"><span class="tn">97.2%</span> Enclaves</div><svg class="sp" viewBox="0 0 300 44" preserveAspectRatio="none"><use href="#sp-b" width="300" height="44"/></svg></div>
+<div class="st"><div class="h"><span><svg class="ic"><use href="#i-lock"/></svg></span>veBTC locked</div><div class="v tn">1,404.32 BTC</div><div class="s tn">$148.45M</div><svg class="sp" viewBox="0 0 300 44" preserveAspectRatio="none"><use href="#sp-v" width="300" height="44"/></svg></div>
+</div><div class="blk"><div class="lh"><span>Latest blocks</span><span class="asof">As of 14:05</span></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n tn"><span class="fx">13,078,79<span class="rl"><i style="transform:translateY(-.69em)"><span>5</span><span>6</span></i></span></span></div><div class="s">Ridge Validators</div></div><div class="a tn"><span class="fx"><span class="rl"><i style="transform:translateY(-.46em)"><span>3</span><span>5</span></i></span>&nbsp;txns</span></div></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n tn"><span class="fx">13,078,79<span class="rl"><i style="transform:translateY(-.69em)"><span>4</span><span>5</span></i></span></span></div><div class="s">Northfield Nodes</div></div><div class="a tn"><span class="fx"><span class="rl"><i style="transform:translateY(-.69em)"><span>2</span><span>5</span></i></span>&nbsp;txns</span></div></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n tn"><span class="fx">13,078,79<span class="rl"><i style="transform:translateY(-.69em)"><span>3</span><span>4</span></i></span></span></div><div class="s">Harbor Stake</div></div><div class="a tn"><span class="fx"><span class="rl"><i style="transform:translateY(-.69em)"><span>1</span><span>2</span></i></span>&nbsp;txns</span></div></div>
+</div></div></article>
+<p class="nt">Block numbers roll up (5 to 6, 4 to 5, 3 to 4). Row 1's txns roll down, 5 to 3, because that value fell. No row slides in or out.</p></div>
+
+<div><div class="cap"><b>Fresh data unavailable</b><p>The request failed or took more than 5000ms. The cached figures stay. The snapshot is older than 5 minutes, so "As of 14:05" fades in on the "Latest blocks" row.</p></div>
+<article class="hc"><div class="strip s-scan"></div><div class="bd"><div class="mbx-lockup" style="--mbx-h:32px" role="img" aria-label="Matchscan"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span>MATCH</span><span class="mbx-product">SCAN</span></span></div><p class="line">Every block, lock and loan on Mezo.</p><div class="act"><div class="sf"><svg class="ic"><use href="#i-search"/></svg>Address or transaction<kbd>/</kbd></div></div></div>
+<div class="scr ms"><div class="sts">
+<div class="st"><div class="h"><img src="https://doop.design/a/be1DrI6IjG.svg" alt="">Borrowed</div><div class="v tn">$4,130,114</div><div class="s"><span class="tn">97.2%</span> Enclaves</div><svg class="sp" viewBox="0 0 300 44" preserveAspectRatio="none"><use href="#sp-b" width="300" height="44"/></svg></div>
+<div class="st"><div class="h"><span><svg class="ic"><use href="#i-lock"/></svg></span>veBTC locked</div><div class="v tn">1,404.32 BTC</div><div class="s tn">$148.45M</div><svg class="sp" viewBox="0 0 300 44" preserveAspectRatio="none"><use href="#sp-v" width="300" height="44"/></svg></div>
+</div><div class="blk"><div class="lh"><span>Latest blocks</span><span class="asof on tn">As of 14:05</span></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n tn">13,078,795</div><div class="s">Northfield Nodes</div></div><div class="a tn">5 txns</div></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n tn">13,078,794</div><div class="s">Harbor Stake</div></div><div class="a tn">2 txns</div></div>
+<div class="br"><span class="bi"><svg class="ic"><use href="#i-box"/></svg></span><div><div class="n tn">13,078,793</div><div class="s">Copperline</div></div><div class="a tn">1 txn</div></div>
+</div></div></article>
+<p class="nt">One note per card, on the block list, because it covers the whole card. Search keeps working: it goes to Matchscan.</p></div>
+
+<div><div class="cap"><b>No cached value</b><p>Each live slot reads "Not available" in secondary text at its own line height. No sparkline, no sublines, the card keeps its size. Never $0, never a dash.</p></div>
+<article class="hc"><div class="strip s-scan"></div><div class="bd"><div class="mbx-lockup" style="--mbx-h:32px" role="img" aria-label="Matchscan"><span class="mbx-icon"><img alt="" src="https://doop.design/a/X0GAz7r26O.png"></span><span class="mbx-text"><span>MATCH</span><span class="mbx-product">SCAN</span></span></div><p class="line">Every block, lock and loan on Mezo.</p><div class="act"><div class="sf"><svg class="ic"><use href="#i-search"/></svg>Address or transaction<kbd>/</kbd></div></div></div>
+<div class="scr ms"><div class="sts">
+<div class="st"><div class="h"><img src="https://doop.design/a/be1DrI6IjG.svg" alt="">Borrowed</div><div class="v na">Not available</div><div class="s"></div></div>
+<div class="st"><div class="h"><span><svg class="ic"><use href="#i-lock"/></svg></span>veBTC locked</div><div class="v na">Not available</div><div class="s"></div></div>
+</div><div class="blk"><div class="lh"><span>Latest blocks</span><span class="asof">As of 14:05</span></div>
+<div class="nal" style="height:168px">Not available</div>
+</div></div></article>
+<p class="nt">A figure that has a value keeps it: only the missing slots say "Not available". When data arrives later, values replace the text with a 200ms fade, no roll.</p></div>
+</div></section>
+<section class="sec" data-doop-id="spec-motion"><h2>Motion, timing and reduced motion</h2><p class="sub">From the motion kit in matchbox-v3 (NumberFlow, torph), held to 300ms for the homepage.</p>
+<div class="pn">
+<div class="pb" style="grid-column:span 2"><b class="t">Digit roll</b>
+<div class="tl">
+<div><div class="f tn"><span class="fx">$1<span class="rl"><i><span>3</span><span>4</span></i></span>,<span class="rl"><i><span>9</span><span>8</span></i></span><span class="rl"><i><span>5</span><span>2</span></i></span>0</span></div><small>0ms, cached</small></div>
+<div><div class="f tn"><span class="fx">$1<span class="rl"><i style="transform:translateY(-.63em)"><span>3</span><span>4</span></i></span>,<span class="rl"><i style="transform:translateY(-.63em)"><span>9</span><span>8</span></i></span><span class="rl"><i style="transform:translateY(-.63em)"><span>5</span><span>2</span></i></span>0</span></div><small>60ms</small></div>
+<div><div class="f tn"><span class="fx">$1<span class="rl"><i style="transform:translateY(-.95em)"><span>3</span><span>4</span></i></span>,<span class="rl"><i style="transform:translateY(-.95em)"><span>9</span><span>8</span></i></span><span class="rl"><i style="transform:translateY(-.95em)"><span>5</span><span>2</span></i></span>0</span></div><small>120ms</small></div>
+<div><div class="f tn">$14,820</div><small>300ms, fresh</small></div>
+</div>
+<ul>
+<li>300ms per figure, easing <code>cubic-bezier(.2,.8,.2,1)</code>. matchbox-v3 uses 380ms for NumberFlow; the homepage uses 300ms, the owner's ceiling.</li>
+<li>Only digits that changed move. Every changed digit of every changed figure starts at the same moment, no stagger.</li>
+<li>Up when the value grows, down when it falls. Each digit box fades its top and bottom 16% with a mask.</li>
+<li>No colour change, no flash, no scale, no blur. NumberFlow: <code>transformTiming</code> and <code>spinTiming</code> 300ms with the easing above, <code>opacityTiming</code> 200ms, <code>trend</code> from the sign of the change.</li>
+</ul></div>
+<div class="pb"><b class="t">Words, pictures, the note</b><ul>
+<li>Gauge and validator names change with torph <code>TextMorph</code>, 300ms, <code>cubic-bezier(.19,1,.22,1)</code>.</li>
+<li>Gauge pictures, type icons and coin stacks crossfade, opacity only, 200ms ease-out.</li>
+<li>"As of 14:05" fades in and out, opacity only, 200ms.</li>
+<li>"Not available" to a value: 200ms fade, no roll.</li>
+<li>Units ("veBTC", "veMEZO", "BTC", "txns") never animate.</li>
+</ul></div>
+<div class="pb"><b class="t">No layout movement</b><ul>
+<li>Tabular numerals on every live figure: <code>font-variant-numeric: tabular-nums</code>.</li>
+<li>Fixed heights: gauge rows 62px (58 phone), block rows 56px (54 phone), headline line box 52px (44 phone), stat line box 36px (32 phone).</li>
+<li>Right aligned values sit in their own grid column and grow to the left. The name column absorbs it.</li>
+<li>The note's space is always there: <code>visibility</code>, never <code>display</code>.</li>
+<li>A figure that gains a digit grows into free space on its own line. Nothing beside it moves.</li>
+</ul></div>
+<div class="pb"><b class="t">Reduced motion</b><ul>
+<li>With <code>prefers-reduced-motion: reduce</code>, values just change. No roll, no morph, no crossfade, no fade on the note.</li>
+<li>The countdown still updates every 60000ms.</li>
+<li>Same rule when a card is off screen at swap time: the value just changes, so nobody scrolls into a roll.</li>
+</ul></div>
+<div class="pb"><b class="t">When to fetch</b><ul>
+<li>First paint never waits for a request: the snapshot is in the HTML.</li>
+<li>One fresh request after first paint, on idle, at most 1000ms after load, never before the LCP element paints.</li>
+<li>Timeout 5000ms. A failure or timeout is state 3.</li>
+<li>Refresh: Pro figures every 60000ms, Matchscan stats every 60000ms, latest blocks every 30000ms. Only while the tab is visible and the card is in the viewport. Coming back, refresh at once if older than the interval.</li>
+<li>At the epoch boundary the Pro figures refetch.</li>
+</ul></div>
+<div class="pb"><b class="t">The cache</b><ul>
+<li>The server renders every live figure from the latest snapshot, with its snapshot time.</li>
+<li>A scheduled job refreshes the snapshot every 60000ms and it is served stale while revalidating, so first paint has values in normal operation.</li>
+<li>The fresh response has the snapshot's shape. One request covers both cards.</li>
+<li>Snapshot older than 300000ms and no fresh data: show "As of".</li>
+</ul></div>
+<div class="pb" style="grid-column:span 2"><b class="t">Never on this page</b><ul>
+<li>Skeletons, spinners, "Loading" or empty boxes, even for a moment.</li>
+<li>$0, 0 or a dash standing in for a missing value. Missing reads "Not available".</li>
+<li>Count-up from zero on first view. matchbox-v3 headline count-ups do not run on the homepage, because the cached value is already right.</li>
+<li>Live dots, "updated 12s ago" lines, colour flashes on change.</li>
+<li>Anyone's own data: no wallet, lock, ballot or address. Every figure is protocol wide.</li>
+</ul></div>
+</div></section>
+</body></html>

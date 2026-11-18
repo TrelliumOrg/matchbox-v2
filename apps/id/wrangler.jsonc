@@ -1,0 +1,47 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // Same Worker name, route, bindings, cron and vars as Classic's
+  // apps/matchbox-id Worker, which this replaced on 13 Nov 2026.
+  "name": "matchbox-id",
+  // TanStack Start serves the pages; /api, /oauth and /.well-known go to the
+  // Hono OIDC server first (see src/server.ts).
+  "main": "./src/server.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "id.matchbox.markets", "custom_domain": true }],
+  "assets": { "binding": "ASSETS" },
+  "durable_objects": {
+    "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }],
+  "observability": {
+    "enabled": true
+  },
+  // Hourly purge of expired nonces, authorization requests, codes and tokens.
+  "triggers": { "crons": ["17 * * * *"] },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "MATCHBOX_ID_ENABLED": "true",
+    "DISCORD_CLAIMS_ENABLED": "true",
+    "ISSUER": "https://id.matchbox.markets"
+  },
+  // Staging on workers.dev (no custom domain). Non-inheritable keys are
+  // repeated; secrets are set per environment.
+  "env": {
+    "staging": {
+      "workers_dev": true,
+      "routes": [],
+      "durable_objects": {
+        "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
+      },
+      "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }],
+      "triggers": { "crons": ["17 * * * *"] },
+      "vars": {
+        "ENVIRONMENT": "preview",
+        "MATCHBOX_ID_ENABLED": "true",
+        "DISCORD_CLAIMS_ENABLED": "true",
+        "ISSUER": "https://matchbox-id-staging.mallard.workers.dev"
+      }
+    }
+  }
+}

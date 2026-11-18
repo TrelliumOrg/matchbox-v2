@@ -1,0 +1,600 @@
+/*
+ * Import once in the app stylesheet, after tailwindcss and the tokens:
+ *   @import "tailwindcss";
+ *   @import "@matchbox/tokens/themes.css";
+ *   @import "@matchbox/tokens/tailwind.css";
+ *   @import "@matchbox/ui/styles.css";
+ * The @source line makes Tailwind scan the components for their classes.
+ */
+
+@source "./";
+@source "../../motion/src";
+
+/*
+ * Every animation is transform or opacity (charts: stroke-dashoffset), under
+ * 400ms for UI and 600ms for charts. apps/pro/MOTION.md lists each one.
+ */
+
+@keyframes mbx-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes mbx-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-sheet-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes mbx-sheet-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes mbx-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes mbx-sheet-down {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes mbx-slot-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-slot-out {
+  to {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-ring-a {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes mbx-ring-b {
+  from {
+    transform: rotate(-180deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes mbx-toast-countdown {
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes mbx-check-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-pop-in {
+  from {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-pop-out {
+  to {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-toast-out {
+  to {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-leave {
+  to {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+}
+
+/* A sub-view pushed in (forward) or popped back to, inside a panel. */
+@keyframes mbx-push-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-push-out {
+  to {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-back-in {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+
+@keyframes mbx-back-out {
+  to {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+/* A check stroke drawn from its start (paths under 25 units, 24px boxes). */
+@keyframes mbx-draw-check {
+  from {
+    stroke-dashoffset: 25;
+  }
+}
+
+/* Charts: a line drawn left to right (pathLength 1), bars from the baseline. */
+@keyframes mbx-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes mbx-grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@layer base {
+  /*
+   * Press: buttons, radios, checkboxes and pressable cards ([data-press])
+   * settle to 0.97 while held (the scale property, so it composes with any
+   * transform). [data-no-press] opts out.
+   */
+  :where(button, [role="button"], [data-press]):not(
+    :disabled,
+    [aria-disabled="true"],
+    [data-no-press]
+  ) {
+    transition: scale 120ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  :where(button, [role="button"], [data-press]):not(
+    :disabled,
+    [aria-disabled="true"],
+    [data-no-press]
+  ):active {
+    scale: 0.97;
+  }
+}
+
+/*
+ * Touch targets. A control marked `data-tap` keeps its size on screen, and
+ * under a finger its hit area is at least 44 by 44, centred on it. In the
+ * base layer, so a utility that positions the control (absolute, fixed)
+ * still wins over the `relative` it needs otherwise.
+ */
+@layer base {
+  @media (pointer: coarse) {
+    [data-tap] {
+      position: relative;
+    }
+
+    [data-tap]::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+@layer components {
+  /*
+   * NumberFlow pads itself top and bottom for its fade mask, so a figure
+   * that goes live grew its line by twice the mask (17px on a 44px
+   * headline): a layout shift. The same amount as negative margin keeps the
+   * line box exactly as the server-rendered text drew it.
+   */
+  number-flow-react,
+  number-flow {
+    margin-block: calc(
+      -2 *
+      round(nearest, calc(var(--number-flow-mask-height, 0.25em) / 2), 1px)
+    );
+  }
+
+  /* Checks draw in: put .mbx-draw on the check's svg (or a parent). */
+  .mbx-draw :is(path, polyline) {
+    stroke-dasharray: 25;
+    animation: mbx-draw-check 320ms var(--ease-roll) 80ms backwards;
+  }
+
+  /* Whatever is leaving never takes a click (sheets, drawers, list items). */
+  [data-mbx-motion][data-state="closed"],
+  [data-leaving] {
+    pointer-events: none;
+  }
+
+  /* List items kept for their exit by usePresenceList. */
+  [data-leaving] {
+    animation: mbx-leave 160ms var(--ease-roll) forwards;
+  }
+
+  /*
+   * Top-layer bubbles (Floating.Tip, Floating.Pop) fade and settle in on
+   * showPopover and back out on hidePopover; display and overlay stay
+   * until the fade is over.
+   */
+  @supports selector(:popover-open) {
+    [data-mbx-pop] {
+      opacity: 0;
+      transform: scale(0.97);
+      transition:
+        opacity 120ms ease-out,
+        transform 120ms var(--ease-roll),
+        display 120ms allow-discrete,
+        overlay 120ms allow-discrete;
+    }
+
+    [data-mbx-pop]:popover-open {
+      opacity: 1;
+      transform: none;
+      transition-duration: 150ms;
+    }
+
+    [data-mbx-pop]:not(:popover-open) {
+      pointer-events: none;
+    }
+
+    @starting-style {
+      [data-mbx-pop]:popover-open {
+        opacity: 0;
+        transform: scale(0.97);
+      }
+    }
+  }
+}
+
+/*
+ * Charts (@matchbox/ui chart) hold their entry at its first frame until
+ * they are in view (`data-play`), or skip it (`data-shown`). Only with
+ * scripting on: without JS the chart shows as the server drew it.
+ */
+@media (scripting: enabled) {
+  [data-chart] [data-draw] {
+    animation-play-state: paused;
+  }
+
+  [data-chart][data-play] [data-draw] {
+    animation-play-state: running;
+  }
+
+  [data-chart][data-shown] [data-draw] {
+    animation: none;
+  }
+}
+
+/*
+ * Inspectable charts (@matchbox/ui inspect). While a point is inspected
+ * the others dim, a line shows its guide and dot, and the panel's figure
+ * shows the point's live half in place of its own text. The halves share
+ * one grid cell with the widest value reserved, so nothing moves. A
+ * horizontal drag inspects on touch; a vertical one still scrolls.
+ */
+[data-inspect="x"] {
+  touch-action: pan-y pinch-zoom;
+}
+
+:is([data-inspect-point], [data-inspect-anchor]) {
+  transition: opacity 120ms ease-out;
+}
+
+/* A point with text (a gauge's row) dims only its bar, its text stays. */
+[data-inspect][data-inspecting]
+  [data-inspect-point]:not([data-active]):not(:has([data-inspect-anchor])),
+[data-inspect][data-inspecting]
+  [data-inspect-point]:not([data-active])
+  [data-inspect-anchor] {
+  opacity: 0.55;
+}
+
+[data-inspect-guide],
+[data-inspect-dot] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+[data-inspect][data-inspecting] :is([data-inspect-guide], [data-inspect-dot]) {
+  visibility: visible;
+}
+
+/* The latest point's own dot gives way to the inspected one. */
+[data-inspect][data-inspecting] [data-inspect-latest] {
+  opacity: 0;
+}
+
+[data-inspect-slot] {
+  display: inline-grid;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-inspect-slot] > * {
+  grid-area: 1 / 1;
+}
+
+[data-inspect-slot] > :is([data-inspect-live], [data-inspect-reserve]) {
+  visibility: hidden;
+}
+
+[data-inspect-reserve]::before {
+  content: attr(data-inspect-reserve);
+}
+
+[data-inspect-scope][data-inspecting]
+  [data-inspect-slot]
+  > [data-inspect-rest] {
+  visibility: hidden;
+}
+
+[data-inspect-scope][data-inspecting]
+  [data-inspect-slot]
+  > [data-inspect-live] {
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is([data-inspect-point], [data-inspect-anchor]) {
+    transition: none;
+  }
+}
+
+/*
+ * A modal Radix dialog sets pointer-events: none on the body until it
+ * unmounts, which is after its exit. Once every sheet and drawer is
+ * closing, the page takes clicks again, so nothing blocks during an exit.
+ */
+body:has([data-mbx-layer][data-state="closed"]):not(
+  :has([data-mbx-layer][data-state="open"])
+) {
+  /* biome-ignore lint/complexity/noImportantStyles: must beat Radix's inline style */
+  pointer-events: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-mbx-motion],
+  .mbx-draw :is(path, polyline) {
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must win over inline animations */
+    animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: reduced motion must win over inline transitions */
+    transition: none !important;
+  }
+
+  :where(button, [role="button"], [data-press]):active {
+    /* biome-ignore lint/complexity/noImportantStyles: no press scale under reduced motion */
+    scale: none !important;
+  }
+}
+
+/*
+ * Slider (`./slider`): a native range input with its own track and knob.
+ * The fill runs to the knob's centre: `--mbx-slider-at` (0 to 1) is set
+ * inline, and the knob's centre travels 12px to 100% - 12px.
+ */
+[data-mbx-slider] {
+  --mbx-slider-fill: var(--acc);
+  --mbx-slider-knob: var(--ink);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+[data-mbx-slider]:disabled {
+  --mbx-slider-fill: var(--mut);
+  --mbx-slider-knob: var(--mut);
+}
+
+[data-mbx-slider]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--mbx-slider-fill) calc(12px + (100% - 24px) * var(--mbx-slider-at, 0)),
+    var(--soft2) 0
+  );
+}
+
+[data-mbx-slider]::-moz-range-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--mbx-slider-fill) calc(12px + (100% - 24px) * var(--mbx-slider-at, 0)),
+    var(--soft2) 0
+  );
+}
+
+[data-mbx-slider]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -8px;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--knob);
+  border-radius: 9999px;
+  background: var(--mbx-slider-knob);
+  box-shadow: var(--knobShadow);
+}
+
+[data-mbx-slider]::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--knob);
+  border-radius: 9999px;
+  background: var(--mbx-slider-knob);
+  box-shadow: var(--knobShadow);
+}
+
+[data-mbx-slider]:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Kbd: the server stamps <html data-platform="mac">; ctrl shows otherwise. */
+[data-kbd-platform="mac"],
+html[data-platform="mac"] [data-kbd-platform="other"] {
+  display: none;
+}
+
+html[data-platform="mac"] [data-kbd-platform="mac"] {
+  display: inline-grid;
+}
+
+/*
+ * Lockup Fold (`Wo5F_DTsbm` option A): MATCHBOX collapses with its 1ch gap
+ * while it fades, the product name slides next to the icon and turns ink.
+ * The svg keeps the full width, so nothing around it moves. Folded after
+ * the first fold of the session (html[data-lockup-folded], set before
+ * paint) and under reduced motion; hover or focus on the logo unfolds it.
+ */
+[data-lockup-fold] [data-lockup-part] {
+  transform-box: fill-box;
+  transition:
+    transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 400ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    fill 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+[data-lockup-fold] [data-lockup-part="lead"] {
+  transform-origin: left center;
+}
+
+[data-lockup-fold] [data-lockup-part="suffix"] {
+  fill: var(--sec);
+}
+
+:is(
+    [data-lockup-fold][data-folded],
+    html[data-lockup-folded] [data-lockup-fold]
+  )
+  [data-lockup-part="lead"] {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+:is(
+    [data-lockup-fold][data-folded],
+    html[data-lockup-folded] [data-lockup-fold]
+  )
+  [data-lockup-part="suffix"] {
+  fill: var(--ink);
+  transform: translateX(var(--lockup-fold-x));
+}
+
+:is(a, button):is(:hover, :focus-visible)
+  > [data-lockup-fold]
+  [data-lockup-part] {
+  opacity: 1;
+  transform: none;
+}
+
+:is(a, button):is(:hover, :focus-visible)
+  > [data-lockup-fold]
+  [data-lockup-part="suffix"] {
+  fill: var(--sec);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-lockup-fold] [data-lockup-part] {
+    transition: none;
+  }
+
+  [data-lockup-fold] [data-lockup-part="lead"] {
+    opacity: 0;
+    transform: scaleX(0);
+  }
+
+  [data-lockup-fold] [data-lockup-part="suffix"] {
+    fill: var(--ink);
+    transform: translateX(var(--lockup-fold-x));
+  }
+}
+
+html[data-lockup-folded]
+  [data-lockup-fold]:not([data-folded])
+  [data-lockup-part] {
+  transition: none;
+}
+
+/*
+ * A row of tabs or filters that may be wider than the screen: it scrolls
+ * sideways, never up and down, and shows no scrollbar. `overflow-x: auto`
+ * alone turns `overflow-y` to auto as well, so one pixel of overflow (an
+ * underline pulled over a border) gave tab rows a vertical scrollbar.
+ * With `useScrollRow` (scroll-row/), a side with more to see fades out.
+ */
+@utility scroll-row {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  &[data-more-start] {
+    mask-image: linear-gradient(to right, transparent, #000 32px);
+  }
+
+  &[data-more-end] {
+    mask-image: linear-gradient(to left, transparent, #000 32px);
+  }
+
+  &[data-more-start][data-more-end] {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 32px,
+      #000 calc(100% - 32px),
+      transparent
+    );
+  }
+}

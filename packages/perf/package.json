@@ -1,0 +1,43 @@
+{
+  "name": "@matchbox/perf",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "matchbox-lhci": "./src/lhci.mjs"
+  },
+  "exports": {
+    "./compressing-proxy": {
+      "default": "./src/compressing-proxy.mjs"
+    },
+    "./lighthouse": {
+      "default": "./src/lighthouse.mjs"
+    },
+    "./measure": {
+      "default": "./src/measure.mjs"
+    },
+    "./vite": {
+      "types": "./src/vite.ts",
+      "default": "./src/vite.ts"
+    },
+    "./lcp-tie": {
+      "default": "./src/lcp-tie.mjs"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@lhci/cli": "0.16.0",
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2",
+    "vite": "8.3.6",
+    "vitest": "4.1.12"
+  },
+  "peerDependencies": {
+    "vite": "8.3.6"
+  }
+}

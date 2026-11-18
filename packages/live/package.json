@@ -1,0 +1,56 @@
+{
+  "name": "@matchbox/live",
+  "version": "0.0.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./config": {
+      "types": "./src/config.ts",
+      "default": "./src/config.ts"
+    },
+    "./context": {
+      "types": "./src/live-context.tsx",
+      "default": "./src/live-context.tsx"
+    },
+    "./head-source": {
+      "types": "./src/head-source.ts",
+      "default": "./src/head-source.ts"
+    },
+    "./heads": {
+      "types": "./src/heads.ts",
+      "default": "./src/heads.ts"
+    },
+    "./heads-route": {
+      "types": "./src/heads-route.ts",
+      "default": "./src/heads-route.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@matchbox/app-kit": "workspace:*",
+    "@matchbox/motion": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "peerDependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261108.1",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "happy-dom": "21.0.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.6",
+    "vitest": "4.1.12"
+  }
+}

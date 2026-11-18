@@ -1,0 +1,9 @@
+# Copy to .dev.vars (gitignored). Fixtures need no backend.
+SCAN_DATA=fixtures
+# Each recorded Blockscout read answers after this long, like the proxy, so
+# the loader timing gate (scripts/measure.mjs) sees serial reads.
+SCAN_FIXTURE_LATENCY_MS=40
+# api mode only: salt for the end-user key sent to the API (at least 32
+# bytes, else no key is sent and one line is logged). Any random 32+ byte
+# string locally; a wrangler secret on deployed environments (README).
+# BLOCKSCOUT_CALLER_SALT=

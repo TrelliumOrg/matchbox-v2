@@ -1,0 +1,75 @@
+{
+  "$comment": "Reviewed false positives of scripts/check-trellium-boundary.mjs. Each entry allows one rule in the listed files, and only for the listed values when `values` is present. Keep entries narrow and give a reason.",
+  "allow": [
+    {
+      "rule": "private-ipv4",
+      "paths": [
+        "apps/api/src/scan/routes.workers.test.ts",
+        "apps/developer/src/app/console/cidrs.test.ts",
+        "apps/developer/src/worker/credentials.test.ts",
+        "apps/developer/src/worker/logo-pin.test.ts",
+        "apps/developer/src/worker/security.test.ts",
+        "apps/stuart/src/query/docsAsk.test.ts",
+        "apps/stuart/src/query/routes.test.ts",
+        "packages/server/src/ip.test.ts",
+        "packages/server/src/ip.ts"
+      ],
+      "values": [
+        "10.0.0.0",
+        "10.0.0.1",
+        "10.0.0.7",
+        "10.0.0.8",
+        "10.1.2.3",
+        "10.20.30.40"
+      ],
+      "reason": "CIDR, IP allowlist and SSRF tests use made-up 10/8 addresses; no host on any network"
+    },
+    {
+      "rule": "personal-email",
+      "paths": ["apps/developer/src/worker/auth.test.ts"],
+      "values": [
+        "a@b.co",
+        "a@gmail.com",
+        "a@thesis.co",
+        "a@thesis.co.evil.com",
+        "Dev@Thesis.CO",
+        "dev@thesis.co",
+        "ops@thesis.co",
+        "rev@thesis.co",
+        "someone@thesis.co"
+      ],
+      "reason": "Synthetic addresses for the staff-domain sign-in rules; no one's mailbox"
+    },
+    {
+      "rule": "personal-email",
+      "paths": ["packages/contracts/src/feedback.test.ts"],
+      "values": ["a@b.co"],
+      "reason": "Synthetic address in a schema test"
+    },
+    {
+      "rule": "private-ipv4",
+      "paths": ["scripts/lib/public-tree.test.mjs"],
+      "reason": "The boundary check's own tests: every rule needs a positive example. Made-up values; deny-list terms are not allowed here"
+    },
+    {
+      "rule": "ssh-user-host",
+      "paths": ["scripts/lib/public-tree.test.mjs"],
+      "reason": "The boundary check's own tests: every rule needs a positive example. Made-up values; deny-list terms are not allowed here"
+    },
+    {
+      "rule": "home-path",
+      "paths": ["scripts/lib/public-tree.test.mjs"],
+      "reason": "The boundary check's own tests: every rule needs a positive example. Made-up values; deny-list terms are not allowed here"
+    },
+    {
+      "rule": "personal-email",
+      "paths": ["scripts/lib/public-tree.test.mjs"],
+      "reason": "The boundary check's own tests: every rule needs a positive example. Made-up values; deny-list terms are not allowed here"
+    },
+    {
+      "rule": "secret: *",
+      "paths": ["scripts/lib/public-tree.test.mjs"],
+      "reason": "The boundary check's own tests: every rule needs a positive example. Made-up values; deny-list terms are not allowed here"
+    }
+  ]
+}
