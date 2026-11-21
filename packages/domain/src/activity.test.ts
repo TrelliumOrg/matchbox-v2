@@ -6,6 +6,7 @@ import {
   describedActions,
   escrowOf,
   lockName,
+  mezoPoolName,
   type SentenceText,
   sentenceText,
 } from "./activity"
@@ -278,5 +279,26 @@ describe("activity sentences", () => {
     expect(escrowOf(vemezo)).toBe("vemezo")
     expect(escrowOf(gauge)).toBeNull()
     expect(lockName(null, "5")).toBe("lock #5")
+  })
+})
+
+describe("Mezo pool names", () => {
+  it("names a pool by its pair and pool type, never its contract name", () => {
+    expect(mezoPoolName("0x52E604C44417233B6CCEDDDC0D640A405CAACEFB")).toBe(
+      "BTC/MUSD Volatile",
+    )
+    expect(mezoPoolName("0x9cbc1537d255768b431488305b1c7efc2ac95022")).toBe(
+      "BTC/MUSD CL200",
+    )
+    expect(mezoPoolName("0xed812aec0fecc8fd882ac3eccc43f3aa80a6c356")).toBe(
+      "mUSDC/MUSD Stable",
+    )
+    expect(mezoPoolName("0x907d055978943c69cffd5ed969f5603af104acc5")).toBe(
+      "MEZO/BTC CL2000",
+    )
+  })
+
+  it("names nothing else", () => {
+    expect(mezoPoolName(CONTRACTS.mainnet.veBTC)).toBeNull()
   })
 })

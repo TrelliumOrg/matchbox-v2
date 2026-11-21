@@ -2,8 +2,10 @@
 
 The in-product feedback widget for the Matchbox v2 surfaces: the Feedback
 entry, the panel, its states and the optional screenshot. Reports go to the
-`matchbox-feedback` Worker (`apps/feedback`). Designs: Doop canvas
-`hFp5UsQ4BA`, page "Feedback widget".
+`matchbox-feedback` Worker ([apps/feedback](../../apps/feedback)). Tests
+need nothing: `pnpm --filter @matchbox/feedback-ui test`. To try the widget
+end to end, run the feedback Worker locally ("Try it locally" in its
+README) and point Pro at it.
 
 ## Mounting
 

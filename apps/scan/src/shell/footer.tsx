@@ -4,6 +4,7 @@ import * as ScanLockup from "@matchbox/ui/scan-lockup"
 import { getWallet } from "@matchbox/wallet"
 import type { ReactNode } from "react"
 import { outbound } from "../data/sections"
+import { privacyLink } from "../site"
 import { openAppearance } from "./appearance"
 
 /**
@@ -27,7 +28,7 @@ export function Footer(): ReactNode {
           Appearance
         </button>
         <ul className="flex items-center gap-6 text-[15px] text-sec">
-          {outbound.map((link) => (
+          {[...outbound, privacyLink].map((link) => (
             <li key={link.href}>
               <a
                 href={link.href}

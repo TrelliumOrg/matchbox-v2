@@ -1,3 +1,4 @@
+import { addDays, utcDay } from "@matchbox/api/read-models/claim-prices"
 import { CONTRACTS } from "@matchbox/chain"
 import {
   type GaugeCard,
@@ -96,6 +97,7 @@ const context: BuildContext = {
   gauges: new Map([[kiln, kilnRef]]),
   cards: new Map([[kiln, kilnCard]]),
   historicPrice: () => null,
+  claimPrices: null,
 }
 
 function event(fields: Partial<ActivityEventRow>): ActivityEventRow {
@@ -470,6 +472,169 @@ describe("wallet documents", () => {
     expect(documents.rewards.byLock[0]?.gauges[0]).toMatchObject({
       gauge: { name: "Kiln Labs" },
       usd: "8.70",
+    })
+  })
+
+  it("prices stored claims as the document's, by their token amounts", () => {
+    const claimEvent = (tx: string, ts: number) =>
+      event({
+        tx_hash: tx,
+        action_type: "VOTE_BRIBE_CLAIMED",
+        source: "BRIBE_VOTING_REWARD",
+        token: mezo,
+        amount: ((2_652_170n * wad) / 1000n).toString(),
+        gauge: kiln,
+        timestamp: String(ts),
+      })
+    // Stored weeks ago, when MEZO was priced otherwise, with a token the
+    // registry does not know beside it.
+    const [stored] = activityRows(context, [
+      claimEvent(`0x${"e".repeat(64)}`, now - 30 * 86_400),
+    ])
+    if (stored?.type !== "claim") throw new Error("unexpected row")
+    const [mezoAmount] = stored.rewards.tokens
+    if (mezoAmount === undefined) throw new Error("unexpected row")
+    const stale = {
+      ...stored,
+      rewards: {
+        usd: "1005.00",
+        tokens: [
+          { ...mezoAmount, usd: "1000.00" },
+          {
+            token: {
+              address: `0x${"9".repeat(40)}`,
+              symbol: "ODD",
+              name: "Odd",
+              decimals: 18,
+            },
+            amount: "5",
+            usd: "5.00",
+          },
+        ],
+      },
+    }
+    const staleDay = utcDay(now - 30 * 86_400)
+    const recentDay = utcDay(now - 7_200)
+    const priced: BuildContext = {
+      ...context,
+      claimPrices: {
+        daily: new Map([
+          [`mezo:${staleDay}`, { usd: "0.184", source: "coingecko" }],
+          [`mezo:${recentDay}`, { usd: "0.25", source: "coingecko" }],
+        ]),
+        coverage: {
+          btc: null,
+          mezo: { from: "2025-12-03", through: recentDay },
+        },
+      },
+    }
+    const build = (claimContext: BuildContext) =>
+      buildWalletDocuments(
+        claimContext,
+        {
+          wallet,
+          locks: [],
+          votes: [],
+          events: [claimEvent(`0x${"f".repeat(64)}`, now - 7_200)],
+          rewardSources: [],
+          votingPower: new Map(),
+          earned: new Map(),
+          storedClaims: [stale],
+        },
+        new Map(),
+      )
+    const documents = build(priced)
+    // 2652.17 MEZO at each claim's own day: $0.184 ($488.00) and $0.25
+    // ($663.04). The unregistered token counts no dollars: that claim is
+    // counted as one with a token that had no price.
+    expect(documents.rewards.earned).toMatchObject({
+      usd: "1151.04",
+      whenClaimed: { unpriced: 1, pending: 0 },
+    })
+    expect(documents.rewards.history).toHaveLength(1)
+    expect(documents.rewards.history[0]?.atClaim).toMatchObject({
+      usd: "663.04",
+      tokens: [{ price: "0.25", day: recentDay, source: "coingecko" }],
+    })
+    const claimRow = documents.activity.rows[0]
+    expect(claimRow?.type === "claim" && claimRow.atClaim?.usd).toBe("663.04")
+
+    // The recent claim's day is not checked yet: pending, not $0.
+    const unsettled = build({
+      ...priced,
+      claimPrices: {
+        daily: new Map([
+          [`mezo:${staleDay}`, { usd: "0.184", source: "coingecko" }],
+        ]),
+        coverage: {
+          btc: null,
+          mezo: { from: "2025-12-03", through: staleDay },
+        },
+      },
+    })
+    expect(unsettled.rewards.earned).toMatchObject({
+      usd: "488.00",
+      whenClaimed: { unpriced: 1, pending: 1, settling: 1 },
+    })
+    expect(unsettled.rewards.history[0]?.atClaim).toBeUndefined()
+    expect(unsettled.earnedBasis).not.toBe(documents.earnedBasis)
+
+    // Inside the settling days it carries an estimate, at the sample
+    // nearest before it, which Earned leaves out: Earned never drops
+    // when the day settles lower.
+    const sampled = build({
+      ...priced,
+      historicPrice: (token, at) =>
+        token === "mezo" && at === now - 7_200 ? "0.2" : null,
+      claimPrices: {
+        daily: new Map([
+          [`mezo:${staleDay}`, { usd: "0.184", source: "coingecko" }],
+        ]),
+        coverage: {
+          btc: null,
+          mezo: { from: "2025-12-03", through: staleDay },
+        },
+      },
+    })
+    expect(sampled.rewards.earned).toMatchObject({
+      usd: "488.00",
+      whenClaimed: { pending: 1 },
+    })
+    const estimate = {
+      usd: "530.43",
+      tokens: [{ token: mezo, price: "0.2", usd: "530.43" }],
+      finalOn: addDays(recentDay, 3),
+    }
+    expect(sampled.rewards.history[0]?.estimate).toEqual(estimate)
+    const settling = sampled.activity.rows[0]
+    expect(settling?.type === "claim" && settling.estimate).toEqual(estimate)
+    // Once valued, the estimate goes.
+    expect(documents.rewards.history[0]?.estimate).toBeUndefined()
+
+    // Prices unknown this run: every claim pending (the snapshot carries
+    // the previous Earned instead).
+    expect(build(context).rewards.earned).toMatchObject({
+      usd: "0.00",
+      whenClaimed: { unpriced: 0, pending: 2, settling: 1 },
+    })
+
+    // A claim weeks old with no price yet (a day not checked, a leftover
+    // estimate on a stored row) is pending but not settling: the line
+    // under Earned never calls it recent.
+    const older = build({
+      ...priced,
+      claimPrices: {
+        daily: new Map(),
+        coverage: {
+          btc: null,
+          mezo: { from: "2025-12-03", through: addDays(staleDay, -1) },
+        },
+      },
+    })
+    expect(older.rewards.earned.whenClaimed).toEqual({
+      unpriced: 0,
+      pending: 2,
+      settling: 1,
     })
   })
 })

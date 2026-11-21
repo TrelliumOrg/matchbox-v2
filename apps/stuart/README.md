@@ -108,8 +108,11 @@ through the `API` service binding: `/internal/pro/gauges`,
 and `/rewards`, `/internal/pro/prices`, `/internal/pro/summary` (lockers,
 incentives, gauge counts) and `/internal/pro/head`. Protocol lock totals are
 the escrows' on-chain `supply()`, with the summary as the fallback. Without the
-binding (local `wrangler dev`, tests) it serves the shared demo fixtures from
-`@matchbox/contracts/read-models/fixtures`.
+binding (the tests and the benchmark) it serves the shared demo fixtures from
+`@matchbox/contracts/read-models/fixtures`. Local `wrangler dev` declares the
+binding, so data questions go to an API Worker on the same machine. Those
+routes read the API's `READ_DB` (D1), not the sample store behind
+`dev:memory`, so seed it first with `pnpm db:seed:local` (see Development).
 
 Mezo RPC (`MEZO_RPC_URL`) covers what the read models do not: trove state,
 zap quotes, token balances and allowances, `eth_call` simulation, boost
@@ -313,10 +316,54 @@ Browser origins allowed by default: `https://pro.matchbox.markets`,
 
 ## Development
 
-- `pnpm --filter @matchbox/stuart dev` runs `wrangler dev` on the fixtures.
-  Copy `.dev.vars.example` to `.dev.vars` for secrets.
-- `pnpm --filter @matchbox/stuart test`, `typecheck` and `build` (a
-  `wrangler deploy --dry-run`).
+No credentials are needed to run Stuart, test it or run the benchmark
+without a model.
+
+```sh
+cp apps/stuart/.dev.vars.example apps/stuart/.dev.vars   # no model key: deterministic
+pnpm --filter @matchbox/stuart dev        # wrangler dev, http://localhost:8787
+pnpm --filter @matchbox/stuart test       # unit tests and the bench's own tests
+pnpm --filter @matchbox/stuart typecheck
+pnpm --filter @matchbox/stuart build      # wrangler deploy --dry-run
+pnpm --filter @matchbox/stuart bench      # the benchmark on fixtures, router only
+```
+
+`GET /status` answers `{"stuart":"deterministic","model":null,...}` without
+a model key. Questions that read gauges, wallets or protocol totals go
+through the `API` service binding, which `wrangler dev` connects to an API
+Worker named `matchbox-developer-api` running locally. They call the API's
+`/internal/pro/*` routes, which read the `READ_DB` D1 binding
+(`apps/api/src/read-models/routes.ts`), not the sample store behind
+`dev:memory`. Seed those read models first (apps/api README, "Local read
+models"), then run the API and Stuart on another port:
+
+```sh
+pnpm db:seed:local                                # from the repo root
+pnpm --filter @matchbox/api dev:memory            # :8787
+pnpm --filter @matchbox/stuart dev --port 8788    # second terminal
+```
+
+Without the seed every data question answers "Data unavailable" (the API
+logs `no such table: read_models`). Checked on 19 Nov 2026, deterministic
+mode, posting `POST /chat` to `http://127.0.0.1:8788`:
+
+- "which gauges have the most incentives": Kiln Labs, 1,180.00 USD, 6 of 8
+  boost gauges funded, Epoch 47, block 13,078,795 (the seeded directory).
+- "how many veMEZO lockers are there": 1,356 lockers (the seeded summary),
+  with the escrows' locked totals read live from the chain.
+- "what am I earning" and "show my locks" for a real wallet with locks: its
+  locks, voting power and earnings from the API's wallet documents, which
+  the API builds live from the chain and stores in the seeded database. The
+  seed's demo wallet is made up, so the chain reports no locks for it.
+
+The binding can take up to a minute after both Workers start to find the
+API. Until then answers say "Data unavailable": ask again. Restart Stuart
+after restarting the API. Other routes Stuart calls on the binding, such as
+the Blockscout proxy, need only the API running.
+
+What needs credentials of your own: model answers (`ANTHROPIC_API_KEY`),
+stored support reports (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) and the
+model runs of the benchmark (`STUART_BENCH_MODEL` with a key, below).
 
 ## Mezo knowledge
 

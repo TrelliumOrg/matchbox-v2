@@ -434,6 +434,12 @@ describe("tokens", () => {
       "Minted 30d to 31 Oct",
       "Burned 30d to 31 Oct",
     ])
+    // Backfill-only: they end there by design, and say so.
+    expect(supply?.stats.map((stat) => stat.note ?? null)).toEqual([
+      null,
+      "Not updated daily",
+      "Not updated daily",
+    ])
     expect(page.emissions).toBeNull()
     expect(state.headers.get("x-scan-cache")).toBe("fresh")
   })

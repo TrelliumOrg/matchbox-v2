@@ -48,6 +48,11 @@
         {
           "pattern": "matchbox.markets/favicon.svg",
           "zone_name": "matchbox.markets"
+        },
+        // The link preview card (public/og.png).
+        {
+          "pattern": "matchbox.markets/og.png",
+          "zone_name": "matchbox.markets"
         }
       ],
       "services": [

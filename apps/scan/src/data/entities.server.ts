@@ -35,7 +35,7 @@ import {
 } from "./scan/borrow-views"
 import { attachLabels } from "./scan/labels"
 import { type LockView, lockView } from "./scan/lock-views"
-import { readScan, skippedOf } from "./scan/read.server"
+import { readBudgetMs, readScan, skippedOf } from "./scan/read.server"
 import { scanSchemas } from "./scan/schemas"
 import { type TokenInfo, tokenLookup } from "./scan/tokens"
 import { loanRefs, type TxLoanView } from "./scan/tx-loan"
@@ -48,6 +48,8 @@ import {
   blockDetail,
   cursorOf,
   type LogView,
+  liveLogViews,
+  liveTxDetail,
   logView,
   type Page,
   rawUnits,
@@ -172,7 +174,16 @@ export type TxPage = {
    * the position. Null when its logs name no loan Scan knows.
    */
   loan: Section<TxLoanView> | null
+  /**
+   * Still on its way into our data, from the API's live read: `pending`
+   * (in the mempool) and `mined` (in a block the explorer has not
+   * indexed) are drawn from the chain; `indexing` has the explorer's page
+   * with our rows read from the chain. The page re-reads until null.
+   */
+  live: LiveState
 }
+
+export type LiveState = "pending" | "mined" | "indexing" | null
 
 async function txFromProxy(hash: string): Promise<TxPage> {
   const [tx, logs] = await Promise.all([
@@ -202,6 +213,7 @@ async function txFromProxy(hash: string): Promise<TxPage> {
     final: false,
     labelsCapped: null,
     loan: null,
+    live: null,
   }
 }
 
@@ -215,6 +227,7 @@ export async function transactionPage(data: { hash: string }): Promise<TxPage> {
       final: false,
       labelsCapped: null,
       loan: null,
+      live: null,
     }
   }
   const read = await readScan(
@@ -240,6 +253,7 @@ export async function transactionPage(data: { hash: string }): Promise<TxPage> {
       final: false,
       labelsCapped: null,
       loan: null,
+      live: null,
     }
   }
   const doc = read.data.data
@@ -250,8 +264,22 @@ export async function transactionPage(data: { hash: string }): Promise<TxPage> {
       : {},
   )
   const context = { tokens, labels }
-  const tx = partEntity(doc.transaction, txDetail)
-  const activityRows = doc.activity.status === "ok" ? doc.activity.data : []
+  const live = doc.live?.status === "ok" ? doc.live.data : null
+  // The explorer lacks it but the chain has it: drawn from the chain.
+  const chainOnly =
+    doc.transaction.status === "unavailable" &&
+    doc.transaction.reason === "not_found" &&
+    live !== null &&
+    live.state !== "unknown"
+  const liveDetail = chainOnly ? liveTxDetail(data.hash, live) : null
+  const tx: Entity<TxDetail> =
+    liveDetail === null
+      ? partEntity(doc.transaction, txDetail)
+      : { status: "ok", data: liveDetail }
+  const indexed = doc.activity.status === "ok" ? doc.activity.data : []
+  // Our rows as the chain gives them, until the copy has written them.
+  const activityRows =
+    indexed.length === 0 && live !== null ? live.activity : indexed
   // A loan the logs name: read through the position's own routes.
   const refs =
     doc.logs.status === "ok"
@@ -263,12 +291,22 @@ export async function transactionPage(data: { hash: string }): Promise<TxPage> {
         )
       : []
   const loan = refs.length === 0 ? null : await txLoan(data.hash, refs)
+  const activity: Section<ActivityView[]> =
+    live !== null && indexed.length === 0
+      ? {
+          status: "ok",
+          data: live.activity.map((row) => activityView(row, context)),
+        }
+      : partSection(doc.activity, (rows) =>
+          rows.map((row) => activityView(row, context)),
+        )
   const page: TxPage = {
     tx,
-    logs: partSection(doc.logs, (logs) => logs.items.map(logView)),
-    activity: partSection(doc.activity, (rows) =>
-      rows.map((row) => activityView(row, context)),
-    ),
+    logs:
+      liveDetail === null
+        ? partSection(doc.logs, (logs) => logs.items.map(logView))
+        : { status: "ok", data: live === null ? [] : liveLogViews(live) },
+    activity,
     headline:
       tx.status === "ok"
         ? headline(activityRows, tx.data.method, context)
@@ -276,9 +314,25 @@ export async function transactionPage(data: { hash: string }): Promise<TxPage> {
     final: doc.final,
     labelsCapped: doc.labelsTruncated === true ? (doc.labelLimit ?? 50) : null,
     loan,
+    // Sent (read or not) only while our data has yet to catch up.
+    live:
+      doc.live === undefined
+        ? null
+        : liveDetail === null
+          ? "indexing"
+          : liveDetail.pending
+            ? "pending"
+            : "mined",
   }
-  // A loan's position moves on: the page is kept as a fresh one.
-  setCacheClass(doc.final && loan === null ? "final" : "fresh")
+  // A loan's position moves on: the page is kept as a fresh one. One on
+  // its way in changes every block.
+  setCacheClass(
+    page.live !== null
+      ? "list"
+      : doc.final && loan === null
+        ? "final"
+        : "fresh",
+  )
   return attachLabels(page, labels)
 }
 
@@ -467,6 +521,34 @@ function marketViewOf(market: ScanMorphoMarket | undefined) {
   return market === undefined ? null : marketView(market)
 }
 
+/**
+ * A document whose part failed before this is read once more
+ * (`addressDocument`); the API cuts a slow part at 2.4 s.
+ */
+export const partRetryBeforeMs = 1_500
+
+/** A part as the address document carries it. */
+type PartState = { status: string; reason?: string | undefined }
+
+/** Whether a part of the address document failed in passing. */
+export function passingPart(doc: {
+  summary: PartState
+  counters: PartState
+  locks: PartState
+  borrow: PartState
+  activity: PartState
+  tokens?: PartState | undefined
+}): boolean {
+  return [
+    doc.summary,
+    doc.counters,
+    doc.locks,
+    doc.borrow,
+    doc.activity,
+    ...(doc.tokens === undefined ? [] : [doc.tokens]),
+  ].some((part) => part.status === "unavailable" && part.reason === "upstream")
+}
+
 export async function addressDocument(data: {
   address: string
 }): Promise<AddressDocument> {
@@ -487,14 +569,31 @@ export async function addressDocument(data: {
   // The market list beside the document, in the same round: the borrow
   // part lists Morpho positions without their market, and a discovered
   // market's name and decimals are only in the list.
-  const [read, marketList] = await Promise.all([
-    readScan(
-      `entities/address/${data.address}`,
-      new URLSearchParams(),
-      scanSchemas.addressDocument,
-    ),
+  const started = Date.now()
+  const path = `entities/address/${data.address}`
+  const [first, marketList] = await Promise.all([
+    readScan(path, new URLSearchParams(), scanSchemas.addressDocument),
     readScan("borrow/markets", new URLSearchParams(), scanSchemas.markets),
   ])
+  let read = first
+  // A part that failed fast in passing (a D1 error, a Blockscout 5xx) is
+  // asked for once more, with the rest of the read's budget. Not one the
+  // API cut at its deadline: asking again would only wait again, and its
+  // read is finishing in the API for the next request.
+  const spent = Date.now() - started
+  if (
+    first.status === "ok" &&
+    passingPart(first.data.data) &&
+    spent < partRetryBeforeMs
+  ) {
+    const again = await readScan(
+      path,
+      new URLSearchParams(),
+      scanSchemas.addressDocument,
+      readBudgetMs - spent,
+    )
+    if (again.status === "ok") read = again
+  }
   const markets = marketsById(
     marketList.status === "ok" ? marketList.data.data : null,
   )

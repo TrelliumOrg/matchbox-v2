@@ -37,13 +37,13 @@ import {
   nextStepIndex,
   retryFrom,
   type SigningStep,
-  scanTxUrl,
   signingPhase,
   startSigning,
   stepDetail,
   stepLink,
 } from "./steps"
 import { showToast } from "./toasts"
+import { TxLinks } from "./tx-links"
 import { closeTx, useTx } from "./tx-store"
 
 /**
@@ -1131,19 +1131,8 @@ function Proposed({
     { label: "Safe", value: shortAddress(submitted.safe) },
     { label: "Signed", value: `${signed} of ${required}` },
   ]
-  if (
-    status?.transactionHash !== null &&
-    status?.transactionHash !== undefined
-  ) {
-    rows.push({
-      label: "Transaction",
-      value: (
-        <ExternalLink href={scanTxUrl(status.transactionHash)}>
-          View on Matchscan
-        </ExternalLink>
-      ),
-    })
-  } else {
+  const executedHash = status?.transactionHash ?? null
+  if (executedHash === null) {
     rows.push({
       label: "Queue",
       value: <ExternalLink href={submitted.url}>View in Safe</ExternalLink>,
@@ -1173,6 +1162,9 @@ function Proposed({
         {`${signed} of ${required} signed`}
       </p>
       <Rows rows={rows} />
+      {executedHash === null ? null : (
+        <TxLinks hash={executedHash} className="mt-6" />
+      )}
       {safe.split === null ? null : (
         <p className="mt-3 text-[14.5px] text-sec">{safe.split}</p>
       )}
@@ -1194,14 +1186,6 @@ function Done({
   const rows: Row[] = [...review.done.rows]
   if (fee !== null)
     rows.push({ label: "Network fee", value: fee.replace("About ", "") })
-  if (hash !== null) {
-    rows.push({
-      label: "Transaction",
-      value: (
-        <ExternalLink href={scanTxUrl(hash)}>View on Matchscan</ExternalLink>
-      ),
-    })
-  }
   return (
     <div className="flex flex-col">
       <span
@@ -1225,6 +1209,7 @@ function Done({
         </p>
       )}
       <Rows rows={rows} />
+      {hash === null ? null : <TxLinks hash={hash} className="mt-6" />}
     </div>
   )
 }

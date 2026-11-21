@@ -99,6 +99,7 @@ const STUART_REASONS: ReadonlySet<string> = new Set([
   "unsourced",
   "claim",
   "greeting",
+  "instruction",
   "empty",
 ])
 

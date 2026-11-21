@@ -70,6 +70,21 @@ export type ReadModelWrite<Kind extends ReadModelKind> = {
   block: number
   source: ReadModelSource
   updatedAt: number
+  /**
+   * Price-free content a USD value in the document depends on but does not
+   * show, such as which claims a wallet's Earned sums. USD values are left
+   * out of the etag, so without this a change that moves only them is
+   * never written. Part of the stored etag, not of the document.
+   */
+  etagBasis?: string
+  /**
+   * Record `block` and `updatedAt` even when the document is unchanged (its
+   * etag the same), so the row says the document was checked at this
+   * block. One row write each time; otherwise an unchanged document costs
+   * none. For a rebuild someone asked for (`wallet_requests`), whose age
+   * decides whether it is asked for again (`wantsRebuild`).
+   */
+  touch?: boolean
 }
 
 /** True for keys that hold a USD value ("usd", "totalUsd", "changeUsd"). */
@@ -106,21 +121,28 @@ async function sha256Hex(text: string): Promise<string> {
     .join("")
 }
 
-/** Strong ETag value (without quotes) for a document's price-free content. */
-export function readModelEtag(data: unknown): Promise<string> {
-  return sha256Hex(priceFreeCanonical(data)).then((hex) => hex.slice(0, 32))
+/**
+ * Strong ETag value (without quotes) for a document's price-free content,
+ * and its write's `etagBasis` when it has one.
+ */
+export function readModelEtag(data: unknown, basis?: string): Promise<string> {
+  const canonical = priceFreeCanonical(data)
+  return sha256Hex(
+    basis === undefined ? canonical : `${canonical}\u0000${basis}`,
+  ).then((hex) => hex.slice(0, 32))
 }
 
 /**
  * One upsert statement. The row is only rewritten when the etag changed, so
- * an unchanged document costs no D1 row write.
+ * an unchanged document costs no D1 row write, unless the write is a
+ * `touch`.
  */
 export async function readModelStatement<Kind extends ReadModelKind>(
   db: ReadDatabase,
   write: ReadModelWrite<Kind>,
 ): Promise<D1PreparedStatement> {
   const data = schemaFor(write.kind).parse(write.data)
-  const etag = await readModelEtag(data)
+  const etag = await readModelEtag(data, write.etagBasis)
   return db
     .prepare(
       `INSERT INTO read_models
@@ -132,7 +154,7 @@ export async function readModelStatement<Kind extends ReadModelKind>(
          block = excluded.block,
          source = excluded.source,
          updated_at = excluded.updated_at
-       WHERE read_models.etag <> excluded.etag`,
+       WHERE read_models.etag <> excluded.etag OR ?9 = 1`,
     )
     .bind(
       write.network,
@@ -143,6 +165,7 @@ export async function readModelStatement<Kind extends ReadModelKind>(
       write.block,
       write.source,
       write.updatedAt,
+      write.touch === true ? 1 : 0,
     )
 }
 
@@ -201,12 +224,14 @@ async function withoutUnchanged(
   const kept: ReadModelWrite<ReadModelKind>[] = []
   for (const write of writes) {
     const known = stored.get(`${write.network}:${write.kind}`)?.get(write.key)
-    if (known === undefined) {
+    if (known === undefined || write.touch === true) {
       kept.push(write)
       continue
     }
     const data = schemaFor(write.kind).parse(write.data)
-    if ((await readModelEtag(data)) !== known) kept.push(write)
+    if ((await readModelEtag(data, write.etagBasis)) !== known) {
+      kept.push(write)
+    }
   }
   return kept
 }
@@ -269,6 +294,35 @@ export async function replaceReadModel<Kind extends ReadModelKind>(
   return result.meta.changes > 0
 }
 
+/**
+ * A stored wallet whose overview is older than this is put on the warehouse
+ * snapshot's list (`wallet_requests`) when someone looks at it, so the next
+ * run, within 15 minutes, rebuilds it rather than the rotating sweep, which
+ * comes round every several hours.
+ */
+export const staleWalletSeconds = 3_600
+
+/**
+ * Whether a stored wallet someone looks at should be rebuilt in the next
+ * warehouse run: its overview is over `staleWalletSeconds` old and names
+ * locks. Only the locks move with the chain and not with events (voting
+ * power, claimable), and a rebuild stamps the overview with the block it
+ * read (`claimableAsOf`), or else the run touches it (`touch`), so a
+ * rebuild always makes it recent again. A wallet without locks changes
+ * only through its events, and the run after them rebuilds it anyway
+ * (`changedWallets`). The activity document is not asked about: it holds
+ * no block, so a rebuild that finds no new events leaves it as it was.
+ */
+export function wantsRebuild(
+  overview: Pick<StoredReadModel<"wallet-overview">, "data" | "meta">,
+  nowSeconds: number,
+): boolean {
+  return (
+    overview.data.locks.length > 0 &&
+    nowSeconds - overview.meta.updatedAt >= staleWalletSeconds
+  )
+}
+
 const rowSchema = z.object({
   body: z.string(),
   etag: z.string(),
@@ -276,6 +330,35 @@ const rowSchema = z.object({
   source: z.enum(["warehouse", "live", "fixture"]),
   updated_at: z.number().int(),
 })
+
+/**
+ * One document's meta, without reading its body (a wallet's activity runs
+ * to 73 kB); null when absent.
+ */
+export async function readReadModelMeta(
+  db: ReadDatabase,
+  network: NetworkSlug,
+  kind: ReadModelKind,
+  key: string,
+): Promise<ReadModelMeta | null> {
+  const row = await db
+    .prepare(
+      `SELECT block, source, updated_at FROM read_models
+       WHERE network = ?1 AND kind = ?2 AND doc_key = ?3`,
+    )
+    .bind(network, kind, key)
+    .first()
+  if (row === null) return null
+  const parsed = rowSchema
+    .pick({ block: true, source: true, updated_at: true })
+    .parse(row)
+  return {
+    network,
+    source: parsed.source,
+    block: parsed.block,
+    updatedAt: parsed.updated_at,
+  }
+}
 
 /** Reads and validates one document; null when absent. */
 export async function readReadModel<Kind extends ReadModelKind>(

@@ -118,8 +118,30 @@ export function borrowedTile(
 }
 
 /**
+ * The blocks the chain produced on the API's latest counted day: every
+ * block (`blocks_in_day`, from `chain.blocks`), or, from an API without
+ * it, the validators' summed counts only when every validator was counted
+ * (`day_total` sums the validators with a count, so with any missing it
+ * is a part shown as the whole). Null when neither says.
+ */
+export function countedBlocks(data: {
+  available: boolean
+  day: string | null
+  day_total: string | null
+  blocks_in_day?: string | null | undefined
+  missing_counts: readonly string[]
+}): { day: string; total: string } | null {
+  if (!data.available || data.day === null) return null
+  const total =
+    data.blocks_in_day ??
+    (data.missing_counts.length === 0 ? data.day_total : null)
+  return total === null ? null : { day: data.day, total }
+}
+
+/**
  * The validators in the set now: every row whose pool has not left, with
- * the blocks they proposed on the API's latest counted day.
+ * the blocks the chain produced on the API's latest counted day
+ * (countedBlocks).
  */
 export function validatorsTile(
   rows: readonly ScanValidatorRow[],
@@ -226,9 +248,11 @@ export function collateralTile(
 }
 
 /**
- * Open loans across venues: open troves and Enclave positions (the
- * Borrow totals' counts) and Morpho positions with debt. Null unless
- * every venue was counted whole.
+ * Open MUSD loans across venues: open troves and Enclave positions (the
+ * Borrow totals' counts) and Morpho positions with debt in the markets
+ * that lend MUSD, as Borrowed beside it counts. The Borrow page counts
+ * Morpho positions in every market and names this share, so the detail
+ * says it. Null unless every venue was counted whole.
  */
 export function positionsTile(counts: {
   troves: number | null
@@ -241,7 +265,7 @@ export function positionsTile(counts: {
     id: "positions",
     label: "Open positions",
     value: groupThousands(BigInt(troves + enclaves + markets)),
-    detail: `${enclaves === 1 ? "1 Enclave" : `${enclaves} Enclaves`}, ${markets} Morpho`,
+    detail: `${enclaves === 1 ? "1 Enclave" : `${enclaves} Enclaves`}, ${markets} MUSD Morpho`,
     aside: { label: "Troves", value: groupThousands(BigInt(troves)) },
     spark: null,
     sparkDays: null,

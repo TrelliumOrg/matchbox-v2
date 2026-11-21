@@ -793,7 +793,8 @@ export function agreementSplit<T extends Entry>(
  * lists the reasons (benchRejectionReasons, which follows Stuart's own
  * answer check: the first that fails is the reason recorded). Labels come
  * from the file's rejectionTypes. One colour per reason, by that order, so a
- * colour never moves.
+ * colour never moves: a reason added later ("instruction") is appended to
+ * the contract's list and takes the next colour.
  */
 const rejectionColours = [
   "var(--bench-fail-1)",
@@ -805,6 +806,7 @@ const rejectionColours = [
   "var(--bench-fail-8)",
   "var(--bench-fail-5)",
   "var(--bench-fail-9)",
+  "var(--bench-fail-10)",
 ]
 
 /** The reasons that are about length: Stuart's two sentence and 280 character limits. */

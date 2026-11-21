@@ -11,6 +11,7 @@ import {
 } from "@matchbox/ui/kbd"
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry"
 import { cspReport, cspReportPath } from "./csp-report.server"
+import { exportResponse, matchExport } from "./data/history-export.server"
 import { readIdentity } from "./data/identity.server"
 import { walletRpcUrl } from "./data/inputs.server"
 import {
@@ -209,6 +210,9 @@ async function route(
   if (url.pathname === cspReportPath) {
     return cspReport(request, env.PRO_CSP === "report-only")
   }
+  // Activity's and Rewards' Download CSV: a file, not a page.
+  const wanted = matchExport(url.pathname)
+  if (wanted !== null) return exportResponse(request, wanted)
   if (!isPage(request, url)) {
     return guardRedirect(
       await handler.fetch(withNonce(request, nonce)),

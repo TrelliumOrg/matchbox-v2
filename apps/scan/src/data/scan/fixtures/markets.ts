@@ -275,7 +275,7 @@ function rollupSeriesAnswer(
     points: Point[]
   }[]
   const points = series.find((each) => each.dimension === dimension)?.points
-  return ok({ data: { ...own.body.data, points: points ?? [] } })
+  return ok({ ...own.body, data: { ...own.body.data, points: points ?? [] } })
 }
 
 /** Ahead of the voting fixtures' `/series`, which answers the rest. */

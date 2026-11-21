@@ -2,12 +2,15 @@ import {
   demoWalletOverview,
   demoWalletRewards,
 } from "@matchbox/contracts/read-models/fixtures"
+import { EPOCH_ZERO_START } from "@matchbox/domain/epoch"
 import { describe, expect, it } from "vitest"
 import {
   barsSince,
   centsOf,
+  hadPower,
   rewardBars,
   veMezoVotes,
+  votedEpochs,
   voteStreak,
   walletView,
 } from "./wallet-views"
@@ -152,6 +155,22 @@ describe("veMEZO votes", () => {
       projectedApr: null,
     })
   })
+
+  it("does not say a lock with no power left voted", () => {
+    const [, mezo] = demoWalletOverview.locks
+    if (mezo === undefined) throw new Error("demo")
+    // Expired: its last vote is still on chain, with no power behind it.
+    const overview = {
+      ...demoWalletOverview,
+      locks: [{ ...mezo, votingPower: "0", projected: null }],
+    }
+    expect(veMezoVotes(overview, 47)).toMatchObject({
+      votes: "0",
+      usedBps: 0,
+      voted: false,
+      epoch: 47,
+    })
+  })
 })
 
 describe("the voting streak", () => {
@@ -182,6 +201,57 @@ describe("the voting streak", () => {
       more: true,
       missed: null,
     })
+  })
+
+  const week = 604_800
+  const epochStart = (epoch: number) => EPOCH_ZERO_START + epoch * week
+  const lock = {
+    escrow: "0x0000000000000000000000000000000000000e5c",
+    token_id: "2330",
+    unlock_at: epochStart(35) + 3_600,
+    is_permanent: false,
+    withdrawn_at: null,
+    merged_at: null,
+  }
+  /** One vote a lock cast in Epoch 34, carried to Epoch 49. */
+  const carried = Array.from({ length: 16 }, (_, index) => ({
+    epoch_start: epochStart(34 + index),
+    escrow: lock.escrow,
+    token_id: lock.token_id,
+  }))
+
+  it("ends when the lock's power does, though its vote is carried on", () => {
+    const voted = votedEpochs(carried, [lock])
+    expect([...voted].sort((a, b) => a - b)).toEqual([34, 35])
+    expect(voteStreak(voted, 49)).toMatchObject({
+      streak: 0,
+      more: false,
+      missed: 48,
+    })
+    expect(voteStreak(voted, 49).squares.some((square) => square.voted)).toBe(
+      false,
+    )
+  })
+
+  it("counts a permanent lock's carried votes, and every vote of an unread lock", () => {
+    const permanent = { ...lock, unlock_at: null, is_permanent: true }
+    expect(votedEpochs(carried, [permanent]).size).toBe(16)
+    expect(votedEpochs(carried, null).size).toBe(16)
+    expect(votedEpochs(carried, []).size).toBe(16)
+  })
+
+  it("stops counting once a lock is withdrawn or merged", () => {
+    const at = epochStart(40)
+    expect(hadPower({ ...lock, unlock_at: at + week * 10 }, at)).toBe(true)
+    expect(
+      hadPower({ ...lock, unlock_at: at + week * 10, withdrawn_at: at }, at),
+    ).toBe(false)
+    expect(
+      hadPower(
+        { ...lock, unlock_at: null, is_permanent: true, merged_at: at - 1 },
+        at,
+      ),
+    ).toBe(false)
   })
 
   it("is zero after a missed epoch", () => {

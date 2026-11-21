@@ -187,8 +187,8 @@ await revokeToken({
 
 | Scope                | Claims                                                           | Review |
 | -------------------- | ---------------------------------------------------------------- | ------ |
-| `openid`             | `sub`                                                            | —      |
-| `wallet`             | `wallet_address`, `wallet_network`                               | —      |
+| `openid`             | `sub`                                                            | No     |
+| `wallet`             | `wallet_address`, `wallet_network`                               | No     |
 | `discord:id`         | `discord_id`                                                     | Yes    |
 | `discord:profile`    | `discord_username`, `discord_display_name`, `discord_avatar_url` | Yes    |
 | `discord:membership` | `discord_joined_at` (ISO 8601 UTC, `null` when unknown)          | Yes    |

@@ -118,14 +118,26 @@ describe("saving changes for a lock that voted this epoch", () => {
       ),
     ]).toEqual([[gaugeB, 4_600]])
     // Nothing of the type in the saved split: the lock's votes in it.
+    const mezoOnly = savedFrom(new Map([[gaugeB, 10_000]]), 47, 1)
     expect([
       ...startingBallot(
         [voted],
-        () => mixed,
+        () => mezoOnly,
+        "vebtc",
+        (id) => id === gaugeA,
+      ),
+    ]).toEqual([[gaugeA, 10_000]])
+  })
+
+  it("leaves a vote on a gauge the list does not show off the ballot", () => {
+    expect([
+      ...startingBallot(
+        [voted],
+        () => null,
         "vebtc",
         () => false,
       ),
-    ]).toEqual([[gaugeA, 10_000]])
+    ]).toEqual([])
   })
 
   it("keeps a split per wallet and lock, in this browser", () => {

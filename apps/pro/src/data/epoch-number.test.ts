@@ -14,7 +14,7 @@ describe("epoch numbers", () => {
 })
 
 describe("voted gauge names", () => {
-  it("use the gauge's display name, not its lock", async () => {
+  async function namedAs(profileName: string): Promise<string | undefined> {
     const { withGaugeNames } = await import("./adapters")
     const gauge = {
       address: "0xAbC0000000000000000000000000000000006033",
@@ -47,8 +47,17 @@ describe("voted gauge names", () => {
         suggestion: null,
         activity: [],
       },
-      new Map([["0xabc0000000000000000000000000000000006033", "SNF"]]),
+      new Map([["0xabc0000000000000000000000000000000006033", profileName]]),
     )
-    expect(named.locks[0]?.votes[0]?.gauge.name).toBe("SNF")
+    return named.locks[0]?.votes[0]?.gauge.name
+  }
+
+  it("use the gauge's display name, not its lock", async () => {
+    expect(await namedAs("SNF")).toBe("SNF")
+  })
+
+  it("drop the spaces a hand-typed profile name came with", async () => {
+    // Overview's lock cards read "SNF " from the profile (19 Nov 2026).
+    expect(await namedAs("SNF ")).toBe("SNF")
   })
 })

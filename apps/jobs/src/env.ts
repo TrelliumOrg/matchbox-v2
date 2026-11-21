@@ -90,6 +90,12 @@ export const jobsEnvSchema = z.object({
    * with decaying voting power rewrites its overview on every visit.
    */
   WAREHOUSE_SWEEP_WALLETS: positiveInt(150),
+  /**
+   * Older transactions read back into one wallet's stored history per
+   * snapshot run (warehouse/history.ts). Unset: none, so stored histories
+   * only grow forward from when each wallet was first stored.
+   */
+  WAREHOUSE_HISTORY_BACKFILL_TXS: optionalPositiveInt,
   /** eth_getLogs windows (10,000 blocks) per live run for Morpho accounts. */
   MORPHO_LOG_WINDOWS_PER_RUN: positiveInt(20),
   /**

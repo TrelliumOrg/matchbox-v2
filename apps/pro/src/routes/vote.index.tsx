@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router"
+import { defaultKind } from "../features/vote/default-kind"
 import { VotePage } from "../features/vote/vote-page"
-import {
-  defaultKind,
-  loadVote,
-  validateVoteSearch,
-} from "../features/vote/vote-route"
+import { loadVote, validateVoteSearch } from "../features/vote/vote-route"
 
-/** `/vote`: the type the wallet's locks vote first, or a picked gauge's. */
+/**
+ * `/vote`: a picked gauge's type, else the type the wallet's locks vote
+ * first while it has funded gauges, else the most funded (`defaultKind`).
+ * `/vote/<type>` always opens its own type.
+ */
 export const Route = createFileRoute("/vote/")({
   validateSearch: validateVoteSearch,
   loaderDeps: ({ search }) => ({ address: search.address ?? null }),
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/vote/")({
       <VotePage
         list={list}
         voter={voter}
-        kind={picked?.kind ?? defaultKind(voter?.locks ?? [])}
+        kind={picked?.kind ?? defaultKind(voter?.locks ?? [], list.fundedKinds)}
         search={search}
       />
     )

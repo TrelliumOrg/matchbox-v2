@@ -1,10 +1,15 @@
 # Matchbox indexer
 
-The Mezo warehouse ingest that replaces the `matchbox-explorer` Goldsky
-subgraph (see `docs/goldsky-exit.md` in MallardLabs/Matchbox). Ported from
-Matchbox `apps/matchbox-indexer` on 8 Nov 2026 with the same Neon schemas, SQL
-and Worker name, so this Worker can replace the live one without a migration. It reads `eth_getLogs` from Mezo RPC into
-Neon. There is no Goldsky pipeline.
+The Mezo warehouse ingest: a scheduled Worker that reads `eth_getLogs` from
+Mezo RPC and writes the decoded events into Postgres (Neon in production),
+where the jobs Worker ([apps/jobs](../jobs)) builds the read models from
+them. It replaces an earlier Goldsky subgraph, whose manifest the tests
+still compare against.
+
+Run it locally on your own Postgres with no other credentials (see
+Commands: copy `.dev.vars.example`, which has a one-line `docker run`).
+`pnpm --filter @matchbox/indexer test` needs nothing: it runs on PGlite and a
+fake chain.
 
 ## How ingest works
 
@@ -30,8 +35,8 @@ Neon. There is no Goldsky pipeline.
     logs fill a provider's result cap and stall ingest (audit MBX-02).
   - Widening a set is a config change plus a re-backfill.
   - `test/ingest/manifest.test.ts` fails if the explorer contracts or topics
-    drift from the explorer manifest (a snapshot of Matchbox
-    `apps/activity-subgraph/subgraph.yaml` in `test/fixtures/activity-subgraph`).
+    drift from the explorer manifest (a snapshot of the earlier subgraph's
+    manifest in `test/fixtures/activity-subgraph`).
 - **Windows.**
   - Logs are fetched in 10,000-block windows, at most 100 addresses per filter
     on `rpc-internal.mezo.org`. ValidationCloud (30) and Boar are fallbacks.
@@ -407,12 +412,4 @@ by the maintainers and are not documented here. The tools they use are the
   connections, so it runs only on a real Postgres:
   `MATCHBOX_TEST_DATABASE_URL=postgres://postgres@localhost:5432/postgres`
   (it creates and drops a scratch database and two test logins there). It
-  is skipped otherwise, so CI does not run it.
-
-## History
-
-`apps/matchbox-indexer/SPIKE.md` in MallardLabs/Matchbox records the August Goldsky Turbo/Mirror spike that preceded this
-design. Its leftovers were removed on 2026-10-24: the Goldsky
-`matchbox-mainnet-spike-turbo` and `matchbox-mainnet-spike-mirror` pipelines,
-the `MATCHBOX_NEON_SPIKE` secret, and on the dev branch the
-`matchbox_raw.logs_spike_*` tables and the `goldsink` role.
+  is skipped otherwise. CI runs it against a throwaway Postgres service.

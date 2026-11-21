@@ -15,7 +15,7 @@ import { Usd } from "../../components/money"
 import type { Overview } from "../../data/view-models"
 import { formatCompactVotes, formatTokenWithSymbol } from "../../lib/format"
 import { gaugeName } from "../../lib/gauge-name"
-import { useViewer } from "../../lib/viewer"
+import { useViewer, useViewingOther } from "../../lib/viewer"
 import { useLive } from "../../live/live-context"
 import { openClaim } from "../../tx/open-claim"
 import { openTx, txIntent } from "../../tx/tx-store"
@@ -121,8 +121,17 @@ const Activity = island("overview-activity", () =>
   import("./overview-activity").then((module) => module.OverviewActivity),
 )
 
+/**
+ * In place of the actions on someone else's wallet: only its owner can
+ * claim, vote or lock with it (as "Nothing to claim" stands in for Claim).
+ */
+function ViewingOnly(): ReactNode {
+  return <PillButton.Root disabled>Viewing only</PillButton.Root>
+}
+
 export function OverviewView({ data }: { data: Overview }): ReactNode {
   const viewer = useViewer()
+  const other = useViewingOther()
   const hasLocks = data.locks.length > 0
   const nothing = !/[1-9]/.test(data.claimable.usd)
   const wallet = data.wallet
@@ -172,25 +181,31 @@ export function OverviewView({ data }: { data: Overview }): ReactNode {
             )}
           </div>
           <div className="mt-[22px] flex flex-wrap gap-2.5">
-            <PillButton.Root
-              {...txIntent}
-              disabled={nothing}
-              onClick={() => void openClaim(viewer, { relock: false })}
-            >
-              Claim all
-            </PillButton.Root>
-            <PillButton.Root
-              intent="secondary"
-              className="max-md:hidden"
-              disabled={nothing}
-              {...txIntent}
-              onClick={() => void openClaim(viewer, { relock: true })}
-            >
-              Claim and relock
-            </PillButton.Root>
-            <PillButton.Root asChild intent="secondary">
-              <Link to="/vote">Vote</Link>
-            </PillButton.Root>
+            {other ? (
+              <ViewingOnly />
+            ) : (
+              <>
+                <PillButton.Root
+                  {...txIntent}
+                  disabled={nothing}
+                  onClick={() => void openClaim(viewer, { relock: false })}
+                >
+                  Claim all
+                </PillButton.Root>
+                <PillButton.Root
+                  intent="secondary"
+                  className="max-md:hidden"
+                  disabled={nothing}
+                  {...txIntent}
+                  onClick={() => void openClaim(viewer, { relock: true })}
+                >
+                  Claim and relock
+                </PillButton.Root>
+                <PillButton.Root asChild intent="secondary">
+                  <Link to="/vote">Vote</Link>
+                </PillButton.Root>
+              </>
+            )}
           </div>
         </>
       ) : (
@@ -210,23 +225,29 @@ export function OverviewView({ data }: { data: Overview }): ReactNode {
             />
           </div>
           <div className="mt-[22px] flex flex-wrap gap-2.5">
-            <LockButton
-              symbol="BTC"
-              amount={wallet.btc.amount}
-              intent="primary"
-            />
-            <LockButton
-              symbol="MEZO"
-              amount={wallet.mezo.amount}
-              intent="secondary"
-            />
+            {other ? (
+              <ViewingOnly />
+            ) : (
+              <>
+                <LockButton
+                  symbol="BTC"
+                  amount={wallet.btc.amount}
+                  intent="primary"
+                />
+                <LockButton
+                  symbol="MEZO"
+                  amount={wallet.mezo.amount}
+                  intent="secondary"
+                />
+              </>
+            )}
           </div>
         </>
       )}
       {/* Shown only when the locks below are not this moment's. */}
       <LocksAsOfNote asOf={data.locksAsOf} className="mt-9 -mb-6" />
       <LockCards locks={data.locks} />
-      {data.suggestion === null ? null : (
+      {data.suggestion === null || other ? null : (
         <Suggestion suggestion={data.suggestion} />
       )}
       <Activity events={data.activity} address={data.address} />

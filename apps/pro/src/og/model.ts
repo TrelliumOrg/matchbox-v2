@@ -7,7 +7,7 @@ import type {
   Protocol,
 } from "../data/view-models"
 import { gaugeKinds } from "../features/gauge/kinds"
-import { formatVeBtc, weiToWhole } from "../lib/format"
+import { formatIncentives, formatVeBtc, weiToWhole } from "../lib/format"
 
 /**
  * What each link preview card shows, built from the same view models the
@@ -42,7 +42,8 @@ export type GaugeCard = {
   typeLine: string
   picture: CardPicture
   apyBps: number | null
-  incentivesUsd: string
+  /** "$12.40", "Unpriced", "$1.15 + 2 unpriced" (`formatIncentives`). */
+  incentives: string
   incentiveTokens: string[]
   /** "5×" and whether the gauge is at or past optimal. Null without a boost. */
   boost: { label: string; atMax: boolean } | null
@@ -151,7 +152,11 @@ export function gaugeCard(profile: GaugeProfile, epoch: number): GaugeCard {
     typeLine: meta === null ? singular : `${singular}, ${meta}`,
     picture,
     apyBps: gauge.expired ? null : gauge.apyBps,
-    incentivesUsd: gauge.incentivesUsd,
+    incentives: formatIncentives({
+      usd: gauge.incentivesUsd,
+      priced: gauge.priced,
+      unpriced: gauge.unpriced,
+    }),
     incentiveTokens: gauge.incentiveTokens,
     boost,
     band,

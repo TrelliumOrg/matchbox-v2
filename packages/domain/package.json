@@ -97,6 +97,10 @@
     "./pool-search": {
       "types": "./src/pool-search.ts",
       "default": "./src/pool-search.ts"
+    },
+    "./funding": {
+      "types": "./src/funding.ts",
+      "default": "./src/funding.ts"
     }
   },
   "scripts": {

@@ -23,16 +23,19 @@ export class ReadModelError extends Error {
 }
 
 /**
- * The header a request sends to ask the fixtures for the gauge directory
- * at mainnet's size (`scripts/measure.mjs` does, to measure what Vote
- * inlines). Read in fixtures mode only: the API never sees it.
+ * The header a request sends to ask the fixtures for another gauge
+ * directory: `live`, at mainnet's size (`scripts/measure.mjs` does, to
+ * measure what Vote inlines), or `pools-only`, with only pool gauges
+ * funded (Vote's e2e tests). Read in fixtures mode only: the API never
+ * sees it.
  */
 export const fixtureDirectoryHeader = "x-pro-fixture-directory"
 
 function fixtureOptions(): FixtureOptions {
   try {
-    return getRequestHeader(fixtureDirectoryHeader) === "live"
-      ? { directory: "live" }
+    const directory = getRequestHeader(fixtureDirectoryHeader)
+    return directory === "live" || directory === "pools-only"
+      ? { directory }
       : {}
   } catch {
     // Outside a request (a test calling the reader directly).

@@ -79,7 +79,9 @@ async function refreshVote(
     lockIds: selectedIds,
     manual: null,
   })
-  if (!optimum || optimum.eligible.length === 0) throw unavailable()
+  if (optimum.eligible.length === 0 || optimum.bps.size === 0) {
+    throw unavailable()
+  }
   const optimumView = await presentVotePlan(
     { ...context, scope: new IdScope("o") },
     optimum,

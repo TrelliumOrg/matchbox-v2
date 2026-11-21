@@ -79,13 +79,19 @@ export type VotePrices = Record<VoteUnit, string | null>
  * The APY at `votes`: the same incentives among more or fewer votes. A
  * gauge that had no votes had no APY to scale, so it is worked out from
  * its incentives and the price of a vote (incentives a week, 52 weeks).
+ * None below the votes the server says an APY needs (`apyMinVotes`,
+ * null when the gauge cannot show one): votes change here, so this is
+ * the one place the browser applies the floors, as data it was sent.
  */
 function apyBpsAt(
   gauge: GaugeSummary,
   votes: bigint,
   prices: VotePrices,
 ): number | null {
-  if (votes <= 0n) return null
+  // `== null`: a directory from before the field has none, and a
+  // missing floor means no APY, never a throw from BigInt(undefined).
+  if (votes <= 0n || gauge.apyMinVotes == null) return null
+  if (votes < BigInt(gauge.apyMinVotes)) return null
   const before = BigInt(gauge.votes)
   if (gauge.apyBps !== null && before > 0n) {
     return Number((BigInt(gauge.apyBps) * before) / votes)

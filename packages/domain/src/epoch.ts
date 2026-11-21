@@ -3,10 +3,8 @@
 // a week gives its epoch start. Votes open one hour into an epoch and close
 // one hour before it ends (Wednesday 23:00 UTC).
 //
-// One module for what Matchbox had in four places: the webapp's
-// lib/mezoGauges/epochs.ts and lib/academy/epoch.ts, platform-contracts'
-// market.ts and Pro's lib/epoch.ts (plus the bigint helper in Pro's
-// worker/history/math.ts). EPOCHS.md lists how they differed.
+// The one epoch module for every app and Worker. EPOCHS.md lists the rules
+// and the behaviour callers rely on.
 
 /** Seconds in an epoch. */
 export const EPOCH_SECONDS = 604_800
@@ -14,7 +12,7 @@ export const EPOCH_SECONDS = 604_800
 /** Seconds in an epoch, for on-chain (bigint) timestamps. */
 export const EPOCH_SECONDS_BIGINT = 604_800n
 
-/** Alias kept for the webapp and academy callers. */
+/** Alias of EPOCH_SECONDS, kept for older callers. */
 export const WEEK = EPOCH_SECONDS
 
 /** Votes open this long after an epoch starts and close this long before. */

@@ -696,6 +696,8 @@ export default function BoostCalculator({
               ) : totals.read === null ? null : (
                 <a
                   href={scanBlock(totals.read.block)}
+                  target="_blank"
+                  rel="noreferrer noopener"
                   className="rounded-sm font-mono text-[13px] text-sec underline-offset-[3px] outline-none hover:underline focus-visible:outline-2 focus-visible:outline-ink"
                 >
                   Block {groupThousands(BigInt(totals.read.block))}

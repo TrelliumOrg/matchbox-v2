@@ -1,10 +1,10 @@
 import { fetchLive } from "../../data/live-query"
 import { gaugesQuery, voterQuery } from "../../data/queries"
-import type { GaugeKind, GaugeList, Lock, Voter } from "../../data/view-models"
+import type { GaugeList, Voter } from "../../data/view-models"
 
 /**
- * What Vote's routes need before the view loads: search validation, the
- * loader and the default type. Kept apart from the view so the route
+ * What Vote's routes need before the view loads: search validation and
+ * the loader (the default type is `default-kind`). Kept apart from the view so the route
  * definitions (which ship on every first paint) never pull the view in.
  */
 
@@ -42,12 +42,16 @@ export function validateVoteSearch(
     typeof search.pick === "string" && gaugeAddress.test(search.pick)
       ? search.pick.toLowerCase()
       : null
+  // Every key is set, to undefined when it is the default or unknown: the
+  // router lays these over the raw query, so a key left out keeps what
+  // the URL had, and "/vote?tab=" handed Vote a tab it has no list for
+  // (the page fell to "Data unavailable", 19 Nov 2026).
   return {
-    ...(tab === undefined || tab === "all" ? {} : { tab }),
-    ...(sort === undefined || sort === "incentives" ? {} : { sort }),
-    ...(page === null ? {} : { page }),
-    ...(q === null ? {} : { q: q.slice(0, 80) }),
-    ...(pick === null ? {} : { pick }),
+    tab: tab === undefined || tab === "all" ? undefined : tab,
+    sort: sort === undefined || sort === "incentives" ? undefined : sort,
+    page: page ?? undefined,
+    q: q === null ? undefined : q.slice(0, 80),
+    pick: pick ?? undefined,
   }
 }
 
@@ -71,11 +75,4 @@ export async function loadVote(address: string | null): Promise<{
     address === null ? null : fetchLive(voterQuery(address)),
   ])
   return { list, voter }
-}
-
-/** The type /vote opens on: the first type the wallet's locks can vote. */
-export function defaultKind(locks: readonly Lock[]): GaugeKind {
-  if (locks.some((lock) => lock.kind === "vemezo")) return "vebtc"
-  if (locks.some((lock) => lock.kind === "vebtc")) return "validator"
-  return "vebtc"
 }

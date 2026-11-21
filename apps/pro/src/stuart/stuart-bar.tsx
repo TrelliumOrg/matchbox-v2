@@ -46,6 +46,21 @@ const listId = "stuart-search-list"
 const wrapper =
   "fixed bottom-6 z-30 hidden -translate-x-1/2 [--sb:72px] [--sr:0px] left-[calc(var(--sb)+(100vw-var(--sb)-var(--sr))/2)] w-[min(600px,calc(100vw-var(--sb)-var(--sr)-48px))] md:block lg:[--sb:240px] xl:[--sb:280px] rail:[--sb:72px] min-[1600px]:[body:has([data-vote])_&]:[--sr:364px] stuart-expanded:hidden"
 
+/**
+ * From 768px Stuart's Ctrl K bar floats 24px above the foot of the content
+ * column, and on first view it sat over whatever was there: Protocol's
+ * chart labels, a gauge's About icons, a wallet's Activity amounts (P10,
+ * 19 Nov 2026). This strip, the page's own background with a short fade
+ * at its top, keeps the foot of the column clear up to 12px over the bar
+ * (where docked bars sit, `--dock`), so content stops above the bar as it
+ * scrolls and is never under it. The same span as the bar,
+ * and hidden with it. A sibling of the bar, not a child: inside the
+ * bar's transform, `fixed` would place it by the bar. Server rendered
+ * with the bar, so it is there on first paint without first-paint code.
+ */
+const stuartGutter =
+  "fixed bottom-0 z-20 hidden h-[90px] bg-linear-to-t from-bg from-87% to-transparent [--sb:72px] [--sr:0px] left-(--sb) right-(--sr) md:block lg:[--sb:240px] xl:[--sb:280px] rail:[--sb:72px] min-[1600px]:[body:has([data-vote])_&]:[--sr:364px] stuart-expanded:hidden"
+
 // Focused, the bar lifts and its surface widens to 640 (600 at rest): the
 // surface is its own layer that scales, and the orange ring fades in on
 // another, so only transform and opacity animate.
@@ -137,79 +152,82 @@ export function StuartBar(): ReactNode {
   }
 
   return (
-    <search
-      id={barId}
-      aria-label="Stuart"
-      className={wrapper}
-      onPointerEnter={warm}
-      onTouchStart={warm}
-    >
-      <div className={box}>
-        <span aria-hidden="true" className={surface} />
-        <span aria-hidden="true" className={ring} />
-        <StuartBadge size={36} />
-        <input
-          ref={input}
-          id={barInputId}
-          role="combobox"
-          type="text"
-          autoComplete="off"
-          spellCheck={false}
-          enterKeyHint="search"
-          maxLength={2_000}
-          aria-label={barPlaceholder}
-          aria-expanded={resultsOpen}
-          aria-controls={listId}
-          aria-autocomplete="list"
-          aria-activedescendant={
-            resultsOpen && activeId !== null ? activeId : undefined
-          }
-          placeholder={barPlaceholder}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onPaste={(event) => {
-            // A pasted vote script keeps its lines apart (" | ").
-            const next = pastedValue({
-              value: query,
-              pasted: event.clipboardData.getData("text"),
-              start: event.currentTarget.selectionStart,
-              end: event.currentTarget.selectionEnd,
-              max: 2_000,
-            })
-            if (next === null) return
-            event.preventDefault()
-            setQuery(next)
-          }}
-          onFocus={() => {
-            warm()
-            setFocused(true)
-          }}
-          onBlur={() => setFocused(false)}
-          onKeyDown={onKeyDown}
-          className="h-full min-w-0 flex-1 bg-transparent text-[15.5px] text-ink outline-none placeholder:text-sec"
-        />
-        <span
-          aria-hidden="true"
-          className={`flex-none transition-opacity duration-150 ${focused || query !== "" ? "opacity-0" : "opacity-100"}`}
-        >
-          <Kbd keys={["mod", "k"]} />
-        </span>
-        {wanted ? (
-          <Suspense fallback={null}>
-            <SearchResults
-              endpoint={stuartEndpoint()}
-              query={query}
-              open={resultsOpen}
-              listId={listId}
-              controller={controller}
-              onActiveChange={setActiveId}
-              onAsk={ask}
-              onNavigate={navigate}
-              onDone={done}
-            />
-          </Suspense>
-        ) : null}
-      </div>
-    </search>
+    <>
+      <span aria-hidden="true" data-stuart-gutter="" className={stuartGutter} />
+      <search
+        id={barId}
+        aria-label="Stuart"
+        className={wrapper}
+        onPointerEnter={warm}
+        onTouchStart={warm}
+      >
+        <div className={box}>
+          <span aria-hidden="true" className={surface} />
+          <span aria-hidden="true" className={ring} />
+          <StuartBadge size={36} />
+          <input
+            ref={input}
+            id={barInputId}
+            role="combobox"
+            type="text"
+            autoComplete="off"
+            spellCheck={false}
+            enterKeyHint="search"
+            maxLength={2_000}
+            aria-label={barPlaceholder}
+            aria-expanded={resultsOpen}
+            aria-controls={listId}
+            aria-autocomplete="list"
+            aria-activedescendant={
+              resultsOpen && activeId !== null ? activeId : undefined
+            }
+            placeholder={barPlaceholder}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onPaste={(event) => {
+              // A pasted vote script keeps its lines apart (" | ").
+              const next = pastedValue({
+                value: query,
+                pasted: event.clipboardData.getData("text"),
+                start: event.currentTarget.selectionStart,
+                end: event.currentTarget.selectionEnd,
+                max: 2_000,
+              })
+              if (next === null) return
+              event.preventDefault()
+              setQuery(next)
+            }}
+            onFocus={() => {
+              warm()
+              setFocused(true)
+            }}
+            onBlur={() => setFocused(false)}
+            onKeyDown={onKeyDown}
+            className="h-full min-w-0 flex-1 bg-transparent text-[15.5px] text-ink outline-none placeholder:text-sec"
+          />
+          <span
+            aria-hidden="true"
+            className={`flex-none transition-opacity duration-150 ${focused || query !== "" ? "opacity-0" : "opacity-100"}`}
+          >
+            <Kbd keys={["mod", "k"]} />
+          </span>
+          {wanted ? (
+            <Suspense fallback={null}>
+              <SearchResults
+                endpoint={stuartEndpoint()}
+                query={query}
+                open={resultsOpen}
+                listId={listId}
+                controller={controller}
+                onActiveChange={setActiveId}
+                onAsk={ask}
+                onNavigate={navigate}
+                onDone={done}
+              />
+            </Suspense>
+          ) : null}
+        </div>
+      </search>
+    </>
   )
 }

@@ -1,8 +1,8 @@
 import type { CoinGeckoPlan } from "@matchbox/api/market/coingecko"
 
 // CoinGecko's monthly allowance is shared by this Worker's price job (MEZO,
-// every few minutes) and its keyed pool reads (TVL and 24h volume, three
-// chains). Everything here derives from COINGECKO_API_PLAN, so a Demo key is
+// every few minutes), its keyed pool reads (TVL and 24h volume, three
+// chains) and the daily price history for claims' values when claimed. Everything here derives from COINGECKO_API_PLAN, so a Demo key is
 // safe without anyone setting a number. README "CoinGecko call budget" has
 // the arithmetic.
 
@@ -18,6 +18,14 @@ export const demoPlannedCalls = 9_000
 
 /** The longest month, so the plan holds in every month. */
 const minutesPerMonth = 31 * 24 * 60
+
+/**
+ * The daily history for claims' values (warehouse/claim-prices.ts): one
+ * call a token (BTC, MEZO) a day once a day settles, so 62 in a 31-day
+ * month. A failed call waits 6 hours, so a month of failures would spend
+ * at most 248, inside the margin.
+ */
+export const historyCallsPerMonth = 2 * 31
 
 /**
  * COINGECKO_REFRESH_SECONDS when unset: 90 keyless (limited per IP, not per
@@ -100,6 +108,8 @@ export type CoinGeckoBudget = {
    */
   keyedPoolsEveryHours: number | null
   keyedPoolCallsPerMonth: number
+  /** The daily price history's calls (`historyCallsPerMonth`). */
+  historyCallsPerMonth: number
   /** Planned calls in a 31-day month; null for a paid plan (not capped). */
   plannedCallsPerMonth: number | null
 }
@@ -121,6 +131,7 @@ export function coingeckoBudget(input: {
     refreshSeconds: refresh,
     priceEveryMinutes: priceCallEveryMinutes(refresh),
     priceCallsPerMonth: price,
+    historyCallsPerMonth,
   }
   if (!input.hasKey) {
     // Keyless calls are limited per IP, not per month.
@@ -139,16 +150,17 @@ export function coingeckoBudget(input: {
       plannedCallsPerMonth: null,
     }
   }
+  const fixed = price + historyCallsPerMonth
   const hours =
     poolIntervals.find(
       (each) =>
-        price + poolCallsPerMonth(each, input.poolChains) <= demoPlannedCalls,
+        fixed + poolCallsPerMonth(each, input.poolChains) <= demoPlannedCalls,
     ) ?? null
   const pools = hours === null ? 0 : poolCallsPerMonth(hours, input.poolChains)
   return {
     ...base,
     keyedPoolsEveryHours: hours,
     keyedPoolCallsPerMonth: pools,
-    plannedCallsPerMonth: price + pools,
+    plannedCallsPerMonth: fixed + pools,
   }
 }

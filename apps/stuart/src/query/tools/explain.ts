@@ -1,5 +1,6 @@
 import { decimalToScaledBigInt } from "@matchbox/domain/money"
 import { calculateOptimalVeMEZO } from "@matchbox/domain/optimalVeMEZO"
+import { referencePrice } from "@matchbox/domain/prices"
 import { calculateAnnualizedReturnBasisPoints } from "@matchbox/domain/rewardOptimizer"
 import { type PricedTarget, priceTarget } from "@matchbox/domain/voteMath"
 import type {
@@ -40,6 +41,7 @@ import {
   sourceCluster,
   targetKind,
   targetPicture,
+  unpricedIncentives,
   ZERO_WALLET,
 } from "./common"
 import { defineTool, type ToolContext } from "./tool"
@@ -144,7 +146,7 @@ async function selectionReason(
     return { reason: "no_eligible_locks", bps: null }
   }
   const plan = await planVotes(context, { branch, lockIds: null, manual: null })
-  if (!plan || plan.eligible.length === 0) {
+  if (plan.eligible.length === 0) {
     return { reason: "no_eligible_locks", bps: null }
   }
   const bps = plan.bps.get(entry.target.targetAddress.toLowerCase()) ?? null
@@ -412,8 +414,35 @@ export const explainGaugeTool = defineTool({
             )
           : null
 
+      // Incentive tokens outside the registry have no verified price: say
+      // how many there are, never a dollar value for them.
+      const unpricedCount = entry.unpricedTokens.length
+      const unpricedFact =
+        unpricedCount > 0
+          ? add(
+              makeFact({
+                scope,
+                key: "unpriced",
+                label: "Unpriced incentives",
+                value: { kind: "count", count: unpricedCount },
+                display: String(unpricedCount),
+                status: "unpriced",
+                evidenceRefs: [priceRef ?? ""],
+              }),
+            )
+          : null
+      const unpricedText = unpricedFact
+        ? unpricedIncentives(unpricedCount, unpricedFact.display)
+        : ""
       let templateId = `${tool}.overview.v1`
-      let text = `${nameFact.display}: ${incentivesFact.display} incentives this epoch, APY ${apyFact?.display ?? "unpriced"} at ${weightFact.display}.`
+      let text =
+        incentivesMicro === null && unpricedFact
+          ? `${nameFact.display}: ${unpricedText} this epoch and no priced ones, so no USD value or APY, at ${weightFact.display}.`
+          : `${nameFact.display}: ${incentivesFact.display} incentives this epoch, APY ${apyFact?.display ?? "unpriced"} at ${weightFact.display}.${
+              unpricedFact
+                ? ` ${unpricedText} ${unpricedCount === 1 ? "is" : "are"} not counted.`
+                : ""
+            }`
       if (boostFact && branch === "boost") {
         text += additionalFact
           ? ` Boost ${boostFact.display}, ${additionalFact.display} more reaches max boost.`
@@ -563,9 +592,15 @@ export const explainGaugeTool = defineTool({
         incentives: target.incentives
           .filter((incentive) => incentive.amount > 0n)
           .slice(0, 16)
-          .map((incentive) =>
-            tokenAmount(incentive.amount, incentive.decimals, incentive.symbol),
-          ),
+          .map((incentive) => ({
+            ...tokenAmount(
+              incentive.amount,
+              incentive.decimals,
+              incentive.symbol,
+            ),
+            token: incentive.token,
+            priced: referencePrice(incentive.token, prices) !== null,
+          })),
         weight: weightAmount,
         apyBps: apy,
         boostWad: boost?.boostWad != null ? boost.boostWad.toString() : null,

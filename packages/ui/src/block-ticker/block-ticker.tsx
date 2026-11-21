@@ -18,6 +18,8 @@ export type RootProps = {
   receivedAt: number
   /** Matchscan link for the block. */
   href?: string
+  /** Open the link in a new tab (an app other than Matchscan). */
+  newTab?: boolean
   blockTime?: number
   staleAfter?: number
   /** "corner" fixes it bottom right of the window (Pro desktop). */
@@ -106,6 +108,7 @@ export function Root({
   block,
   receivedAt,
   href,
+  newTab,
   blockTime = duration.block,
   staleAfter = 30_000,
   placement = "inline",
@@ -176,6 +179,8 @@ export function Root({
         ) : (
           <a
             href={href}
+            target={newTab ? "_blank" : undefined}
+            rel={newTab ? "noreferrer noopener" : undefined}
             aria-label={`${label}, view on Matchscan`}
             className={classes}
             {...tip}

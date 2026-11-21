@@ -14,7 +14,7 @@
 - Functions, triggers, policies, or constraints may already exist when migrations run
 
 **Solution:**
-**ALWAYS** Use defensive migration patterns and test against realistic data with `./supabase/scripts/test-migration.sh`
+**ALWAYS** Use defensive migration patterns and test against realistic data: apply the migration to a local database that already holds representative rows, not only to an empty one.
 
 ## Defensive Migration Patterns
 
@@ -270,21 +270,22 @@ UPDATE users SET status = 'active' WHERE created_at < NOW() - INTERVAL '30 days'
 
 3. **Test Against Realistic Data**
 
-   ```bash
-   # From project root
-   ./supabase/scripts/test-migration.sh your_migration_file.sql
-
-   # Or test latest migration
-   ./supabase/scripts/test-migration.sh
-   ```
+   Migrations live in `supabase/migrations/`. Apply them to a local
+   Postgres or a local Supabase stack (`npx supabase start`) that you have
+   filled with representative rows first, then apply your new file on top.
+   Run it twice: a defensive migration is a no-op the second time.
 
 4. **Validate Results**
    - Check that migration runs successfully against seeded data
    - Verify no constraint violations or conflicts
    - Test rollback scenarios when possible
 
-5. **Update the Supabase Typescript schema**
-   - Check that schema defined in `packages/shared/src/types/supabase.ts` is up to date with the actual Supabase schema after the migration
+5. **Update the TypeScript row types**
+   - The stores that read a table declare its rows themselves (for example
+     `apps/api/src/store/supabase-store.ts`,
+     `apps/id/src/worker/store/supabase-store.ts` and
+     `apps/developer/src/worker/store/supabase-store.ts`). Update them, and
+     the memory store beside each, to match the migrated schema.
 
 6. **Review Before Merge**
    - Ensure all defensive patterns are used
@@ -293,11 +294,10 @@ UPDATE users SET status = 'active' WHERE created_at < NOW() - INTERVAL '30 days'
 
 ### Testing Script Benefits
 
-The `test-migration.sh` script catches issues that `npx supabase db reset` misses:
+Testing against populated data catches issues that a reset on an empty database misses:
 
 - **Race conditions:** Duplicate data causing constraint violations
 - **Precision errors:** Scientific notation breaking decimal handling
-- **Ban sync failures:** Complex user states triggering edge cases
 - **Performance issues:** Slow queries against populated tables
 - **Constraint conflicts:** Unique violations from realistic data scenarios
 
@@ -348,8 +348,8 @@ CREATE POLICY "Service role read access" ON public.global_config
 
 1. **ALWAYS use defensive patterns** - Never assume clean database state
 2. **ALWAYS ask about feature flags** - Coordinate with UI/backend changes
-3. **ALWAYS test every migration** - Use the test script before merging: `./supabase/scripts/test-migration.sh`
-4. **ALWAYS update the Supabase Typescript schema** - Check the typescript types match the supabase schema in `packages/shared/src/types/supabase.ts`
+3. **ALWAYS test every migration** - Apply it to a local database with representative rows before merging
+4. **ALWAYS update the row types** - The stores that read the table (`supabase-store.ts` and the memory store) match the migrated schema
 5. **Document assumptions** - Add comments explaining complex conditions
 6. **Plan for rollbacks** - Consider how to safely revert changes
 
@@ -366,9 +366,9 @@ Before merging any migration:
 
 - [ ] Used defensive patterns (`CREATE OR REPLACE`, `IF NOT EXISTS`, etc.)
 - [ ] Asked user about feature flag requirements
-- [ ] Tested with `./supabase/scripts/test-migration.sh`
+- [ ] Applied to a local database with representative rows, twice
 - [ ] Added appropriate comments and documentation
-- [ ] Verified the types in `packages/shared/src/types/supabase.ts` match the Supabase schema
+- [ ] Updated the row types in the stores that read the table
 - [ ] Considered rollback scenarios
 - [ ] Coordinated with frontend/backend changes if needed
 

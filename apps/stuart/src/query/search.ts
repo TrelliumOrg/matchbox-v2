@@ -4,11 +4,14 @@ import { getAddress } from "viem"
 import { displayUsd } from "./format"
 import type { ReadModelSource } from "./providers/readModels"
 import { usdToMicro } from "./providers/units"
+import { mayCarrySecret } from "./secretShapes"
 
 // The Ctrl K bar's search: gauges by name or address prefix (the API's
 // directory query), a wallet for a pasted address (with its Mezo ID), and a
 // transaction for a pasted hash. Read only, no model, cheap: one directory
-// page and at most one identity lookup per query.
+// page and at most one identity lookup per query. Text that may carry a
+// key or phrase is never sent to the directory (the API Worker logs its
+// request URLs): it gets no results.
 
 const MATCHSCAN = "https://scan.matchbox.markets"
 const GAUGE_LIMIT = 6
@@ -53,6 +56,7 @@ export async function searchQuery(
     })
     return { query, results }
   }
+  if (mayCarrySecret(raw.slice(0, 2_000))) return { query: "", results: [] }
   const [gauges, identity] = await Promise.all([
     query.length >= 2
       ? readModels.searchGauges(query.slice(0, 64), GAUGE_LIMIT).catch(() => [])

@@ -85,4 +85,19 @@ export const VOTER_ADDRESSES = [
   "0xe99a9ad5ed26bd30e4db25397f378817e9b9515a", // ValidatorsVoter
 ] as const
 
+// The mainnet MEZO gauges (ThirdPartyVoter) the Mezo app lists for veMEZO
+// votes: the keys of NON_STAKING_GAUGES in mezo-org/web
+// (apps/dapp/src/shared/constants/non-staking-gauges.ts), which gate that
+// page. The voter also holds gauges the app leaves out (SNF Community,
+// SNF Community 2, Mezo Technical), so Pro lists only these. bdUSD/MUSD is
+// listed ahead of the app, whose entry is mezo-org/web#942. Keep the two
+// lists in step when Mezo admits or retires a gauge.
+export const MEZO_APP_GAUGES = [
+  "0xc7e81dd77a4624f0dd14a8bb97bc721b0cee6e26", // USDC/MUSD, Aero (Base)
+  "0x4440a9b2954cb98416c0122e2ea996c46555f4b6", // MEZO/MUSD, Aero (Base)
+  "0x2ced96e759ab481210d41c567eee5c42edb59a1d", // MUSD/USDC, Uniswap v4
+  "0xc39a294024dca62f579c49d7c83a6c831d4976d0", // MUSD/USDC/USDT, Curve
+  "0xfee9aa9146e95d233e1b2b48bda69a3bc4e268c1", // bdUSD/MUSD, Curve
+] as const
+
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"

@@ -22,7 +22,7 @@ import {
   weiToWhole,
 } from "../lib/format"
 import { gaugeName } from "../lib/gauge-name"
-import { useViewer } from "../lib/viewer"
+import { useViewer, useViewingOther } from "../lib/viewer"
 import { useHead } from "../live/heads"
 import { chainNow, useLive } from "../live/live-context"
 import {
@@ -162,6 +162,11 @@ function Row({
             <AllocationMark.Root
               allocations={allocationOf(sharesOfAll(lock.votes))}
               surface="var(--soft)"
+              max={2}
+              className="flex-none"
+              {...(lock.votes.length > 2
+                ? { barClassName: "max-md:hidden" }
+                : {})}
             />
           )}
           {/* One line: a long gauge name truncates, the label never wraps.
@@ -427,6 +432,8 @@ function LockFace({
   savedNext: boolean
 }): ReactNode {
   const viewer = useViewer()
+  // Someone else's lock: no action pill and no actions side to flip to.
+  const other = useViewingOther()
   const symbol = coin[lock.kind]
   const pill = cardPill(lock)
   const labels: Record<CardAction["action"], string> = {
@@ -443,7 +450,7 @@ function LockFace({
           aside={
             <>
               {lock.expired ? <LockCard.Chip>Expired</LockCard.Chip> : null}
-              {pill.kind === "manage" ? null : <LockCard.Flip />}
+              {pill.kind === "manage" || other ? null : <LockCard.Flip />}
             </>
           }
         >
@@ -485,9 +492,11 @@ function LockFace({
               </LockCard.Line>
             ) : null}
           </LockCard.Lines>
-          <div className="mt-auto pt-4">
-            <Pill pill={pill} lock={lock} />
-          </div>
+          {other ? null : (
+            <div className="mt-auto pt-4">
+              <Pill pill={pill} lock={lock} />
+            </div>
+          )}
         </LockCard.Body>
       </LockCard.Front>
       <LockCard.Back>
@@ -522,6 +531,7 @@ export function LockCards({ locks }: { locks: readonly Lock[] }): ReactNode {
   const { market, store } = useLive()
   const head = useHead(store)
   const viewer = useViewer()
+  const other = useViewingOther()
   const now = chainNow(market, head.number)
   const savedNext = useSavedNext(
     viewer.kind === "signed-out" ? null : viewer.address,
@@ -550,15 +560,17 @@ export function LockCards({ locks }: { locks: readonly Lock[] }): ReactNode {
           />
         </LockCard.Root>
       ))}
-      <LockCard.NewTile
-        {...txIntent}
-        onClick={() => openTx(viewer, { flow: "new-lock", kind: "vemezo" })}
-        className={`w-[300px] flex-none snap-start md:w-auto ${
-          locks.length > 0
-            ? "md:max-lg:col-span-2 md:max-lg:min-h-[76px] md:max-lg:flex-row md:max-lg:justify-start md:max-lg:px-5 md:max-lg:[&>:last-child]:ml-auto"
-            : ""
-        }`}
-      />
+      {other ? null : (
+        <LockCard.NewTile
+          {...txIntent}
+          onClick={() => openTx(viewer, { flow: "new-lock", kind: "vemezo" })}
+          className={`w-[300px] flex-none snap-start md:w-auto ${
+            locks.length > 0
+              ? "md:max-lg:col-span-2 md:max-lg:min-h-[76px] md:max-lg:flex-row md:max-lg:justify-start md:max-lg:px-5 md:max-lg:[&>:last-child]:ml-auto"
+              : ""
+          }`}
+        />
+      )}
     </section>
   )
 }

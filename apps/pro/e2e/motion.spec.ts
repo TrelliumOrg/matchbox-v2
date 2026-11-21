@@ -1,4 +1,6 @@
 import { expect, type Page, test } from "@playwright/test"
+import openDialog from "./dialog"
+import { rememberWallet } from "./own-wallet"
 
 /**
  * Exits mirror entries (ledger M1, M6, L6): a sheet or drawer that closes
@@ -111,9 +113,13 @@ function exitOf(page: Page): Promise<Exit> {
 }
 
 async function openAccount(page: Page): Promise<void> {
+  // pyke.mezo as this browser's own wallet: the header's Account button.
+  await rememberWallet(page, "0x7c21095156ab25e989c3c084bcb06037c6539e0b")
   await page.goto(user)
   await page.waitForLoadState("networkidle")
-  await page.getByRole("button", { name: /^Account/ }).click()
+  await openDialog(page, () =>
+    page.getByRole("button", { name: /^Account/ }).click(),
+  )
   const panel = page.getByRole("dialog")
   await expect(panel).toHaveAttribute("data-state", "open")
   // Let the slide in finish.
@@ -144,7 +150,7 @@ test.describe("exits", () => {
   test("an Activity sheet slides out, then unmounts", async ({ page }) => {
     await page.goto(`${user}/activity`)
     await page.waitForLoadState("networkidle")
-    await page.locator("main li button").first().click()
+    await openDialog(page, () => page.locator("main li button").first().click())
     const sheet = page.getByRole("dialog")
     await expect(sheet).toHaveAttribute("data-state", "open")
     await page.waitForTimeout(450)

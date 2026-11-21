@@ -1,5 +1,6 @@
-import { BORROW_CONTRACTS, MUSD_CONTRACTS } from "@matchbox/chain"
+import { BORROW_CONTRACTS, CONTRACTS, MUSD_CONTRACTS } from "@matchbox/chain"
 import { demoPrices } from "@matchbox/contracts/read-models/fixtures"
+import type { ScanActivityItem } from "@matchbox/contracts/scan"
 import { fixtureIds } from "../../blockscout/fixtures"
 import address from "../../blockscout/fixtures/address.json"
 import addressCounters from "../../blockscout/fixtures/address-counters.json"
@@ -375,11 +376,160 @@ const loanDocuments: Readonly<
   ),
 }
 
+// -- transactions on their way in -------------------------------------------
+
+/**
+ * Hashes the chain has and the explorer does not yet, by prefix: each
+ * moves on from the first time it is asked for (in this isolate), as a
+ * transaction sent from Pro does, so a page can be seen upgrading.
+ * - `0x11ce…`: mined; indexed (explorer and our rows) after `indexedAfterMs`.
+ * - `0x9e9d…`: pending; mined after `minedAfterMs`, then indexed.
+ * Any other hash is one the chain has never seen.
+ */
+export const liveHashes = { mined: "0x11ce", pending: "0x9e9d" } as const
+export const minedAfterMs = 5_000
+export const indexedAfterMs = 10_000
+
+const firstAsked = new Map<string, number>()
+
+function ageOf(id: string): number {
+  const now = Date.now()
+  const first = firstAsked.get(id) ?? now
+  firstAsked.set(id, first)
+  return now - first
+}
+
+const voter = CONTRACTS.mainnet.boostVoter.toLowerCase()
+const [, firstVote, secondVote] = walletActivity
+
+/** The wallet's two votes, as this transaction's rows. */
+function liveVotes(id: string): ScanActivityItem[] {
+  return [firstVote, secondVote].flatMap((row, index) =>
+    row === undefined
+      ? []
+      : [
+          {
+            ...row,
+            id: `${id}-${index}-BOOST_VOTE`,
+            tx_hash: id,
+            log_index: index,
+            block_number: 13_334_700,
+            contract_address: voter,
+          },
+        ],
+  )
+}
+
+function liveDocument(id: string, state: "pending" | "mined") {
+  const rows = liveVotes(id)
+  const at = rows[0]?.timestamp ?? 0
+  return {
+    hash: id,
+    transaction: unavailable("not_found"),
+    logs: unavailable("not_found"),
+    tokenTransfers: unavailable("not_found"),
+    activity: part([]),
+    labels: labelsFor([wallet, ...rows.flatMap((row) => row.gauge ?? [])]),
+    labelLimit,
+    labelsTruncated: false,
+    final: false,
+    live: part({
+      state,
+      read_at: at,
+      transaction: {
+        from: wallet,
+        to: voter,
+        value: "0",
+        nonce: 41,
+        gas_limit: "450000",
+        gas_price: "1000000",
+        input: "0x7ac09bf7",
+        input_truncated: false,
+        method: "vote",
+      },
+      receipt:
+        state === "pending"
+          ? null
+          : {
+              status: "success",
+              block_number: 13_334_700,
+              position: 0,
+              gas_used: "301234",
+              effective_gas_price: "1000000",
+              created: null,
+              logs: rows.map((row) => ({
+                index: row.log_index,
+                address: voter,
+                topics: [`0x${"ab".repeat(32)}`],
+                data: "0x",
+              })),
+              logs_truncated: false,
+            },
+      timestamp: state === "pending" ? null : at,
+      activity: state === "pending" ? [] : rows,
+    }),
+  }
+}
+
+function indexedDocument(id: string) {
+  const rows = liveVotes(id)
+  const at = rows[0]?.timestamp ?? 0
+  return {
+    hash: id,
+    transaction: part({
+      ...transaction,
+      hash: id,
+      block_number: 13_334_700,
+      timestamp: new Date(at * 1000).toISOString(),
+      method: "vote",
+      from: { ...transaction.from, hash: wallet },
+      to: { ...transaction.to, hash: voter, name: "BoostVoter" },
+      token_transfers: [],
+      decoded_input: null,
+    }),
+    logs: part({ items: [], next_page_params: null }),
+    tokenTransfers: part({ items: [], next_page_params: null }),
+    activity: part(rows),
+    labels: labelsFor([wallet, ...rows.flatMap((row) => row.gauge ?? [])]),
+    labelLimit,
+    labelsTruncated: false,
+    final: true,
+  }
+}
+
+/** The document for a hash on its way in, or null for any other. */
+function liveFixture(id: string) {
+  if (id.startsWith(liveHashes.mined)) {
+    return ageOf(id) < indexedAfterMs
+      ? liveDocument(id, "mined")
+      : indexedDocument(id)
+  }
+  if (id.startsWith(liveHashes.pending)) {
+    const age = ageOf(id)
+    if (age < minedAfterMs) return liveDocument(id, "pending")
+    return age < indexedAfterMs
+      ? liveDocument(id, "mined")
+      : indexedDocument(id)
+  }
+  return null
+}
+
+const neverSeen = {
+  state: "unknown",
+  read_at: 0,
+  transaction: null,
+  receipt: null,
+  timestamp: null,
+  activity: [],
+}
+
 export const entityFixtures: FixtureRoute[] = [
   {
     pattern: /^entities\/tx\/(0x[0-9a-f]{64})$/,
     answer: (match, _query, scenario) => {
       const id = match[1] ?? ""
+      const onItsWay = scenario === "disabled" ? null : liveFixture(id)
+      if (onItsWay !== null) return ok({ data: onItsWay })
       const loan = loanDocuments[id]
       if (loan !== undefined) {
         return ok({
@@ -408,6 +558,7 @@ export const entityFixtures: FixtureRoute[] = [
             labelLimit,
             labelsTruncated: false,
             final: false,
+            ...(scenario === "disabled" ? {} : { live: part(neverSeen) }),
           },
         })
       }

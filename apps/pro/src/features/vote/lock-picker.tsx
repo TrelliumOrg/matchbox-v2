@@ -30,6 +30,8 @@ export type LockPickerProps = {
   selected: readonly string[]
   onSelectedChange: (ids: string[]) => void
   onNewLock: () => void
+  /** False on someone else's wallet: no New lock tile. */
+  newLock?: boolean
   /**
    * Locks whose changes are saved for `nextEpoch` (they voted this one).
    * A list, not a Set: the picker is an island and islands compare props
@@ -204,6 +206,7 @@ export function LockPicker({
   selected,
   onSelectedChange,
   onNewLock,
+  newLock = true,
   saved,
   nextEpoch,
 }: LockPickerProps): ReactNode {
@@ -321,16 +324,18 @@ export function LockPicker({
               }
             />
           ))}
-          <li data-flip="new-lock" className="w-[176px] flex-none snap-start">
-            <button
-              type="button"
-              onClick={onNewLock}
-              className="flex h-full min-h-[100px] w-full cursor-pointer items-center justify-center gap-2 rounded-[18px] text-[15px] font-semibold shadow-[inset_0_0_0_1.5px_var(--line)] outline-none hover:bg-soft focus-visible:outline-2 focus-visible:outline-ink"
-            >
-              <Glyph shape={shapes.plus} size={18} strokeWidth={2} />
-              New lock
-            </button>
-          </li>
+          {newLock ? (
+            <li data-flip="new-lock" className="w-[176px] flex-none snap-start">
+              <button
+                type="button"
+                onClick={onNewLock}
+                className="flex h-full min-h-[100px] w-full cursor-pointer items-center justify-center gap-2 rounded-[18px] text-[15px] font-semibold shadow-[inset_0_0_0_1.5px_var(--line)] outline-none hover:bg-soft focus-visible:outline-2 focus-visible:outline-ink"
+              >
+                <Glyph shape={shapes.plus} size={18} strokeWidth={2} />
+                New lock
+              </button>
+            </li>
+          ) : null}
         </ul>
         {overflow.before ? (
           <Arrow side="before" onClick={() => page(-1)} />

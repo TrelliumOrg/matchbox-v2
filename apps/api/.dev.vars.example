@@ -8,8 +8,10 @@ SUPABASE_SERVICE_ROLE_KEY=replace-me
 # Same value as the developer console uses to issue keys (>= 32 random chars).
 API_KEY_PEPPER=replace-with-at-least-32-random-characters
 
-# Reconciliation cron RPC endpoints.
-MEZO_MAINNET_RPC_URL=https://mezo-mainnet.boar.network
+# Reconciliation cron RPC endpoints. Mainnet unset: the public Mezo RPCs
+# (src/heads/poller.ts). A mainnet URL here goes first for every chain read,
+# including live wallet builds (README, "Local read models").
+# MEZO_MAINNET_RPC_URL=https://mezo-mainnet.boar.network
 MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org
 
 # Lets a direct caller (curl, Pro without a service binding) reach

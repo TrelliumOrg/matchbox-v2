@@ -21,6 +21,12 @@ pnpm --filter @matchbox/scan measure                  # JS and loader budgets
 In fixtures mode a request header `x-scan-fixture: disabled | limited |
 filling` plays the API's 503, 429 and still-filling answers (never cached).
 
+None of these need credentials (`e2e` needs Playwright's Chromium:
+`pnpm --filter @matchbox/scan exec playwright install chromium`). Live data
+(`SCAN_DATA=api`) needs the API Worker ([apps/api](../api)) bound as `API`,
+with Matchscan's read models filled by the jobs Worker
+([apps/jobs](../jobs)).
+
 ## Environments
 
 | Environment | Worker                 | Where                                   | API binding                                         |

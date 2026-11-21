@@ -1,4 +1,7 @@
-import { scanMetricDefinition } from "@matchbox/contracts/scan"
+import {
+  scanMetricDefinition,
+  scanMetricRecomputed,
+} from "@matchbox/contracts/scan"
 import { formatCompact, unitsToDecimal } from "@matchbox/domain/format"
 import { canonicalQuery } from "../caller.server"
 import type { Section } from "../explorer"
@@ -13,6 +16,14 @@ import { knownTokens } from "./tokens"
  * series' own facts from the registry (flow or level, unit, decimals,
  * first day, the last day of a backfill-only series). Values are never
  * summed across metrics.
+ *
+ * A flow the copy step writes has no row for a day with nothing to count.
+ * Once it has rows, a today without one is zero so far: the series ends
+ * with that zero, marked partial, rather than with the last day that had
+ * a row, which would read as today's. Only when the copy is known to be
+ * current today (copiedToday): a halted or failing copy, or one that has
+ * not run since midnight UTC, has no row today for want of copying, not
+ * for want of activity.
  */
 
 export type SeriesView = {
@@ -47,6 +58,23 @@ function decimalsOf(
   if (decimals !== "token") return decimals
   const token = dimension.split(":").at(-1) ?? ""
   return knownTokens[token.toLowerCase()]?.decimals ?? null
+}
+
+/**
+ * Whether the series' data is known to be current for `today`: the API
+ * says the copy is not stale (no failing runs, no halted table) and its
+ * last ok copy run (`asOf`) was today, UTC. A pending re-fill alone is not
+ * stale. An API that sends neither field is unknown: false.
+ */
+export function copiedToday(
+  meta:
+    | { asOf?: number | null | undefined; stale?: boolean | undefined }
+    | undefined,
+  today: string,
+): boolean {
+  if (meta === undefined || meta.stale !== false) return false
+  const asOf = meta.asOf
+  return typeof asOf === "number" && day(asOf) === today
 }
 
 /** A decimal's whole part, compact: "1,204", "6.41k". */
@@ -106,6 +134,18 @@ export async function readSeries(input: {
       partial: point.partial,
     }
   })
+  const latest = points.at(-1)
+  if (
+    definition.kind === "flow" &&
+    definition.liveWriter &&
+    scanMetricRecomputed(input.metric) &&
+    series.firstDay !== null &&
+    series.firstDay <= to &&
+    (latest === undefined || latest.day < to) &&
+    copiedToday(read.data.meta, to)
+  ) {
+    points.push({ day: to, value: 0, text: "0", decimal: "0", partial: true })
+  }
   const last = points.at(-1)
   return {
     status: "ok",

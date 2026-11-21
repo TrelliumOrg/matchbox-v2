@@ -16,6 +16,26 @@ import {
 } from "./parts"
 
 /**
+ * The open epoch's two figures say which is which: "Epoch 49 posted $227"
+ * beside "Epoch 49 so far $11,044" read as a contradiction, when the first
+ * is the incentives posted and the second those with the fees.
+ */
+export function openEpochWords(
+  stats: RewardsView["stats"],
+): RewardsView["stats"] {
+  const posted = stats.find((stat) => / posted$/.test(stat.label))
+  if (posted === undefined) return stats
+  const epoch = posted.label.replace(/ posted$/, "")
+  return stats.map((stat) =>
+    stat === posted
+      ? { ...stat, label: `${epoch} incentives so far` }
+      : stat.label === `${epoch} so far`
+        ? { ...stat, label: `${epoch} with fees so far` }
+        : stat,
+  )
+}
+
+/**
  * Incentives and fees paid to voters each epoch, in USD at the epoch's
  * closing daily prices, stacked by token kind.
  */
@@ -50,7 +70,7 @@ export function PaidPanel({
           {data.filling === null ? null : (
             <Filling asOf={data.filling.asOf} className="mt-1" />
           )}
-          <Stats stats={data.stats} />
+          <Stats stats={openEpochWords(data.stats)} />
           <StackedEpochBars
             bars={data.bars}
             series={data.series}

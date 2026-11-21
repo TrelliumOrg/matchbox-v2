@@ -23,6 +23,8 @@ const step = tv({
     label: "block text-base font-semibold",
     status: "block text-[14.5px] font-semibold",
     link: "rounded-sm font-semibold text-ink underline underline-offset-[3px] outline-none focus-visible:outline-2 focus-visible:outline-ink",
+    secondary:
+      "rounded-sm text-[13.5px] font-normal text-sec underline underline-offset-[3px] outline-none focus-visible:outline-2 focus-visible:outline-ink",
   },
   variants: {
     status: {
@@ -66,8 +68,19 @@ export type StepProps = {
   detail?: string | undefined
   /** Right aligned, for example "41,260 votes". */
   aside?: ReactNode
-  /** The step's transaction on an explorer: inline after the detail, or on its own line when failed. */
-  link?: { href: string; label: string } | null | undefined
+  /**
+   * The step's transaction on an explorer: inline after the detail, or on
+   * its own line when failed. `secondary`, a second explorer, follows it
+   * smaller.
+   */
+  link?:
+    | {
+        href: string
+        label: string
+        secondary?: { href: string; label: string } | undefined
+      }
+    | null
+    | undefined
 }
 
 function Badge({
@@ -131,6 +144,17 @@ export function Step({
         {link.label}
       </a>
     )
+  const second =
+    link?.secondary === undefined ? null : (
+      <a
+        href={link.secondary.href}
+        target="_blank"
+        rel="noreferrer noopener"
+        className={s.secondary()}
+      >
+        {link.secondary.label}
+      </a>
+    )
   return (
     <li
       className={s.row()}
@@ -147,13 +171,21 @@ export function Step({
             {detail}
           </MorphText>
         ) : (
-          <span className={s.status()}>
-            <MorphText as="span">{detail}</MorphText>,{" "}
-            <span className="font-normal">{anchor}</span>
+          <span
+            className={`${s.status()} flex flex-wrap items-baseline gap-x-3`}
+          >
+            <span>
+              <MorphText as="span">{detail}</MorphText>,{" "}
+              <span className="font-normal">{anchor}</span>
+            </span>
+            {second}
           </span>
         )}
         {anchor !== null && status === "failed" ? (
-          <span className="block text-[14.5px]">{anchor}</span>
+          <span className="flex flex-wrap items-baseline gap-x-3 text-[14.5px]">
+            {anchor}
+            {second}
+          </span>
         ) : null}
       </span>
       {aside === undefined ? null : (

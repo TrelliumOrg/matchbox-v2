@@ -104,8 +104,12 @@ describe("Mezo knowledge notes", () => {
       "earn.savings",
       "network.gas",
       "safety.approve",
+      "safety.drained",
       "safety.incident",
       "safety.meta_tx",
+      "safety.phrase_holder",
+      "safety.redirect",
+      "safety.secrets",
       "support.contact",
     ])
   })

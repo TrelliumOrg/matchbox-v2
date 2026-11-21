@@ -3,6 +3,7 @@ import * as FilterTabs from "@matchbox/ui/filter-tabs"
 import { Glyph, shapes } from "@matchbox/ui/icons"
 import { clampPage, pageCount } from "@matchbox/ui/pagination"
 import * as SelectMenu from "@matchbox/ui/select-menu"
+import { Link } from "@tanstack/react-router"
 import {
   type ReactNode,
   useCallback,
@@ -15,7 +16,6 @@ import {
 import { island } from "../../components/island"
 import type {
   GaugeKind,
-  GaugeKindTotals,
   GaugeList,
   GaugeSummary,
   Lock,
@@ -23,9 +23,9 @@ import type {
   Voter,
 } from "../../data/view-models"
 import { weiToWhole } from "../../lib/format"
-import { useViewer } from "../../lib/viewer"
+import { useViewer, useViewingOther } from "../../lib/viewer"
 import { useLive } from "../../live/live-context"
-import { PageTitle } from "../../shell/page"
+import { PageTitle, underlineLink } from "../../shell/page"
 import { openTx, txIntent } from "../../tx/tx-store"
 import { useWatching } from "../../watchlist/watch-store"
 import { escrowGroups, gaugeKinds, kindOrder } from "../gauge/kinds"
@@ -41,12 +41,12 @@ import {
   setShare,
   splitEvenly,
   unpick,
-  usdToMicro,
   votedIn,
   votesIn,
   voteWeight,
 } from "./ballot"
 import { BallotBar, type OptimizeState, type OtherBallot } from "./ballot-panel"
+import { fundedAlternative } from "./default-kind"
 import { listGauges } from "./gauge-filter"
 import type { PagerPosition } from "./gauge-pager"
 import { GaugeTile } from "./gauge-tile"
@@ -141,34 +141,6 @@ function isVoteSort(value: string): value is VoteSort {
   return Object.hasOwn(voteSorts, value)
 }
 
-/** Count and this epoch's incentives per type. */
-export function kindTotals(gauges: readonly GaugeSummary[]): GaugeKindTotals {
-  const micro: Record<GaugeKind, bigint> = {
-    vebtc: 0n,
-    mezo: 0n,
-    validator: 0n,
-    pool: 0n,
-  }
-  const count: Record<GaugeKind, number> = {
-    vebtc: 0,
-    mezo: 0,
-    validator: 0,
-    pool: 0,
-  }
-  for (const gauge of gauges) {
-    count[gauge.kind] += 1
-    micro[gauge.kind] += usdToMicro(gauge.incentivesUsd)
-  }
-  const usd = (value: bigint): string =>
-    `${value / 1_000_000n}.${((value % 1_000_000n) / 10_000n).toString().padStart(2, "0")}`
-  return Object.fromEntries(
-    kindOrder.map((kind) => [
-      kind,
-      { count: count[kind], incentivesUsd: usd(micro[kind]) },
-    ]),
-  ) as GaugeKindTotals
-}
-
 export type VoteViewProps = {
   list: GaugeList
   voter: Voter | null
@@ -223,6 +195,8 @@ export function VoteView({
   onPageFix,
 }: VoteViewProps): ReactNode {
   const viewer = useViewer()
+  // Someone else's locks: their ballot can be explored, never signed.
+  const other = useViewingOther()
   const wallet = voter?.address ?? null
   const allLocks = voter?.locks ?? []
   const escrow = gaugeKinds[kind].escrow
@@ -406,7 +380,11 @@ export function VoteView({
     () => project(targets, power, ballot),
     [targets, power, ballot],
   )
-  const totals = useMemo(() => kindTotals(list.gauges), [list.gauges])
+  // Nothing funded in this type: say so, and offer the type that is (P3).
+  const unfunded = useMemo(
+    () => fundedAlternative(kind, allLocks, list.fundedKinds),
+    [kind, allLocks, list.fundedKinds],
+  )
 
   useEffect(() => whenIdle(() => void loadHaptics()), [])
 
@@ -498,7 +476,7 @@ export function VoteView({
     tests: {
       all: () => true,
       picked: (gauge) => ballot.has(gaugeKey(gauge)),
-      funded: (gauge) => gauge.apyBps !== null,
+      funded: (gauge) => gauge.funded,
       watching: (gauge) => watching.has(gaugeKey(gauge)),
     },
   })
@@ -604,10 +582,11 @@ export function VoteView({
     onOptimize: () => void runOptimize(),
     onUndo: undoOptimize,
     onSplitEvenly: () => setBallot((current) => splitEvenly(current)),
-    primary: primaryLabel(selected, epoch),
+    primary: other ? "Viewing only" : primaryLabel(selected, epoch),
+    readOnly: other,
     note,
     onReview: () => {
-      if (selected.length === 0 || wallet === null) return
+      if (selected.length === 0 || wallet === null || other) return
       const { sign, save } = splitByVote(selected)
       openTx(viewer, {
         flow: "vote",
@@ -634,7 +613,7 @@ export function VoteView({
       <PageTitle>Vote</PageTitle>
       <div className="mt-6 grid items-start gap-7 min-[834px]:grid-cols-[220px_minmax(0,1fr)] min-[100rem]:grid-cols-[220px_minmax(0,1fr)_336px]">
         <div className="min-w-0 min-[834px]:sticky min-[834px]:top-6">
-          <TypeList totals={totals} active={kind} />
+          <TypeList totals={list.kindTotals} active={kind} />
         </div>
         <section
           aria-label={gaugeKinds[kind].label}
@@ -651,7 +630,25 @@ export function VoteView({
               onNewLock={() =>
                 openTx(viewer, { flow: "new-lock", kind: escrow })
               }
+              newLock={!other}
             />
+          )}
+          {unfunded === null ? null : (
+            <p className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[20px] bg-soft px-5 py-4 text-[15px] text-ink2">
+              <span>
+                No {gaugeKinds[kind].label} funded in Epoch {epoch}
+                {unfunded.needs === null
+                  ? null
+                  : `. ${gaugeKinds[unfunded.kind].label} are, and voting them needs a ${gaugeKinds[unfunded.kind].unit} lock.`}
+              </span>
+              <Link
+                to="/vote/$type"
+                params={{ type: unfunded.kind }}
+                className={underlineLink}
+              >
+                See {gaugeKinds[unfunded.kind].label}
+              </Link>
+            </p>
           )}
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <FilterTabs.Root

@@ -128,7 +128,7 @@ function defaultDescription(card: DefaultCard | null): string {
 function gaugeDescription(card: GaugeCard): string {
   return joined([
     card.apyBps === null ? null : `${formatApy(card.apyBps)} APY`,
-    `${formatUsd(card.incentivesUsd, "cents")} incentives`,
+    `${card.incentives} incentives`,
     card.boost === null ? null : `${card.boost.label} boost`,
     card.expired ? "Lock expired" : null,
     `Epoch ${card.epoch}`,

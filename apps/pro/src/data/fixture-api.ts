@@ -1,11 +1,14 @@
 import {
   type ActivityCategory,
   type ActivityRow,
+  type Allocation,
   activityCategorySchema,
   activityTypesIn,
   type GaugeDetails,
   type GaugeDirectory,
   type GaugeProfileReadModel,
+  type ProSummary,
+  type Protocol,
   type ProtocolEpoch,
   type ReadModelMeta,
   type WalletActivity,
@@ -21,6 +24,7 @@ import {
   demoGauges,
   demoMeta,
   demoReadModels,
+  demoTokens,
   demoWallet,
 } from "@matchbox/contracts/read-models/fixtures"
 import { epochStartOf } from "@matchbox/domain"
@@ -28,7 +32,15 @@ import { canonicalMezoId } from "@matchbox/domain/mezo-id"
 import {
   fixtureGaugeDirectory,
   liveSizedGaugeDirectory,
+  poolsOnlyGaugeDirectory,
+  smallPoolGauges,
+  unpricedPoolGauges,
 } from "./fixture-gauges"
+import {
+  historyActivity,
+  historyRewards,
+  isHistoryWallet,
+} from "./fixture-history"
 
 /**
  * Answers the API Worker's `/internal/pro/*` paths from the shared demo
@@ -134,6 +146,115 @@ function twoLockOverview(): WalletOverview {
   })
 }
 
+/**
+ * A wallet like the live one with veBTC lock #6033 (19 Nov 2026): its
+ * veBTC lock has a boost gauge in the directory, so the card draws the
+ * boost band, and it voted this epoch across every validator and pool
+ * gauge. The demo wallet's veBTC lock has no boost, which is how a
+ * CSP violation and a hydration error on the band reached production
+ * unseen, and how a strip of 30 gauge pictures overflowed its card.
+ */
+export const boostedWallet = `0x6033${"0".repeat(32)}0003`
+
+/** The boost gauge's token id in the fixture directory (Forge Partners). */
+export const boostedLockId = "700"
+
+function boostedVote(): {
+  votes: string
+  allocations: Allocation[]
+  byVoter: { voter: "validators" | "pools"; allocations: Allocation[] }[]
+} {
+  const voted = fixtureGaugeDirectory.gauges.filter(
+    (card) =>
+      card.isAlive &&
+      (card.gauge.voter === "validators" || card.gauge.voter === "pools"),
+  )
+  const byVoter = (["validators", "pools"] as const).map((voter) => {
+    const gauges = voted.filter((card) => card.gauge.voter === voter)
+    const each = Math.floor(10_000 / gauges.length)
+    return {
+      voter,
+      allocations: gauges.map((card, index) => ({
+        gauge: card.gauge,
+        basisPoints: index === 0 ? 10_000 - each * (gauges.length - 1) : each,
+      })),
+    }
+  })
+  return {
+    votes: "2.4000",
+    // Shares of both voters together: each voter's half.
+    allocations: byVoter.flatMap((entry) =>
+      entry.allocations.map((allocation) => ({
+        gauge: allocation.gauge,
+        basisPoints: Math.floor(allocation.basisPoints / 2),
+      })),
+    ),
+    byVoter,
+  }
+}
+
+/** When the boosted lock voted: in the demo's epoch, moved to the live one. */
+const boostedVotedAt = fixtureEpochReference.start + 26 * 3600
+
+function boostedOverview(nowMs: number): WalletOverview {
+  const vote = boostedVote()
+  return liveOverview(
+    walletOverviewSchema.parse({
+      ...emptyOverview(boostedWallet),
+      recentActivity: boostedActivityRows(),
+      locks: [
+        {
+          escrow: "vebtc",
+          tokenId: boostedLockId,
+          tab: "vebtc",
+          locked: { token: demoTokens.btc, amount: "1.2000", usd: "126852.00" },
+          votingPower: "1.2000",
+          unlocksAt: null,
+          isPermanent: true,
+          isWithdrawable: false,
+          vote: {
+            status: "voted",
+            epoch: demoEpoch(fixtureEpochReference.number),
+            votes: vote.votes,
+            allocations: vote.allocations,
+            votedAt: boostedVotedAt,
+            byVoter: vote.byVoter.map((entry) => ({
+              ...entry,
+              votes: "1.2000",
+              votedAt: boostedVotedAt,
+            })),
+          },
+          claimable: { usd: "0", tokens: [] },
+          projected: null,
+          boost: "1.8",
+          createdAt: fixtureEpochReference.start - 90 * 86_400,
+        },
+      ],
+    }),
+    nowMs,
+  )
+}
+
+/** The boosted wallet's activity: its vote across every gauge. */
+function boostedActivityRows(): ActivityRow[] {
+  const vote = boostedVote()
+  return [
+    {
+      type: "vote",
+      id: `0x${"60".repeat(32)}-0`,
+      txHash: `0x${"60".repeat(32)}`,
+      block: demoChainHead.block - 100,
+      timestamp: boostedVotedAt,
+      status: "confirmed",
+      actor: boostedWallet,
+      lock: { escrow: "vebtc", tokenId: boostedLockId },
+      epoch: demoEpoch(fixtureEpochReference.number),
+      votes: vote.votes,
+      allocations: vote.allocations,
+    },
+  ]
+}
+
 export function emptyRewards(address: string): WalletRewards {
   return {
     address,
@@ -218,11 +339,14 @@ function activity(
   cursor: string | null,
   limit: number,
 ): WalletActivity {
-  if (!isDemo(address)) return { address, rows: [], nextCursor: null }
+  const own = isDemo(address)
+    ? demoReadModels.activity.rows
+    : address.toLowerCase() === boostedWallet
+      ? boostedActivityRows()
+      : null
+  if (own === null) return { address, rows: [], nextCursor: null }
   const types = category === null ? null : new Set(activityTypesIn(category))
-  const rows = demoReadModels.activity.rows.filter(
-    (row) => types === null || types.has(row.type),
-  )
+  const rows = own.filter((row) => types === null || types.has(row.type))
   const start =
     cursor === null ? 0 : rows.findIndex((row) => row.id === cursor) + 1
   const page = rows.slice(start, start + limit)
@@ -263,11 +387,54 @@ function profile(address: string): GaugeProfileReadModel | null {
     locked: null,
     votingStrategy: null,
     incentiveStrategy: null,
-    apyChange: null,
+    // The small pool gauges' APY rose, as the API says of mainnet's: Pro
+    // shows neither the APY nor its change.
+    apyChange: Object.values(smallPoolGauges).includes(card) ? "12.57" : null,
     votesHistory: [],
     incentivesHistory: [],
     details,
   }
+}
+
+/**
+ * The summary for the directory fixtures mode serves: its gauges, and the
+ * funded ones by the API's rule (any incentive token), dust included.
+ */
+const fixtureSummary: ProSummary = {
+  ...demoReadModels.summary,
+  gaugeCount: fixtureGaugeDirectory.gauges.length,
+  fundedCount: fixtureGaugeDirectory.gauges.filter(
+    (card) => card.isAlive && card.incentives.tokens.length > 0,
+  ).length,
+}
+
+/**
+ * Protocol's funded list with mainnet's small rows after the demo's (P6):
+ * $0.28, which Pro counts as funded, and dust below a cent, which it
+ * leaves out of the list and the count. Then the unpriced and mixed
+ * gauges, which Pro lists, and the unregistered one, which it leaves out.
+ */
+const protocolExtras = [
+  smallPoolGauges.tiny,
+  unpricedPoolGauges.mixed,
+  unpricedPoolGauges.unpriced,
+  smallPoolGauges.dust,
+  unpricedPoolGauges.unregistered,
+]
+
+const fixtureProtocol: Protocol = {
+  ...demoReadModels.protocol,
+  funded: {
+    count: demoReadModels.protocol.funded.count + protocolExtras.length,
+    gauges: [
+      ...demoReadModels.protocol.funded.gauges,
+      ...protocolExtras.map((card) => ({
+        gauge: card.gauge,
+        incentives: card.incentives,
+        deposits: 1,
+      })),
+    ],
+  },
 }
 
 /** A past epoch's snapshot, from its bar of the demo chart. */
@@ -285,7 +452,7 @@ function protocolEpoch(number: number): ProtocolEpoch | null {
       changeUsd: null,
     },
     byVoter: bar,
-    funded: demoReadModels.protocol.funded,
+    funded: fixtureProtocol.funded,
     deposits: 0,
     stats: null,
   }
@@ -400,9 +567,10 @@ function directoryPage(
 export type FixtureOptions = {
   /**
    * `live`: the gauge directory at mainnet's size, for measuring what Vote
-   * inlines. Everything else is the same.
+   * inlines. `pools-only`: only pool gauges funded, as in Epoch 49.
+   * Everything else is the same.
    */
-  directory?: "live" | undefined
+  directory?: "live" | "pools-only" | undefined
 }
 
 export function fixtureResponse(
@@ -436,7 +604,7 @@ export function fixtureResponse(
         },
       }
     case "summary":
-      return envelope(demoReadModels.summary)
+      return envelope(fixtureSummary)
     case "gauges": {
       if (id === undefined) {
         return envelope(
@@ -444,7 +612,9 @@ export function fixtureResponse(
             url.searchParams,
             options.directory === "live"
               ? liveSizedGaugeDirectory()
-              : fixtureGaugeDirectory,
+              : options.directory === "pools-only"
+                ? poolsOnlyGaugeDirectory()
+                : fixtureGaugeDirectory,
           ),
         )
       }
@@ -464,7 +634,7 @@ export function fixtureResponse(
           ),
         )
       }
-      if (id !== "epochs") return envelope(demoReadModels.protocol)
+      if (id !== "epochs") return envelope(fixtureProtocol)
       const snapshot = protocolEpoch(Number(view))
       return snapshot === null ? { status: 404 } : envelope(snapshot)
     }
@@ -477,7 +647,9 @@ export function fixtureResponse(
               ? liveOverview(demoReadModels.overview, nowMs)
               : id.toLowerCase() === twoLockWallet
                 ? twoLockOverview()
-                : emptyOverview(id),
+                : id.toLowerCase() === boostedWallet
+                  ? boostedOverview(nowMs)
+                  : emptyOverview(id),
           )
         case "balances":
           // Every wallet holds the demo balances, so a wallet with no
@@ -489,13 +661,28 @@ export function fixtureResponse(
           })
         case "rewards":
           return envelope(
-            isDemo(id) ? demoReadModels.rewards : emptyRewards(id),
+            isDemo(id)
+              ? demoReadModels.rewards
+              : isHistoryWallet(id)
+                ? historyRewards(id, nowMs)
+                : emptyRewards(id),
           )
         case "activity": {
           const category = activityCategorySchema.safeParse(
             url.searchParams.get("category"),
           )
           const limit = Number(url.searchParams.get("limit") ?? 25)
+          if (isHistoryWallet(id)) {
+            return envelope(
+              historyActivity(
+                id,
+                category.success ? category.data : null,
+                url.searchParams.get("cursor"),
+                Number.isInteger(limit) && limit > 0 ? limit : 25,
+                nowMs,
+              ),
+            )
+          }
           return envelope(
             activity(
               id,

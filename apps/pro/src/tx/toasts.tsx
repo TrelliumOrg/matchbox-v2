@@ -8,11 +8,12 @@ import {
   useSyncExternalStore,
 } from "react"
 import { groupThousands } from "../lib/format"
-import { scanTxUrl } from "./steps"
+import { explorerTxUrl, scanTxUrl } from "./steps"
 
 /**
  * Transaction toasts (`djpvmOKrvM`): lower left, 6s, paused while hovered
- * or focused, with the block and "View on Matchscan". A transaction that
+ * or focused, with the block, "View on Matchscan" and a smaller "Mezo
+ * Explorer". A transaction that
  * failed on chain mirrors it with tone "negative" (red x, red line).
  */
 
@@ -94,6 +95,16 @@ function TimedToast({
           rel="noreferrer noopener"
         >
           View on Matchscan
+        </a>
+      )}
+      {item.hash === null ? null : (
+        <a
+          href={explorerTxUrl(item.hash)}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-[13px] font-normal!"
+        >
+          Mezo Explorer
         </a>
       )}
     </Toast.Root>

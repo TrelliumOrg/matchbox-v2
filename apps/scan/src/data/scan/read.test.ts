@@ -23,7 +23,9 @@ vi.mock("@matchbox/logger", () => ({
   createLogger: () => ({ error: () => {}, warn: () => {}, info: () => {} }),
 }))
 
-const { readScan, privateAnswer, skippedOf } = await import("./read.server")
+const { readScan, privateAnswer, routeOf, skippedOf } = await import(
+  "./read.server"
+)
 
 const pageSchema = z.object({
   data: z.array(z.number()),
@@ -140,4 +142,76 @@ describe("readScan", () => {
     expect(read).toEqual({ status: "unavailable" })
     expect(reason).toMatchObject({ name: "TimeoutError" })
   }, 10_000)
+  it("tries a read that failed in passing once more before giving up", async () => {
+    let calls = 0
+    api(() => {
+      calls += 1
+      return calls === 1
+        ? Response.json({ error: { code: "internal_error" } }, { status: 500 })
+        : Response.json({ data: [7], nextCursor: null })
+    })
+    const read = await readScan("locks", new URLSearchParams(), pageSchema)
+    expect(read).toMatchObject({ status: "ok", data: { data: [7] } })
+    expect(calls).toBe(2)
+    // Answered in the end: the page may be stored.
+    expect(state.response.has("x-scan-degraded")).toBe(false)
+  })
+
+  it("tries a read that was unreachable once more", async () => {
+    let calls = 0
+    state.env.API = {
+      fetch: async () => {
+        calls += 1
+        if (calls === 1) throw new TypeError("Network connection lost")
+        return Response.json({ data: [1], nextCursor: null })
+      },
+    }
+    const read = await readScan("locks", new URLSearchParams(), pageSchema)
+    expect(read.status).toBe("ok")
+    expect(calls).toBe(2)
+  })
+
+  it("says unavailable after the second failure, and the page is degraded", async () => {
+    const seen = api(() =>
+      Response.json({ error: { code: "internal_error" } }, { status: 502 }),
+    )
+    const read = await readScan("locks", new URLSearchParams(), pageSchema)
+    expect(read).toEqual({ status: "unavailable" })
+    expect(seen).toHaveLength(2)
+    expect(state.response.get("x-scan-degraded")).toBe("1")
+  })
+
+  it("does not ask again for a limit, a switched-off route or a 404", async () => {
+    for (const [status, expected] of [
+      [429, "rate-limited"],
+      [503, "disabled"],
+      [404, "missing"],
+    ] as const) {
+      const seen = api(() => Response.json({}, { status }))
+      const read = await readScan("locks", new URLSearchParams(), pageSchema)
+      expect(read.status).toBe(expected)
+      expect(seen).toHaveLength(1)
+    }
+  })
+
+  it("leaves no time for a retry past the budget", async () => {
+    const seen = api(() => Response.json({}, { status: 500 }))
+    const read = await readScan(
+      "locks",
+      new URLSearchParams(),
+      pageSchema,
+      // Less than a retry needs.
+      900,
+    )
+    expect(read).toEqual({ status: "unavailable" })
+    expect(seen).toHaveLength(1)
+  })
+
+  it("logs a read's route without its address, hash or number", () => {
+    expect(
+      routeOf(
+        `entities/address/0x${"ab".repeat(20)}/x/0x${"cd".repeat(32)}/locks/vebtc/6033`,
+      ),
+    ).toBe("entities/address/{address}/x/{hash}/locks/vebtc/{n}")
+  })
 })

@@ -64,9 +64,11 @@ export function poolTypeDescription(source: PoolTypeSource): string | null {
 
 /**
  * A gauge's name with its pool type, where text has one line for both:
- * "BTC/MUSD CL200". A name that already ends with the label is kept.
+ * "BTC/MUSD CL200". A name that already ends with the label is kept, and
+ * an empty label adds nothing (not a trailing space).
  */
 export function nameWithPoolType(name: string, label: string | null): string {
-  if (label === null) return name
-  return name.endsWith(` ${label}`) ? name : `${name} ${label}`
+  const kind = label?.trim() ?? ""
+  if (kind === "") return name
+  return name.endsWith(` ${kind}`) ? name : `${name} ${kind}`
 }

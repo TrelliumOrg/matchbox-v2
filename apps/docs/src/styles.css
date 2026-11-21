@@ -116,3 +116,25 @@ html {
 .docs-measure > :not(.docs-wide) {
   max-width: 620px;
 }
+
+/*
+ * Phones: the code block's controls from @matchbox/ui are at least 40 by
+ * 40 themselves (D3, 20 Nov 2026). Copy was 32 tall and 35 wide with its
+ * label hidden, the language tab "npm" 28 wide.
+ */
+@media (max-width: 47.99rem) {
+  button[aria-label="Copy code"] {
+    min-width: 40px;
+    min-height: 40px;
+    justify-content: center;
+  }
+
+  [role="tablist"][aria-label="Language"] {
+    column-gap: 12px;
+  }
+
+  [role="tablist"][aria-label="Language"] > [role="tab"] {
+    min-width: 40px;
+    justify-content: center;
+  }
+}

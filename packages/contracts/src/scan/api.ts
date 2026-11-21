@@ -199,10 +199,17 @@ export const scanAggregateMetaSchema = z.object({
   /** The one-time history fill has been applied; null if unknown. */
   historyFilled: z.boolean().nullable().default(null),
   /**
-   * Copy runs are failing, a re-fill is required, or the copy has halted a
-   * table: data may lag.
+   * Copy runs are failing or the copy has halted a table: data lags the
+   * chain. A pending re-fill is `refillPending`, not this (APIs before
+   * that field counted it here too).
    */
   stale: z.boolean().default(false),
+  /**
+   * A re-fill is required (a warehouse replay or a failed count check):
+   * figures may disagree until it is done, though they are not behind.
+   * False from APIs that do not send it.
+   */
+  refillPending: z.boolean().default(false),
   /**
    * Stored rows of this response that failed their schema and were left
    * out; `complete` is false when any were. Always sent.
@@ -254,7 +261,11 @@ export const scanStatusSchema = z.object({
   halted: z.boolean().nullable().optional(),
   /** The stopped tables' names, where known ([] when none or unknown). */
   haltedTables: z.array(z.string()).nullable().optional(),
-  /** Copy runs failing, a re-fill required, or a table halted. */
+  /**
+   * Copy runs failing or a table halted: data lags the chain. A required
+   * re-fill is `refillRequired` alone (APIs before this change counted it
+   * here too; a reader can tell from `consecutiveFailures` and `halted`).
+   */
   stale: z.boolean(),
   /**
    * READ_DB's live snapshot (Borrow state), apart from Scan's copy.
@@ -786,6 +797,71 @@ export function scanPartSchema<Data extends z.ZodType>(data: Data) {
   ])
 }
 
+/** Most of a live transaction's input kept, in hex characters (32 KiB). */
+export const scanLiveInputLimit = 65_536
+/** Most logs a live receipt keeps. */
+export const scanLiveLogLimit = 200
+
+const hexSchema = z.string().regex(/^0x([0-9a-f]{2})*$/)
+const topicSchema = z.string().regex(/^0x[0-9a-f]{64}$/)
+
+/** One log of a live receipt, raw. */
+export const scanLiveLogSchema = z.object({
+  index: z.number().int().nonnegative(),
+  address: addressSchema,
+  topics: z.array(topicSchema).max(4),
+  data: hexSchema,
+})
+
+/**
+ * A transaction read from Mezo RPC, for one the explorer and our store do
+ * not have yet (the API reads it only then). `unknown`: the RPC has never
+ * seen the hash; `pending`: it is in the mempool; `mined`: it is in a
+ * block, with its receipt, the block's time and our decoded rows (the
+ * indexer's handlers over the receipt's logs, as the copy will write
+ * them). Everything is chain data: names and input are untrusted.
+ */
+export const scanLiveTransactionSchema = z.object({
+  state: z.enum(["unknown", "pending", "mined"]),
+  /** Unix seconds the chain was read at. */
+  read_at: unixSecondsSchema,
+  transaction: z
+    .object({
+      from: addressSchema,
+      to: addressSchema.nullable(),
+      /** Wei. */
+      value: decimalStringSchema,
+      nonce: z.number().int().nonnegative(),
+      gas_limit: decimalStringSchema,
+      /** Wei; the fee cap for a dynamic-fee transaction. */
+      gas_price: decimalStringSchema.nullable(),
+      /** Cut at `scanLiveInputLimit` hex characters (`input_truncated`). */
+      input: hexSchema,
+      input_truncated: z.boolean(),
+      /** The decoded method's name, from our ABIs; untrusted. */
+      method: z.string().max(64).nullable(),
+    })
+    .nullable(),
+  receipt: z
+    .object({
+      status: z.enum(["success", "failed"]),
+      block_number: z.number().int().nonnegative(),
+      position: z.number().int().nonnegative(),
+      gas_used: decimalStringSchema,
+      /** Wei per gas. */
+      effective_gas_price: decimalStringSchema.nullable(),
+      created: addressSchema.nullable(),
+      logs: z.array(scanLiveLogSchema).max(scanLiveLogLimit),
+      logs_truncated: z.boolean(),
+    })
+    .nullable(),
+  /** The block's time, unix seconds; null until mined. */
+  timestamp: unixSecondsSchema.nullable(),
+  activity: z.array(scanActivityItemSchema),
+})
+
+export type ScanLiveTransaction = z.infer<typeof scanLiveTransactionSchema>
+
 export const scanTransactionDocumentSchema = z.object({
   hash: z.string().regex(/^0x[0-9a-f]{64}$/),
   transaction: scanPartSchema(blockscoutTransactionSchema),
@@ -803,6 +879,12 @@ export const scanTransactionDocumentSchema = z.object({
   labelsTruncated: z.boolean().optional(),
   /** True when every part is final: the document will not change. */
   final: z.boolean(),
+  /**
+   * The transaction as the chain has it now, sent while the explorer or
+   * our copy has yet to catch up with it (`scanLiveTransactionSchema`).
+   * Absent once both have, and from APIs that predate it.
+   */
+  live: scanPartSchema(scanLiveTransactionSchema).optional(),
 })
 
 // ---------------------------------------------------------------------------

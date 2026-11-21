@@ -73,6 +73,10 @@
     "ENVIRONMENT": "production",
     "BASE_RPC_URL": "https://base-mainnet.public.blastapi.io",
     "WAREHOUSE_SWEEP_WALLETS": "150",
+    // Older transactions read back into one wallet's stored history a run
+    // (Pro's "Show earlier epochs"). Keep it set: a wallet that passes 80
+    // events later fills back only while it is.
+    "WAREHOUSE_HISTORY_BACKFILL_TXS": "300",
     "MORPHO_LOG_WINDOWS_PER_RUN": "20"
   }
 }

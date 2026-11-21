@@ -32,7 +32,10 @@ function Header(): ReactNode {
   return (
     <header className="border-b border-soft2">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-8 gap-y-2 px-4 pt-4 pb-2 md:h-[76px] md:flex-nowrap md:px-10 md:py-0 xl:px-[120px]">
-        <Link to="/" className={`rounded-md ${focus}`}>
+        <Link
+          to="/"
+          className={`flex items-center rounded-md max-md:min-h-10 ${focus}`}
+        >
           <BenchLockup />
         </Link>
         <p className="ml-auto flex items-center gap-2.5 font-mono text-[12.5px] text-sec md:order-last md:text-[13.5px]">
@@ -88,12 +91,12 @@ function Footer(): ReactNode {
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-7 gap-y-4 px-4 pt-7 pb-[60px] text-[14.5px] text-sec md:px-10 xl:px-[120px]">
         <BenchLockup height={18} />
         <span>Not affiliated with any model provider.</span>
-        <ul className="flex flex-wrap gap-x-[22px] gap-y-2 md:ml-auto">
+        <ul className="flex flex-wrap gap-x-[22px] gap-y-2 max-md:gap-y-0 md:ml-auto">
           {outbound.map((item) => (
             <li key={item.href}>
               <a
                 href={item.href}
-                className={`rounded-sm hover:text-ink ${focus}`}
+                className={`flex items-center rounded-sm hover:text-ink max-md:min-h-10 ${focus}`}
               >
                 {item.label}
               </a>

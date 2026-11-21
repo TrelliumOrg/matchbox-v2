@@ -136,7 +136,12 @@ function Header({ header }: { header: GaugeHeader }): ReactNode {
           <h1 className="mt-1 text-[34px] leading-tight font-[650] tracking-[-0.02em] max-md:text-[28px]">
             <GaugeName gauge={gauge} limit={48} />
             {gauge.tokenId === null ? null : (
-              <span className="ml-2 font-[500] text-sec">#{gauge.tokenId}</span>
+              <>
+                {" "}
+                <span className="ml-1 font-[500] text-sec">
+                  #{gauge.tokenId}
+                </span>
+              </>
             )}
           </h1>
           {header.tagline === null ? null : (

@@ -1,4 +1,10 @@
-import { BORROW_CONTRACTS, CONTRACTS } from "@matchbox/chain"
+import {
+  BORROW_CONTRACTS,
+  CONTRACTS,
+  crossChainPools,
+  tigrisPoolTypes,
+} from "@matchbox/chain"
+import { nameWithPoolType, poolTypeLabel } from "./pool-type"
 
 /**
  * Plain-words sentences for decoded activity rows (matchbox-scan
@@ -498,4 +504,32 @@ export function sentenceText(
       }
     })
     .join("")
+}
+
+/**
+ * Mezo's DEX pools by address, named as Matchscan's pool and gauge pages
+ * name them: the pair with MUSD last and the pool type label pool gauges
+ * carry ("BTC/MUSD Volatile", "BTC/MUSD CL200"). A pool's label in our
+ * labels read model is the indexer's contract name ("Pool Musd Btc"),
+ * which no page should show.
+ */
+const mezoPools: ReadonlyMap<string, string> = new Map(
+  crossChainPools.flatMap((pool) => {
+    const shape = tigrisPoolTypes[pool.id]
+    if (pool.chain !== "mezo" || shape === undefined) return []
+    const sides = pool.pair.split("/")
+    const pair =
+      sides.length === 2 && sides[0] === "MUSD" ? `${sides[1]}/MUSD` : pool.pair
+    return [
+      [
+        pool.address.toLowerCase(),
+        nameWithPoolType(pair, poolTypeLabel(shape)),
+      ],
+    ]
+  }),
+)
+
+/** "BTC/MUSD Volatile" for a Mezo DEX pool's address; null for any other. */
+export function mezoPoolName(address: string): string | null {
+  return mezoPools.get(address.toLowerCase()) ?? null
 }

@@ -15,7 +15,7 @@ import {
   requestId,
 } from "@matchbox/server"
 import { Hono } from "hono"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
 import type { ApiEnv } from "../context"
 import { internalAccess } from "../internal/access"
@@ -113,6 +113,19 @@ type Options = {
   deadlineMs?: number
 }
 
+/** The Cache API, calling `onRead` each time a lookup has answered. */
+function countingReads(cache: Cache, onRead: () => void): Cache {
+  return {
+    match: async (request, options) => {
+      const hit = await cache.match(request, options)
+      onRead()
+      return hit
+    },
+    put: (request, response) => cache.put(request, response),
+    delete: (request, options) => cache.delete(request, options),
+  }
+}
+
 function harness(options: Options = {}) {
   const upstream = fakeUpstream()
   const state = {
@@ -124,6 +137,8 @@ function harness(options: Options = {}) {
     blocksIndexed: true as boolean | null,
     /** Upstream reads already started at each indexing check. */
     indexingAt: [] as number[],
+    /** Edge cache lookups that have answered. */
+    edgeReads: 0,
   }
   const logged: string[] = []
   const pending: Promise<unknown>[] = []
@@ -132,7 +147,12 @@ function harness(options: Options = {}) {
     if (options.edge === false) return null
     if (cache === null) {
       cacheNumber += 1
-      cache = await caches.open(`blockscout-test-${cacheNumber}`)
+      cache = countingReads(
+        await caches.open(`blockscout-test-${cacheNumber}`),
+        () => {
+          state.edgeReads += 1
+        },
+      )
     }
     return cache
   }
@@ -770,7 +790,13 @@ describe("coalescing", () => {
     const responses = Promise.all(
       Array.from({ length: 5 }, () => h.get("main-page/blocks")),
     )
-    await new Promise((resolve) => setTimeout(resolve, 10))
+    // Release the upstream only once every request has found the edge
+    // cache empty: the step just before a request joins the read in
+    // flight. A fixed 10 ms pause let a late request on a loaded machine
+    // arrive after the release and miss the shared read.
+    await vi.waitFor(() => expect(h.state.edgeReads).toBe(5), {
+      timeout: 20_000,
+    })
     release()
     const served = await responses
     expect(h.upstream.calls).toHaveLength(1)

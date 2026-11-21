@@ -8,6 +8,10 @@
     "./hook": {
       "types": "./src/hook.ts",
       "default": "./src/hook.ts"
+    },
+    "./receipt": {
+      "types": "./src/decode/receipt.ts",
+      "default": "./src/decode/receipt.ts"
     }
   },
   "scripts": {

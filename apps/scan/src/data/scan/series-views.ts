@@ -41,6 +41,12 @@ export type SeriesPanelData = {
   outside?: boolean
 }
 
+/**
+ * Said beside a backfill-only series or figure ("to 31 Oct"): it ends
+ * there by design, filled once from history with no daily writer.
+ */
+export const backfillNote = "Not updated daily"
+
 const seconds = (day: string): number =>
   Math.floor(Date.parse(`${day}T00:00:00Z`) / 1000)
 

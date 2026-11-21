@@ -118,7 +118,9 @@ test("well-formed entities the chain lacks are 404s", async ({ page }) => {
     const response = await page.goto(path)
     expect(response?.status(), path).toBe(404)
     await expect(
-      page.getByText(/^(Not found|Not produced yet)$/).first(),
+      page
+        .getByText(/^(Not found|Not produced yet|Waiting for the network)$/)
+        .first(),
       path,
     ).toBeVisible()
   }
@@ -242,8 +244,8 @@ test("home shows the live tiles and the epoch's gauges", async ({ page }) => {
   await expect(tiles.getByText("Borrowed")).toBeVisible()
   await expect(tiles.getByText("723,361 MUSD")).toBeVisible()
   await expect(tiles.getByText("BTC collateral")).toBeVisible()
-  await expect(tiles.getByText("Open positions")).toBeVisible()
-  await expect(tiles.getByText(/^1 Enclave, \d+ Morpho$/)).toBeVisible()
+  await expect(tiles.getByText("Open MUSD loans")).toBeVisible()
+  await expect(tiles.getByText("1 Enclave, 2 MUSD Morpho")).toBeVisible()
   await expect(tiles.getByText("veBTC locked")).toBeVisible()
   await expect(tiles.getByText("Validators")).toBeVisible()
   await expect(tiles.getByText("Epoch 47 incentives")).toBeVisible()

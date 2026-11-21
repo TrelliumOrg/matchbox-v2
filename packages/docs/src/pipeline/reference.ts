@@ -12,7 +12,11 @@ import type {
   ReferenceIndexDoc,
   SchemaField,
 } from "../render-types"
-import type { GeneratedPage, GeneratedTree } from "./build-site"
+import {
+  type GeneratedPage,
+  type GeneratedTree,
+  previewText,
+} from "./build-site"
 import { codeLanguage, highlight } from "./highlight"
 import { inlineText } from "./markdown"
 
@@ -617,11 +621,15 @@ export async function generateReference(): Promise<ReferenceOutput> {
       const errorLinks = statuses.flatMap((status) =>
         status.errors.map((error) => `/developer/errors#${error}`),
       )
+      const firstParagraph = docsVoice(description.split(/\n{2,}/)[0] ?? "")
       pages.push({
         path: href,
         title: operation.summary,
         nav: operation.summary,
         description: `${method} ${path}`,
+        lead: previewText(
+          `${method} ${path} in the Matchbox API. ${firstParagraph}`,
+        ),
         section: "developer",
         eyebrow: tag,
         tree: "api",
@@ -749,6 +757,7 @@ export function referencePage(reference: ReferenceOutput): GeneratedPage {
     nav: "API reference",
     description:
       "Every Matchbox API operation, generated from the OpenAPI document",
+    lead,
     section: "developer",
     eyebrow: "Matchbox Developer",
     tree: "developer",

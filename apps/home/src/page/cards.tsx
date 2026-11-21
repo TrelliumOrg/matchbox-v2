@@ -152,7 +152,7 @@ function GaugeRow({
   return (
     <div className="gr">
       <GaugePicture gauge={gauge} />
-      <div style={{ minWidth: 0 }}>
+      <div className="gt">
         <div className="nm" data-live={`pro.gauge${rank}.name`}>
           <LiveText>{gauge.name}</LiveText>
         </div>
@@ -390,15 +390,20 @@ export function ScanCard({ renderedAt }: { renderedAt: number }): ReactNode {
           <search>
             <form className="sf" action={links.scanSearch} method="get">
               <Icon name="search" size={20} strokeWidth={2} className="ic" />
-              <input
-                ref={searchRef}
-                type="search"
-                name="q"
-                placeholder="Address or transaction"
-                aria-label="Search Matchscan"
-                autoComplete="off"
-                spellCheck={false}
-              />
+              <span className="sfi">
+                <input
+                  ref={searchRef}
+                  type="search"
+                  name="q"
+                  placeholder="Address or transaction"
+                  aria-label="Search Matchscan"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <span className="sfp" aria-hidden="true">
+                  Address or tx
+                </span>
+              </span>
               <kbd title="Press / to search">/</kbd>
             </form>
           </search>

@@ -1,4 +1,8 @@
-import { applyD1Migrations } from "cloudflare:test"
+import {
+  applyD1Migrations,
+  createExecutionContext,
+  waitOnExecutionContext,
+} from "cloudflare:test"
 import { env } from "cloudflare:workers"
 import {
   walletActivityResponseSchema,
@@ -54,6 +58,35 @@ const documents: ReadModelWrite<ReadModelKind>[] = [
   { ...base, kind: "gauges", key: currentKey, data: demoGaugeDirectory },
 ]
 
+/**
+ * The ExecutionContext of every request so far. The routes hand their edge
+ * cache and D1 writes to waitUntil; `settled()` waits for those writes
+ * themselves, where a fixed pause was too short on a loaded machine.
+ */
+const contexts: ExecutionContext[] = []
+
+// Only this test's requests: an earlier test may have left a build that
+// never finishes (on purpose) in its waitUntil.
+beforeEach(() => {
+  contexts.length = 0
+})
+
+/** Waits for the background work (waitUntil) of every request so far. */
+async function settled(): Promise<void> {
+  await Promise.all(contexts.splice(0).map(waitOnExecutionContext))
+}
+
+/** Serves each request with its own ExecutionContext, kept for `settled()`. */
+function withContexts(hono: Hono<ApiEnv>): Hono<ApiEnv> {
+  const request = hono.request
+  hono.request = (input, init) => {
+    const ctx = createExecutionContext()
+    contexts.push(ctx)
+    return request(input, init, undefined, ctx)
+  }
+  return hono
+}
+
 function app(cache: Cache | null) {
   const hono = new Hono<ApiEnv>()
   hono.onError(errorHandler())
@@ -65,7 +98,7 @@ function app(cache: Cache | null) {
     heads: env.BLOCK_HUB,
     network: "mezo",
   })
-  return hono
+  return withContexts(hono)
 }
 
 beforeEach(async () => {
@@ -178,7 +211,7 @@ describe("/internal/pro routes", () => {
     )
     expect(first.headers.get("X-Cache")).toBe("miss")
     // Let the background cache.put land.
-    await new Promise((resolve) => setTimeout(resolve, 10))
+    await settled()
     const second = await app(cache).request(
       "http://api.test/internal/pro/protocol",
     )
@@ -195,13 +228,13 @@ describe("/internal/pro routes", () => {
     const cache = await caches.open("internal-pro-after-test")
     const gauges = "http://api.test/internal/pro/gauges"
     await app(cache).request(gauges)
-    await new Promise((resolve) => setTimeout(resolve, 10))
+    await settled()
     // The cached directory does not answer a request that names a block.
     const later = `${gauges}?after=${demoBlock + 5}`
     const behind = await app(cache).request(later)
     expect(behind.headers.get("X-Cache")).not.toBe("hit")
     expect(behind.headers.get("Cache-Control")).toBe("no-store")
-    await new Promise((resolve) => setTimeout(resolve, 10))
+    await settled()
     // Still older than the block: it was not kept, so it is read again.
     expect((await app(cache).request(later)).headers.get("X-Cache")).not.toBe(
       "hit",
@@ -209,7 +242,7 @@ describe("/internal/pro routes", () => {
     // A directory at that block is kept like any other answer.
     const reached = `${gauges}?after=${demoBlock}`
     await app(cache).request(reached)
-    await new Promise((resolve) => setTimeout(resolve, 10))
+    await settled()
     expect((await app(cache).request(reached)).headers.get("X-Cache")).toBe(
       "hit",
     )

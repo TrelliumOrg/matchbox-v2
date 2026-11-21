@@ -432,6 +432,26 @@ describe("BlockTicker", () => {
         .getAttribute("href"),
     ).toBe("https://scan.matchbox.markets/block/13078795")
   })
+
+  it("opens the block in a new tab only when asked", () => {
+    const ticker = (newTab: boolean) => (
+      <Tooltip.Provider>
+        <BlockTicker.Root
+          block={13078795}
+          receivedAt={Date.now()}
+          href="https://scan.matchbox.markets/block/13078795"
+          newTab={newTab}
+        />
+      </Tooltip.Provider>
+    )
+    const { rerender } = render(ticker(true))
+    const link = screen.getByRole("link")
+    expect(link.getAttribute("target")).toBe("_blank")
+    expect(link.getAttribute("rel")).toBe("noreferrer noopener")
+    rerender(ticker(false))
+    expect(screen.getByRole("link").getAttribute("target")).toBeNull()
+    expect(screen.getByRole("link").getAttribute("rel")).toBeNull()
+  })
 })
 
 describe("Charts", () => {

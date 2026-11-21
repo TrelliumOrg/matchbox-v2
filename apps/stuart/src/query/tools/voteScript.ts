@@ -514,14 +514,6 @@ export async function prepareBallot(
       lockIds: null,
       manual: new Map(),
     })
-    if (!domainPlan) {
-      return errorOutcome({
-        scope,
-        tool: input.tool,
-        intent: "custom_vote",
-        title: `Your ${asset} ballot`,
-      })
-    }
     const manual = new Map<string, bigint>()
     for (const line of matched) {
       if (line.resolution.kind !== "match") continue

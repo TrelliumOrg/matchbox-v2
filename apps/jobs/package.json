@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "build": "wrangler deploy --dry-run --outdir dist",
-    "dev": "wrangler dev --test-scheduled",
-    "db:migrate:local": "wrangler d1 migrations apply READ_DB --local",
-    "db:migrate:scan:local": "wrangler d1 migrations apply SCAN_DB --local --config wrangler.scan-local.jsonc",
+    "dev": "wrangler dev --test-scheduled --port 8790 --persist-to ../api/.wrangler/state",
+    "db:migrate:local": "wrangler d1 migrations apply READ_DB --local --persist-to ../api/.wrangler/state",
+    "db:migrate:scan:local": "wrangler d1 migrations apply SCAN_DB --local --persist-to ../api/.wrangler/state",
     "record:warehouse": "tsx scripts/record-warehouse-fixture.ts && prettier --write test/fixtures/warehouse.json",
     "test": "vitest run --config vitest.config.ts && vitest run --config vitest.workers.config.ts",
     "typecheck": "tsc --noEmit",

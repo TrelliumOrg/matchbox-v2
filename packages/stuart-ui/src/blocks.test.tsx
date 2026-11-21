@@ -132,6 +132,90 @@ describe("Block renderers", () => {
     expect(screen.getByRole("link", { name: "Kiln Labs" })).toBeTruthy()
   })
 
+  it("marks an unpriced incentive with its short address", () => {
+    show(
+      block({
+        type: "gauge_explain",
+        id: "b.explain",
+        target: {
+          targetAddress: address,
+          name: "Scam Gauge",
+          nameSource: "profile",
+          tokenId: null,
+          branch: "boost",
+          isAlive: true,
+          picture: null,
+        },
+        incentivesUsd: "300.000000",
+        pricingStatus: "partial",
+        incentives: [
+          {
+            ...mezo("30000000000000000000000"),
+            symbol: "MEZO",
+            token: "0x7B7c000000000000000000000000000000000001",
+            priced: true,
+          },
+          {
+            raw: "7777000000000000000000",
+            decimals: 18,
+            symbol: "MUSD",
+            token: "0x9999999999999999999999999999999999999998",
+            priced: false,
+          },
+        ],
+        weight: mezo("1000000000000000000000"),
+        apyBps: null,
+        boostWad: null,
+        optimalVeMEZO: null,
+        additionalVeMEZO: null,
+        epochs: [],
+        historyStatus: "live",
+        notSelectedReason: null,
+        snapshotBlock: "13078795",
+      }),
+    )
+    expect(screen.getByText("7,777.00 MUSD")).toBeTruthy()
+    expect(screen.getByText("Unpriced, 0x9999…9998")).toBeTruthy()
+    expect(screen.getAllByText(/^Unpriced/)).toHaveLength(2)
+  })
+
+  it("lists no incentive lines when every one is priced", () => {
+    show(
+      block({
+        type: "gauge_explain",
+        id: "b.explain",
+        target: {
+          targetAddress: address,
+          name: "Kiln Labs",
+          nameSource: "profile",
+          tokenId: null,
+          branch: "boost",
+          isAlive: true,
+          picture: null,
+        },
+        incentivesUsd: "300.000000",
+        pricingStatus: "complete",
+        incentives: [
+          {
+            ...mezo("30000000000000000000000"),
+            token: "0x7B7c000000000000000000000000000000000001",
+            priced: true,
+          },
+        ],
+        weight: mezo("1000000000000000000000"),
+        apyBps: null,
+        boostWad: null,
+        optimalVeMEZO: null,
+        additionalVeMEZO: null,
+        epochs: [],
+        historyStatus: "live",
+        notSelectedReason: null,
+        snapshotBlock: "13078795",
+      }),
+    )
+    expect(screen.queryByText(/^30,000/)).toBeNull()
+  })
+
   it("renders a metric summary", () => {
     show(
       block({

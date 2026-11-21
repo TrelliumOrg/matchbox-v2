@@ -67,6 +67,9 @@ export type CompoundedClaim = {
   from: Address
 }
 
+/** A swap on the way: "swapped to " and the token's own symbol. */
+const SWAPPED = "swapped to "
+
 export type Destination =
   | {
       kind: "locked"
@@ -81,7 +84,11 @@ export type Destination =
   | { kind: "bridged"; via: string }
   /** Native BTC paid to a bridge with a transfer: its fee, not the asset. */
   | { kind: "fee"; via: string }
-  | { kind: "deposited"; into: string }
+  /**
+   * `into` as printed; `name` the contract's own name in it, if any (chain
+   * text), and `to` its address, if any.
+   */
+  | { kind: "deposited"; into: string; name: string | null; to: Address | null }
   | { kind: "burned" }
   | {
       kind: "sent"
@@ -423,7 +430,7 @@ export function traceRewardFlows(input: FlowInput): FlowResult {
           amount: share(total, lot.amount, transfer.amount),
           origin: lot.origin,
           expires: lot.expires,
-          via: [...lot.via, `swapped to ${receivedToken.symbol}`],
+          via: [...lot.via, `${SWAPPED}${receivedToken.symbol}`],
           hops: lot.hops,
           batch: batched(lot),
         })
@@ -499,6 +506,14 @@ export function traceRewardFlows(input: FlowInput): FlowResult {
 /** One line of the summary: a destination and its share of a token. */
 export type FlowBucket = {
   label: string
+  /**
+   * The label without any name read from chain (a contract's or label's
+   * name, a bridge, a swapped-to symbol): Stuart's words, addresses and
+   * lock ids only. Model rows source from it; the names go in `names`.
+   */
+  plain: string
+  /** The names `label` holds that `plain` leaves out. */
+  names: string[]
   /** The destination alone, without the swaps on the way. */
   where: string
   /** The swaps on the way ("swapped to MUSD"), oldest first. */
@@ -526,7 +541,29 @@ export type TokenFlow = {
   buckets: FlowBucket[]
 }
 
-export function destinationLabel(destination: Destination): string {
+/** The name a destination's label holds, read from chain, if any. */
+export function destinationName(destination: Destination): string | null {
+  switch (destination.kind) {
+    case "bridged":
+    case "fee":
+      return destination.via
+    case "deposited":
+      return destination.to === null ? null : destination.name
+    case "sent":
+      return destination.label
+    default:
+      return null
+  }
+}
+
+/**
+ * How a destination reads. Without `named`, no name read from chain: "sent
+ * to 0x…", "bridged out", "deposited into 0x…".
+ */
+export function destinationLabel(
+  destination: Destination,
+  named = true,
+): string {
   switch (destination.kind) {
     case "locked":
       if (destination.tokenId === null) {
@@ -539,15 +576,19 @@ export function destinationLabel(destination: Destination): string {
     case "compounded":
       return `compounded into ${destination.asset} #${destination.tokenId}`
     case "bridged":
-      return `bridged out (${destination.via})`
+      return named ? `bridged out (${destination.via})` : "bridged out"
     case "fee":
-      return `paid as a bridge fee (${destination.via})`
+      return named
+        ? `paid as a bridge fee (${destination.via})`
+        : "paid as a bridge fee"
     case "deposited":
-      return `deposited into ${destination.into}`
+      return named || destination.to === null
+        ? `deposited into ${destination.into}`
+        : `deposited into ${destination.to}`
     case "burned":
       return "burned"
     case "sent":
-      return destination.label === null
+      return destination.label === null || !named
         ? `sent to ${destination.to}`
         : `sent to ${destination.to} (${destination.label})`
     case "unmoved":
@@ -611,8 +652,21 @@ export function summarizeFlows(result: FlowResult): TokenFlow[] {
     const id = bucketKey(outcome)
     const destination = outcome.destination
     const label = [...outcome.via, destinationLabel(destination)].join(", ")
+    // "swapped to X": X is a token's own symbol, chain text.
+    const swapped = (each: string) => each.startsWith(SWAPPED)
+    const name = destinationName(destination)
     const bucket: FlowBucket = buckets.get(id) ?? {
       label,
+      plain: [
+        ...outcome.via.map((each) => (swapped(each) ? "swapped" : each)),
+        destinationLabel(destination, false),
+      ].join(", "),
+      names: [
+        ...outcome.via
+          .filter(swapped)
+          .map((each) => each.slice(SWAPPED.length)),
+        ...(name === null ? [] : [name]),
+      ],
       where: destinationLabel(destination),
       via: outcome.via,
       kind: destination.kind,
@@ -645,6 +699,7 @@ export function summarizeFlows(result: FlowResult): TokenFlow[] {
         .sort((a, b) => byAmountDesc(a[1], b[1]))
         .map(([tokenId]) => tokenId)
       bucket.label = compoundedLabel(destination.asset, bucket.locks)
+      bucket.plain = bucket.label
     }
     buckets.set(id, bucket)
   }

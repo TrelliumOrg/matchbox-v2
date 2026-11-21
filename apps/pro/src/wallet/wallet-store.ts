@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react"
-import { getSettings } from "../settings/settings-store"
+import { browserWalletContext } from "../lib/wallet-context"
+import { insideFrame } from "../safe/frame"
+import { getSettings, isSavedSafe } from "../settings/settings-store"
 import type { TxRequest } from "../tx/tx-store"
 
 /**
@@ -48,6 +50,29 @@ export function useWallet(): WalletSnapshot {
   return useSyncExternalStore(subscribeWallet, getWallet, () => initial)
 }
 
+/**
+ * Whether the wallet has had its chance to reconnect: wagmi is ready, or
+ * this browser never connected one (no reconnect flag, no own-wallet
+ * cookie), so wallet code is never asked for on load and the phase stays
+ * "idle". The server and the hydrating page cannot see the flag and say
+ * no, so the header hydrates as the server rendered it and settles right
+ * after.
+ */
+export function useWalletSettled(): boolean {
+  return useSyncExternalStore(subscribeWallet, walletSettled, () => false)
+}
+
+function walletSettled(): boolean {
+  if (snapshot.phase === "ready") return true
+  // Inside Safe{Wallet} the Safe connects on load (see WalletMount).
+  return (
+    snapshot.phase === "idle" &&
+    !remembered() &&
+    browserWalletContext().own === null &&
+    !insideFrame()
+  )
+}
+
 export function useTx(): WalletSnapshot["tx"] {
   return useWallet().tx
 }
@@ -77,7 +102,8 @@ export function openWallet(): void {
 /**
  * Opens a sheet for the connected wallet. A wallet this browser connected
  * before may still be reconnecting; the sheets' host waits for it. Without
- * a wallet the drawer opens instead; someone else's address is read-only.
+ * a wallet the drawer opens instead, and the sheet once a wallet that
+ * signs for the page connects there. Someone else's address is read-only.
  */
 export function openTx(
   viewer: { kind: string; address?: string },
@@ -90,8 +116,14 @@ export function openTx(
   ) {
     void loadTx()
     setWallet({ tx: { request, owner } })
-  } else if (owner === undefined || !remembered()) {
+  } else if (owner === undefined) {
     openWallet()
+  } else if (!remembered()) {
+    // The drawer opens at once; the sheet follows once a wallet connects.
+    openWallet()
+    void loadTx().then((host) => {
+      if (getWallet().drawerOpen) host.openAfterConnect(owner, request)
+    })
   } else {
     void loadTx().then((host) => host.openAfterReconnect(owner, request))
   }
@@ -102,13 +134,10 @@ export function openTx(
  * is connected, signs through the Safe (the sheet proposes to it).
  */
 export function viewingOwnSafe(address: string | undefined): boolean {
-  const signing = getSettings().signing
   return (
     address !== undefined &&
     snapshot.account !== null &&
-    signing.mode === "multisig" &&
-    signing.safe !== null &&
-    signing.safe.toLowerCase() === address.toLowerCase()
+    isSavedSafe(getSettings().signing, address)
   )
 }
 

@@ -238,7 +238,11 @@ export function Head({
 Head.displayName = "GaugeCard.Head"
 
 export type FiguresProps = {
-  /** APY figure (AnimatedNumber) or null for "No incentives". */
+  /**
+   * APY figure (AnimatedNumber, or "n/a"), or null for "No incentives",
+   * which hides the coins and dollars. Pass a figure for any gauge that
+   * holds tokens, unpriced ones included, so they show.
+   */
   apy: ReactNode | null
   /** Shows the down arrow while picked: APY drops as you add votes. */
   apyFalling?: boolean

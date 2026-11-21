@@ -32,8 +32,8 @@ export function knowledgeOutcome(
       intent: "mezo_help",
       status: "empty",
       title: "Mezo docs",
-      templateId: "mezo_knowledge.none.v1",
-      text: "No reviewed Mezo note covers that. Mezo support takes questions in its Discord.",
+      templateId: "mezo_knowledge.none.v2",
+      text: "No reviewed Mezo note covers that. For other Mezo questions, open a ticket in Mezo's Discord.",
       kind: "empty",
       traceLabel: "No matching Mezo note",
     })

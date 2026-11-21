@@ -120,6 +120,7 @@ export function EntityPage({
         </span>
         <h2
           id="not-indexed"
+          aria-live="polite"
           className="mt-5 text-[30px] font-[650] tracking-[-0.02em] max-md:text-[24px]"
         >
           {heading}

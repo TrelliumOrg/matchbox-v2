@@ -32,6 +32,9 @@ importers:
       '@matchbox/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@matchbox/indexer':
+        specifier: workspace:*
+        version: link:../indexer
       '@matchbox/logger':
         specifier: workspace:*
         version: link:../../packages/logger

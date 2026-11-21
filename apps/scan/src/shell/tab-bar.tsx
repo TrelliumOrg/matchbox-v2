@@ -4,6 +4,7 @@ import { getWallet } from "@matchbox/wallet"
 import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { isActive, outbound, sections } from "../data/sections"
+import { privacyLink } from "../site"
 import { openAppearance } from "./appearance"
 import { usePathname } from "./top-bar"
 
@@ -115,7 +116,7 @@ export function TabBar(): ReactNode {
           ) : null}
         </ul>
         <ul className="mt-1 flex flex-wrap gap-x-5 border-t border-line px-3 pt-3 pb-2 text-[14.5px] text-sec">
-          {outbound.map((link) => (
+          {[...outbound, privacyLink].map((link) => (
             <li key={link.href}>
               <a
                 href={link.href}

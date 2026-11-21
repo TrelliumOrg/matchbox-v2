@@ -3,11 +3,10 @@ import { Btc } from "@matchbox/ui/amount"
 import * as GaugeCard from "@matchbox/ui/gauge-card"
 import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
-import { CoinMarks } from "../../components/coins"
+import { CoinMarks, Incentives } from "../../components/coins"
 import type { GaugeSummary } from "../../data/view-models"
 import {
   formatCompact,
-  formatUsd,
   formatVoteAmount,
   shortAddress,
   weiToWhole,
@@ -71,6 +70,13 @@ export function GaugeTile({
   const optimal =
     gauge.optimalVotes === null ? null : weiToWhole(gauge.optimalVotes)
   const rising = picked
+  // Under the votes an APY needs, the draft shows none, as the signed
+  // vote will (`withSignedVotes`): scaling 12,000 votes' APY to 1,000
+  // would show twelve times it.
+  const apyBps =
+    gauge.apyMinVotes == null || votesWei < BigInt(gauge.apyMinVotes)
+      ? null
+      : gauge.apyBps
   // Grey after the name: a pool's type, else the boosted lock's id.
   const id =
     gauge.poolLabel !== undefined && gauge.poolLabel !== null
@@ -119,19 +125,31 @@ export function GaugeTile({
             // An expired lock earns no boost: no APY to promote.
             gauge.expired ? (
               <span className="text-[17px] font-medium text-mut">No boost</span>
-            ) : gauge.apyBps === null ? null : (
+            ) : apyBps === null ? (
+              // Incentives, but too little or too unpriced for an APY (P6).
+              gauge.funded || gauge.unpriced > 0 ? (
+                <span className="font-medium text-mut">n/a</span>
+              ) : null
+            ) : (
               <AnimatedNumber
-                value={apyAfter(gauge.apyBps, listed, votes)}
+                value={apyAfter(apyBps, listed, votes)}
                 format={{ minimumFractionDigits: 2, maximumFractionDigits: 2 }}
                 suffix="%"
               />
             )
           }
-          apyFalling={rising}
+          // The arrow is the APY's: none beside "n/a" or "No boost".
+          apyFalling={rising && !gauge.expired && apyBps !== null}
           coins={
             <CoinMarks symbols={gauge.incentiveTokens} surface="var(--soft)" />
           }
-          incentives={formatUsd(gauge.incentivesUsd, "cents")}
+          incentives={
+            <Incentives
+              usd={gauge.incentivesUsd}
+              priced={gauge.priced}
+              unpriced={gauge.unpriced}
+            />
+          }
         />
         {gauge.kind === "vebtc" ? (
           <GaugeCard.Weight>

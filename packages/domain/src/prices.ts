@@ -1,4 +1,4 @@
-import { getTokenPriceType } from "@matchbox/chain"
+import { getTokenUsdPrice } from "@matchbox/chain"
 import { decimalToScaledBigInt, tokenUsdMicroValue } from "./money"
 
 // Reference prices for reward tokens (Stuart's providers/prices.ts on
@@ -18,29 +18,32 @@ export type PriceSnapshot = {
 
 /**
  * Reference USD price for a reward token, or null when Matchbox has no
- * verified price for it. Never falls back to a hard-coded MEZO price.
+ * verified price for it. Priced by contract address only, through the
+ * @matchbox/chain token registry (as the API's market `tokenPrice` does):
+ * incentive tokens are permissionless, so a token's symbol is never
+ * evidence of its value, and an unregistered token named "7777USD",
+ * "FAKEBTC" or even "MUSD" stays unpriced. Never falls back to a
+ * hard-coded MEZO price.
  */
 export function referencePrice(
   token: string,
-  symbol: string,
   prices: PriceSnapshot,
 ): string | null {
-  const kind = getTokenPriceType(token, symbol)
-  if (kind === "stablecoin") return "1"
-  if (kind === "btc-pegged") return prices.btc.priceUsd
-  if (kind === "mezo") return prices.mezo.priceUsd
-  return null
+  return getTokenUsdPrice(token, prices.btc.priceUsd, prices.mezo.priceUsd)
 }
 
-/** Token amount → micro-USD, or null when unpriced (never $0). */
+/**
+ * Token amount → micro-USD, or null when unpriced (never $0). Callers must
+ * count an unpriced token as zero value for totals, ranking and the
+ * optimizer, and still say that it exists.
+ */
 export function tokenMicroUsd(input: {
   amount: bigint
   decimals: number
   token: string
-  symbol: string
   prices: PriceSnapshot
 }): bigint | null {
-  const price = referencePrice(input.token, input.symbol, input.prices)
+  const price = referencePrice(input.token, input.prices)
   if (price === null) return null
   return tokenUsdMicroValue(input.amount, input.decimals, price)
 }

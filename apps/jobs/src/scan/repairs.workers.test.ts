@@ -213,6 +213,52 @@ describe("replays, quarantine and the status row", () => {
     expect(row.refill_reason).toContain("projection decoder 2 -> 3")
   })
 
+  it("logs an error on every run once the re-fill flag is over a day old", async () => {
+    const lines: { level: string; line: string }[] = []
+    const recording = createLogger({
+      level: "error",
+      format: "json",
+      sink: (level, line) => lines.push({ level, line }),
+    })
+    const pending = () =>
+      lines.filter(
+        (entry) =>
+          entry.level === "error" && entry.line.includes("RE-FILL PENDING"),
+      )
+    await runScanCopy(deps({ summary: summary(2, 1), logger: recording }))
+    await runScanCopy(
+      deps({
+        summary: summary(3, 1),
+        nowSeconds: now + 900,
+        logger: recording,
+      }),
+    )
+    expect(pending()).toEqual([])
+    // Still pending a day later, on a skipped run (nothing advanced).
+    await runScanCopy(
+      deps({
+        summary: {
+          ...summary(3, 1),
+          projection: { status: "at-head", decoderVersion: 3 },
+          borrow: { status: "at-head", decoderVersion: 1 },
+        },
+        nowSeconds: now + 900 + 86_400 - 60,
+        logger: recording,
+      }),
+    )
+    expect(pending()).toEqual([])
+    await runScanCopy(
+      deps({
+        summary: summary(3, 1),
+        nowSeconds: now + 900 + 86_400 + 60,
+        logger: recording,
+      }),
+    )
+    expect(pending()).toHaveLength(1)
+    expect(pending()[0]?.line).toContain("projection decoder 2 -> 3")
+    expect(pending()[0]?.line).toContain('"hours":24')
+  })
+
   it("quarantines a row it cannot transform and copies the rest", async () => {
     const reader = fixtureReader()
     reader.source.activity.push(

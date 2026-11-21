@@ -6,6 +6,7 @@ import * as PillButton from "@matchbox/ui/pill-button"
 import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { loadCalculator } from "../../boost/calc-mount"
+import { Incentives } from "../../components/coins"
 import { island } from "../../components/island"
 import type { GaugeProfile } from "../../data/view-models"
 import { useMountedAfterHydration } from "../../lib/app-ready"
@@ -13,7 +14,6 @@ import {
   formatApy,
   formatCompact,
   formatCompactVotes,
-  formatUsd,
   shortAddress,
   weiToWhole,
 } from "../../lib/format"
@@ -45,6 +45,8 @@ function Social({
   return (
     <a
       href={href}
+      target="_blank"
+      rel="noreferrer noopener"
       aria-label={label}
       className="grid size-10 place-items-center rounded-full bg-raised text-ink outline-none hover:bg-soft2 focus-visible:outline-2 focus-visible:outline-ink"
     >
@@ -62,7 +64,7 @@ function Figure({
   action,
 }: {
   label: string
-  value: string
+  value: ReactNode
   sub: string
   tone?: "default" | "positive"
   /** A link under the figure, after its sub line. */
@@ -225,14 +227,22 @@ export function GaugeView({
             <Figure
               label="APY"
               countUp={`gauge-${gauge.address}-apy`}
-              value={gauge.apyBps === null ? "None" : formatApy(gauge.apyBps)}
+              value={
+                gauge.apyBps !== null
+                  ? formatApy(gauge.apyBps)
+                  : gauge.funded || gauge.unpriced > 0
+                    ? "n/a"
+                    : "None"
+              }
               sub={
-                data.apyChangeBps === null
+                data.apyChangeBps === null || gauge.apyBps === null
                   ? `Epoch ${epoch}`
                   : `${data.apyChangeBps >= 0 ? "+" : ""}${formatApy(data.apyChangeBps).replace("%", "")} vs Epoch ${epoch - 1}`
               }
               tone={
-                data.apyChangeBps !== null && data.apyChangeBps > 0
+                gauge.apyBps !== null &&
+                data.apyChangeBps !== null &&
+                data.apyChangeBps > 0
                   ? "positive"
                   : "default"
               }
@@ -240,7 +250,13 @@ export function GaugeView({
             <Figure
               label="Incentives"
               countUp={`gauge-${gauge.address}-incentives`}
-              value={formatUsd(gauge.incentivesUsd, "cents")}
+              value={
+                <Incentives
+                  usd={gauge.incentivesUsd}
+                  priced={gauge.priced}
+                  unpriced={gauge.unpriced}
+                />
+              }
               sub={`Epoch ${epoch}`}
             />
             <Figure

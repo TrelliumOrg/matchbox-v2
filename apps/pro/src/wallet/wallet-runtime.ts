@@ -18,6 +18,7 @@ import {
 } from "@wagmi/core"
 import { connectInsideSafe, safeConnectors } from "../safe/connector"
 import { readRpc } from "../settings/settings-store"
+import { reconnectLimitMs, within } from "./reconnect-limit"
 import { connectedFlag, setWallet } from "./wallet-store"
 import {
   isUserRejection,
@@ -192,8 +193,15 @@ export async function walletConfig(rpcUrl: string): Promise<Config> {
       })
     },
   })
-  await reconnect(created).catch(() => undefined)
-  await connectInsideSafe(created)
+  // A wallet that never answers would leave the screens waiting: past the
+  // limit they settle without it, and `watchAccount` picks up a late answer.
+  await within(
+    (async () => {
+      await reconnect(created).catch(() => undefined)
+      await connectInsideSafe(created)
+    })(),
+    reconnectLimitMs,
+  )
   const account = getAccount(created)
   setWallet({
     phase: "ready",
@@ -217,6 +225,16 @@ function rememberConnected(): void {
 export function requireConfig(): Config {
   if (config === null) throw new Error("Wallet is not loaded")
   return config
+}
+
+/** The config, or null while it loads or after its code failed to load. */
+export function loadedConfig(): Config | null {
+  return config
+}
+
+/** Test helper: forgets the config, as a new tab would. */
+export function resetWalletConfig(): void {
+  config = null
 }
 
 export function walletConnectors(target: Config): WalletConnector[] {

@@ -23,6 +23,14 @@ export const tokenAmountSchema = z.object({
   decimals: z.number().int().min(0).max(36),
   symbol: z.string().min(1).max(16),
 })
+// One incentive line: the token's contract address and whether Matchbox
+// prices it, so an unpriced token whose on-chain symbol copies a real one
+// ("MUSD" at another address) can be told apart. Optional: older answers
+// carry neither.
+export const incentiveAmountSchema = tokenAmountSchema.extend({
+  token: addressSchema.optional(),
+  priced: z.boolean().optional(),
+})
 export const bpsSchema = z.number().int().min(0).max(10_000)
 export const signedBpsSchema = z.number().int().min(-1_000_000).max(1_000_000)
 // Collateral ratios and similar unbounded ratios (29_477 = 294.77%).
@@ -896,7 +904,7 @@ export const gaugeExplainBlockSchema = z.object({
   }),
   incentivesUsd: usd6Schema.nullable(), // null = unpriced, never $0
   pricingStatus: z.enum(["complete", "partial", "unpriced"]),
-  incentives: z.array(tokenAmountSchema).max(16), // this epoch
+  incentives: z.array(incentiveAmountSchema).max(16), // this epoch
   weight: tokenAmountSchema, // current votes on the target
   apyBps: z.number().int().nullable(),
   boostWad: uintStringSchema.nullable(), // 1e18 = 1×
@@ -1304,6 +1312,7 @@ export const searchResponseSchema = z.object({
 
 export type Address = z.infer<typeof addressSchema>
 export type TokenAmount = z.infer<typeof tokenAmountSchema>
+export type IncentiveAmount = z.infer<typeof incentiveAmountSchema>
 export type ValueStatus = z.infer<typeof valueStatusSchema>
 export type WalletMode = z.infer<typeof walletModeSchema>
 export type VoteBranch = z.infer<typeof voteBranchSchema>

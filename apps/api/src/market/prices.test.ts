@@ -609,6 +609,19 @@ describe("tokenPrice", () => {
     expect(tokenPrice(musdc, refs)).toEqual({ usd: "1", source: "stablecoin" })
   })
 
+  it("prices Mezo's bridged BTC wrappers at BTC by address", () => {
+    for (const wrapper of [
+      "0xa10ad2570ea7b93d19fdae6bd7189ff4929bc747", // mSolvBTC
+      "0xdf708431162ba247ddae362d2c919e0fbafcf9de", // mxSolvBTC
+      "0x6a7cd8e1384d49f502b4a4ce9ac9eb320835c5d7", // mcbBTC
+    ]) {
+      expect(tokenPrice(wrapper, refs), wrapper).toEqual({
+        usd: "65000.5",
+        source: "btc-pegged",
+      })
+    }
+  })
+
   it("is null when the reference price is missing", () => {
     expect(tokenPrice(mezo, noRefs)).toBeNull()
     expect(tokenPrice(btc, noRefs)).toBeNull()

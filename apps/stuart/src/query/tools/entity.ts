@@ -114,7 +114,7 @@ export const resolveEntityTool = defineTool({
         answer: {
           kind: rows.length ? "result" : "empty",
           templateId: "resolve_entity.count.v1",
-          text: `${count.display} matches.`,
+          text: `${count.display} ${rows.length === 1 ? "match" : "matches"}.`,
           factRefs: [count.id],
         },
         why: null,

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
+import { benchRejectionReasons } from "@matchbox/contracts/bench"
 import { describe, expect, it } from "vitest"
 import { isSample, withRobotsHeader } from "../../scripts/robots.mjs"
 import { type Entry, parseResults } from "../data/schema"
@@ -784,6 +785,24 @@ describe("the grid and the cards", () => {
       rejectionColour(type.id, results.rejectionTypes),
     )
     expect(new Set(colours).size).toBe(results.rejectionTypes.length)
+  })
+
+  it("gives a reason added later its own colour and moves no other", () => {
+    // A file written now lists every reason the contract has, "instruction"
+    // last; the published file was written before it existed.
+    const current = benchRejectionReasons.map((type) => ({ ...type }))
+    expect(current.at(-1)?.id).toBe("instruction")
+    const colours = current.map((type) => rejectionColour(type.id, current))
+    expect(new Set(colours).size).toBe(current.length)
+    expect(rejectionColour("instruction", current)).toBe("var(--bench-fail-10)")
+    for (const type of results.rejectionTypes) {
+      expect(rejectionColour(type.id, current), type.id).toBe(
+        rejectionColour(type.id, results.rejectionTypes),
+      )
+    }
+    // Both themes define the tenth colour.
+    const css = readFileSync(join(process.cwd(), "src/styles.css"), "utf8")
+    expect(css.match(/--bench-fail-10:/g)).toHaveLength(2)
   })
 
   it("reads the real run's rejection shares", () => {

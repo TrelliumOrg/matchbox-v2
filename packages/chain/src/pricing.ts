@@ -39,6 +39,10 @@ export type TokenRegistryEntry = {
  * Known token addresses mapped to their pricing configuration.
  * Addresses are stored lowercase for case-insensitive lookups.
  *
+ * This registry is the only source of token prices: a token that is not
+ * listed here by address is unpriced, whatever its symbol. The `symbol`
+ * field is a label for people reading this file, never used for pricing.
+ *
  * To add a new token:
  * 1. Add its address (lowercase) as the key
  * 2. Set the symbol and priceType
@@ -133,73 +137,49 @@ const TOKEN_REGISTRY: Record<string, TokenRegistryEntry> = {
     priceType: "btc-pegged",
     fixedPrice: null,
   },
-}
 
-/**
- * Common stablecoin symbols that should be treated as $1 USD
- * Used as a fallback when a token isn't in the registry
- */
-const STABLECOIN_SYMBOLS = new Set([
-  "USDC",
-  "USDT",
-  "DAI",
-  "BUSD",
-  "TUSD",
-  "USDP",
-  "GUSD",
-  "FRAX",
-  "LUSD",
-  "SUSD",
-  "MIM",
-  "MUSD",
-  // Uppercase forms for symbol fallback (on-chain symbols are mUSDC / mUSDT)
-  "MUSDC",
-  "MUSDT",
-  "USD",
-  "USDC.E",
-  "USDT.E",
-])
+  // Bridged BTC wrappers on Mezo mainnet. symbol(), name() and decimals()
+  // read at these addresses on Mezo mainnet at block 13,329,514 (19 Nov
+  // 2026). The API's read-model token registry
+  // (apps/api/src/read-models/token-registry.ts) and Scan's pricing list
+  // (apps/scan/src/data/scan/pricing.ts) list all three at BTC;
+  // SCAN_STREAM_TOKENS (scan-stream.ts) lists mSolvBTC and mcbBTC only.
+  // Stuart priced their incentives at BTC by symbol before pricing became
+  // address-only, so they are listed here to keep those prices.
+  //
+  // Other tokens Stuart used to price by symbol are deliberately not here,
+  // so they are now unpriced in Stuart: sMUSD (0xb4d4...51cc) and sUSDat
+  // (0xde40...904f), staking shares once priced at $1 for "USD" in the
+  // symbol; mlvBTC-mUSDC (0xd3f6...8788), a lending vault share once priced
+  // at $1; and mbhBTC (0xe223...9318), "Mezo Bitcoin Home BTC Vault", a
+  // vault share once priced at the BTC price. A share is worth its
+  // exchange rate, not 1 USD or 1 BTC, so leaving them unpriced is the safe
+  // direction.
 
-/**
- * Common BTC-pegged token symbols
- * Used as a fallback when a token isn't in the registry
- */
-const BTC_PEGGED_SYMBOLS = new Set([
-  "WBTC",
-  "TBTC",
-  "SBTC",
-  "BTCB",
-  "RENBTC",
-  "HBTC",
-  "OBTC",
-  "PBTC",
-  "IMBTC",
-  "BTC",
-])
+  // mSolvBTC, "Mezo Solv BTC", 18 decimals
+  "0xa10ad2570ea7b93d19fdae6bd7189ff4929bc747": {
+    symbol: "mSolvBTC",
+    priceType: "btc-pegged",
+    fixedPrice: null,
+  },
 
-function normalizeTokenSymbol(symbol?: string): string | undefined {
-  if (!symbol) return undefined
+  // mxSolvBTC, "Mezo xSolvBTC", 18 decimals. Exactly 1 BTC is an
+  // approximation: xSolvBTC is yield-bearing (a published xSolvBTC/SolvBTC
+  // exchange-rate feed exists), so one is worth slightly more than one BTC.
+  // The error is bounded by its small supply on Mezo, about 0.80 in total
+  // on 19 Nov 2026.
+  "0xdf708431162ba247ddae362d2c919e0fbafcf9de": {
+    symbol: "mxSolvBTC",
+    priceType: "btc-pegged",
+    fixedPrice: null,
+  },
 
-  const normalized = symbol.trim().toUpperCase()
-  return normalized.length > 0 ? normalized : undefined
-}
-
-function isStablecoinSymbol(symbol: string): boolean {
-  if (STABLECOIN_SYMBOLS.has(symbol)) {
-    return true
-  }
-
-  return (
-    symbol.includes("USD") || symbol.endsWith("USDC") || symbol.endsWith("USDT")
-  )
-}
-
-function isBtcPeggedSymbol(symbol: string): boolean {
-  if (BTC_PEGGED_SYMBOLS.has(symbol)) {
-    return true
-  }
-
-  return symbol === "BTC" || symbol.endsWith("BTC") || symbol.startsWith("BTC")
+  // mcbBTC, "Mezo Coinbase Wrapped BTC", 8 decimals
+  "0x6a7cd8e1384d49f502b4a4ce9ac9eb320835c5d7": {
+    symbol: "mcbBTC",
+    priceType: "btc-pegged",
+    fixedPrice: null,
+  },
 }
 
 /**
@@ -212,96 +192,58 @@ export function getTokenFromRegistry(
 }
 
 /**
- * Determine the price type for a token based on address and symbol
+ * The price type of a token, by its contract address only.
  *
- * Priority:
- * 1. Check address in registry
- * 2. Check if symbol matches known stablecoin patterns
- * 3. Check if symbol matches known BTC-pegged patterns
- * 4. Return "unknown" if no match
+ * Incentive and bribe tokens are permissionless: anyone can deploy a token
+ * named "7777USD", "FAKEBTC" or "MUSD" and post it on a gauge. A token's
+ * symbol is never evidence of its value, so a token that is not in the
+ * registry is "unknown" (unpriced), whatever its symbol says.
  */
-export function getTokenPriceType(
-  address: string,
-  symbol?: string,
-): TokenPriceType {
-  // First, check the registry by address
-  const registryEntry = getTokenFromRegistry(address)
-  if (registryEntry) {
-    return registryEntry.priceType
-  }
-
-  // If symbol is provided, try to infer the type
-  const normalizedSymbol = normalizeTokenSymbol(symbol)
-  if (normalizedSymbol) {
-    const upperSymbol = normalizedSymbol
-
-    // Check for MEZO token by symbol
-    if (upperSymbol === "MEZO") {
-      return "mezo"
-    }
-
-    // Check for stablecoins by symbol
-    if (isStablecoinSymbol(upperSymbol)) {
-      return "stablecoin"
-    }
-
-    // Check for BTC-pegged tokens by symbol
-    if (isBtcPeggedSymbol(upperSymbol)) {
-      return "btc-pegged"
-    }
-  }
-
-  return "unknown"
+export function getTokenPriceType(address: string): TokenPriceType {
+  return getTokenFromRegistry(address)?.priceType ?? "unknown"
 }
 
 /**
- * Get the USD price for a token given reference prices
+ * Get the USD price for a token given reference prices, by registry
+ * address only (see getTokenPriceType).
  *
  * @param address - Token contract address
- * @param symbol - Token symbol (optional, used for fallback identification)
  * @param btcPrice - Current BTC price in USD, as a decimal string
  * @param mezoPrice - Current MEZO price in USD, as a decimal string
- * @returns USD price per token as a decimal string, or null if unknown
+ * @returns USD price per token as a decimal string, or null if unpriced
  */
 export function getTokenUsdPrice(
   address: string,
-  symbol: string | undefined,
   btcPrice: string | null,
   mezoPrice: string | null,
 ): string | null {
   const registryEntry = getTokenFromRegistry(address)
+  if (registryEntry === undefined) return null
 
-  // If in registry with a fixed price, use it
-  if (registryEntry !== undefined && registryEntry.fixedPrice !== null) {
-    return registryEntry.fixedPrice
-  }
-
-  const priceType = getTokenPriceType(address, symbol)
-
-  switch (priceType) {
+  switch (registryEntry.priceType) {
     case "stablecoin":
-      return "1"
+      return registryEntry.fixedPrice ?? "1"
     case "btc-pegged":
-      return btcPrice
+      return registryEntry.fixedPrice ?? btcPrice
     case "mezo":
-      return mezoPrice
+      return registryEntry.fixedPrice ?? mezoPrice
     case "unknown":
       return null
   }
 }
 
 /**
- * Check if a token is a known stablecoin
+ * Check if a token is a registered stablecoin
  */
-export function isStablecoin(address: string, symbol?: string): boolean {
-  return getTokenPriceType(address, symbol) === "stablecoin"
+export function isStablecoin(address: string): boolean {
+  return getTokenPriceType(address) === "stablecoin"
 }
 
 /**
- * Check if a token is BTC-pegged
+ * Check if a token is a registered BTC-pegged token
  */
-export function isBtcPegged(address: string, symbol?: string): boolean {
-  return getTokenPriceType(address, symbol) === "btc-pegged"
+export function isBtcPegged(address: string): boolean {
+  return getTokenPriceType(address) === "btc-pegged"
 }
 
 // ============================================================================

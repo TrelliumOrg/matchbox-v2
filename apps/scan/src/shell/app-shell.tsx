@@ -1,7 +1,7 @@
 import { ShellEnd } from "@matchbox/app-kit/root-document"
 import { useMatch } from "@tanstack/react-router"
 import { type ReactNode, Suspense } from "react"
-import { borrowDelayNote } from "../data/shell"
+import { borrowDelayNote, delayedNote, refillNote } from "../data/shell"
 import { useShell } from "../data/shell-context"
 import { SearchMount, SearchShortcuts } from "../search/search-bar"
 import { deferred } from "./deferred"
@@ -22,17 +22,17 @@ const TabBar = deferred(() =>
   import("./tab-bar").then((module) => module.TabBar),
 )
 
-const delayedText =
-  "Some data is delayed: a few lists and figures are behind the chain while Matchscan's updates catch up."
 const borrowDelayedText =
   "Borrow data is delayed: loans and markets show an earlier block than the chain's latest."
 
 /**
- * Quiet notes under the top bar: Scan's copy step has halted tables (every
- * page), or the live Borrow snapshot is stale (address pages only). Borrow
- * pages say so themselves from each live answer's own snapshot. An
- * address page reads the snapshot on its document's borrow part, and
- * /status only when the document carries none.
+ * Quiet notes under the top bar: Scan's copy step is failing or has halted
+ * tables (every page, naming what lags where known), a re-fill of the copy
+ * is due (every page, smaller: figures may disagree but are not behind),
+ * or the live Borrow snapshot is stale (address pages only). Borrow pages
+ * say so themselves from each live answer's own snapshot. An address page
+ * reads the snapshot on its document's borrow part, and /status only when
+ * the document carries none.
  */
 function DelayNotes({ path }: { path: string }): ReactNode {
   const shell = useShell()
@@ -42,11 +42,17 @@ function DelayNotes({ path }: { path: string }): ReactNode {
     shell.borrowDelayed,
     address?.loaderData?.doc.borrowDelayed,
   )
-  if (!shell.delayed && !borrow) return null
+  const refill = shell.refillPending
+  if (!shell.delayed && !borrow && !refill) return null
   return (
     <div className="mx-auto w-full max-w-[1240px] px-5 pt-4 text-[14.5px] text-sec">
-      {shell.delayed ? <p role="status">{delayedText}</p> : null}
+      {shell.delayed ? <p role="status">{delayedNote(shell.behind)}</p> : null}
       {borrow ? <p role="status">{borrowDelayedText}</p> : null}
+      {refill ? (
+        <p role="status" className="text-[13px] max-sm:text-[12.5px]">
+          {refillNote}
+        </p>
+      ) : null}
     </div>
   )
 }

@@ -25,8 +25,11 @@ vi.mock("../live/live-context", () => ({
   chainNow: () => now,
 }))
 vi.mock("../live/heads", () => ({ useHead: () => ({ number: 1 }) }))
+/** Someone else's wallet, viewed: set per test. */
+const viewingOther = vi.hoisted(() => ({ current: false }))
 vi.mock("../lib/viewer", () => ({
   useViewer: () => ({ kind: "connected", address: "0x7c21" }),
+  useViewingOther: () => viewingOther.current,
 }))
 vi.mock("@tanstack/react-router", () => ({
   Link: ({
@@ -42,6 +45,8 @@ vi.mock("@tanstack/react-router", () => ({
       {children}
     </a>
   ),
+  // The band's skeleton reads the response's nonce from the router.
+  useRouter: () => ({ options: {} }),
 }))
 vi.mock("@matchbox/motion", async (original) => ({
   ...(await original<typeof import("@matchbox/motion")>()),
@@ -204,6 +209,31 @@ describe("LockCards", () => {
     expect(
       within(front("3011")).getByRole("button", { name: "Manage" }),
     ).toBeTruthy()
+  })
+
+  it("offers no action on someone else's locks", () => {
+    viewingOther.current = true
+    try {
+      render(<LockCards locks={locks} />)
+      for (const id of ["2930", "4120", "3011", "977"]) {
+        const face = front(id)
+        expect(within(face).queryByRole("button", { name: /^Claim/ })).toBe(
+          null,
+        )
+        expect(within(face).queryByRole("button", { name: /^Withdraw/ })).toBe(
+          null,
+        )
+        expect(within(face).queryByRole("link", { name: "Vote" })).toBe(null)
+        expect(within(face).queryByRole("button", { name: "Manage" })).toBe(
+          null,
+        )
+      }
+      // What the locks hold and earn still shows.
+      expect(within(front("4120")).getByText("Claimable")).toBeTruthy()
+      expect(screen.queryByRole("button", { name: /New lock/ })).toBe(null)
+    } finally {
+      viewingOther.current = false
+    }
   })
 
   it("shows a veBTC lock's own boost band once the gauges load", async () => {

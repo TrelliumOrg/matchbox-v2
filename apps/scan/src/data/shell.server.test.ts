@@ -91,4 +91,47 @@ describe("the shell's status read", () => {
     const current = await loadShell()
     expect(current).toMatchObject({ delayed: false, degraded: false })
   })
+
+  it("names the halted tables it knows", async () => {
+    api(() =>
+      statusBody({
+        halted: true,
+        stale: true,
+        haltedTables: ["activity", "deposits", "unknown_table"],
+      }),
+    )
+    expect(await loadShell()).toMatchObject({
+      delayed: true,
+      behind: ["activity", "incentives"],
+      refillPending: false,
+    })
+  })
+
+  it("reports a due re-fill apart from delay, from either API", async () => {
+    // This API: a re-fill is not stale.
+    api(() => statusBody({ stale: false, refillRequired: true }))
+    expect(await loadShell()).toMatchObject({
+      delayed: false,
+      refillPending: true,
+    })
+    // An older API counted a re-fill in stale too.
+    api(() => statusBody({ stale: true, refillRequired: true }))
+    expect(await loadShell()).toMatchObject({
+      delayed: false,
+      refillPending: true,
+    })
+    // A re-fill and failing copies: both.
+    api(() =>
+      statusBody({
+        stale: true,
+        refillRequired: true,
+        consecutiveFailures: 2,
+      }),
+    )
+    expect(await loadShell()).toMatchObject({
+      delayed: true,
+      behind: [],
+      refillPending: true,
+    })
+  })
 })

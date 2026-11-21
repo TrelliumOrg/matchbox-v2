@@ -308,8 +308,17 @@ describe("the market rollups backfill", () => {
     // total_changes() counts per connection: each file is its own batch.
     const dir = mkdtempSync(path.join(tmpdir(), "rollups-"))
     const file = path.join(dir, "scan.db")
+    // A file, so each connection is its own session, but without a disk
+    // sync after every statement: what is checked is per-session counting,
+    // not durability. With the syncs the test took four times as long here
+    // and ran past 5 s on a busy CI disk.
+    const open = () => {
+      const db = new DatabaseSync(file)
+      db.exec("PRAGMA synchronous = OFF")
+      return db
+    }
     try {
-      const setup = new DatabaseSync(file)
+      const setup = open()
       const migrations = path.resolve(
         import.meta.dirname,
         "../../scan-migrations",
@@ -337,7 +346,7 @@ describe("the market rollups backfill", () => {
       ])
       const versions: unknown[] = []
       for (const chunk of chunks) {
-        const db = new DatabaseSync(file)
+        const db = open()
         db.exec(
           inlineStatementsOf(
             historyStatements(chunk, 1_763_200_000, "backfill:market-rollups"),

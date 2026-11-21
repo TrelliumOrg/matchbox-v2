@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 /**
  * The entity documents over the fixtures: one composed read each, labels
@@ -28,10 +28,15 @@ const { addressDocument, blockPage, transactionPage } = await import(
   "./entities.server"
 )
 const { fixtureIds } = await import("./blockscout/fixtures")
-const { degradedAddress, loanTransactions } = await import(
-  "./scan/fixtures/entities"
-)
+const {
+  degradedAddress,
+  indexedAfterMs,
+  liveHashes,
+  loanTransactions,
+  minedAfterMs,
+} = await import("./scan/fixtures/entities")
 const { otherVoter, wallet } = await import("./scan/fixtures/world")
+const { scanFixture } = await import("./scan/fixtures")
 
 beforeEach(() => {
   state.request.clear()
@@ -95,6 +100,60 @@ describe("transaction document", () => {
 
   it("is the page's 404 when the chain has no such transaction", async () => {
     const page = await transactionPage({ hash: `0x${"1".repeat(64)}` })
+    expect(page.tx.status).toBe("missing")
+  })
+
+  it("draws a transaction the explorer lacks from the chain, decoded", async () => {
+    const hash = `${liveHashes.mined}${"1".repeat(60)}`
+    const page = await transactionPage({ hash })
+    expect(page.live).toBe("mined")
+    expect(page.tx.status).toBe("ok")
+    if (page.tx.status !== "ok") return
+    expect(page.tx.data).toMatchObject({
+      status: "success",
+      block: 13_334_700,
+      method: "vote",
+      pending: false,
+    })
+    // Our sentence, from the receipt, before the copy has the rows.
+    expect(page.headline?.decoded).toBe(true)
+    expect(page.headline?.text).toMatch(/^Voted /)
+    expect(page.activity.status).toBe("ok")
+    expect(page.logs).toMatchObject({ status: "ok" })
+    // Moves every block: never kept long.
+    expect(state.response.get("x-scan-cache")).toBe("list")
+  })
+
+  it("draws a pending transaction, then the indexed page", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] })
+    try {
+      const hash = `${liveHashes.pending}${"2".repeat(60)}`
+      const pending = await transactionPage({ hash })
+      expect(pending.live).toBe("pending")
+      if (pending.tx.status !== "ok") throw new Error("not drawn")
+      expect(pending.tx.data).toMatchObject({
+        status: "pending",
+        block: null,
+        // Its fee cap is not a price paid.
+        gasPrice: null,
+      })
+      vi.advanceTimersByTime(minedAfterMs)
+      const mined = await transactionPage({ hash })
+      expect(mined.live).toBe("mined")
+      if (mined.tx.status !== "ok") throw new Error("not drawn")
+      expect(mined.tx.data.gasPrice).not.toBeNull()
+      vi.advanceTimersByTime(indexedAfterMs)
+      const indexed = await transactionPage({ hash })
+      expect(indexed.live).toBeNull()
+      expect(indexed.final).toBe(true)
+      expect(indexed.headline?.text).toMatch(/^Voted /)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("is the page's 404 while the chain has never seen the hash", async () => {
+    const page = await transactionPage({ hash: `0x${"3".repeat(64)}` })
     expect(page.tx.status).toBe("missing")
   })
 
@@ -190,6 +249,66 @@ describe("address document", () => {
     expect(doc.borrow).toEqual({ status: "unavailable" })
     expect(doc.activity).toEqual({ status: "rate-limited" })
     expect(state.response.get("x-scan-degraded")).toBe("1")
+  })
+
+  describe("over the API", () => {
+    /** The API binding answering with the fixtures, `edit` applied to the address document. */
+    function api(edit: (body: unknown, call: number) => unknown): string[] {
+      const seen: string[] = []
+      state.env.SCAN_DATA = "api"
+      state.env.API = {
+        fetch: async (request: Request) => {
+          const url = new URL(request.url)
+          const path = url.pathname.replace("/internal/scan/", "")
+          seen.push(path)
+          const answer = scanFixture(path, url.searchParams)
+          const calls = seen.filter((each) => each === path).length
+          const body = path.startsWith("entities/address/")
+            ? edit(answer.body, calls)
+            : answer.body
+          return Response.json(body, { status: answer.status })
+        },
+      }
+      return seen
+    }
+    /** The document with its summary part failed in passing. */
+    function withoutSummary(body: unknown): unknown {
+      const { data } = body as { data: Record<string, unknown> }
+      return {
+        data: {
+          ...data,
+          summary: { status: "unavailable", reason: "upstream" },
+        },
+      }
+    }
+
+    afterEach(() => {
+      state.env.SCAN_DATA = "fixtures"
+      delete state.env.API
+    })
+
+    it("reads a document again once when a part failed in passing", async () => {
+      const seen = api((body, call) =>
+        call === 1 ? withoutSummary(body) : body,
+      )
+      const doc = await addressDocument({ address: wallet })
+      expect(doc.summary.status).toBe("ok")
+      expect(
+        seen.filter((path) => path.startsWith("entities/address/")),
+      ).toHaveLength(2)
+      expect(state.response.has("x-scan-degraded")).toBe(false)
+    })
+
+    it("keeps the first document when the part is still missing", async () => {
+      const seen = api((body) => withoutSummary(body))
+      const doc = await addressDocument({ address: wallet })
+      expect(doc.summary).toEqual({ status: "unavailable" })
+      expect(doc.locks.status).toBe("ok")
+      expect(
+        seen.filter((path) => path.startsWith("entities/address/")),
+      ).toHaveLength(2)
+      expect(state.response.get("x-scan-degraded")).toBe("1")
+    })
   })
 
   it("keeps Blockscout's parts while the API answers 503", async () => {

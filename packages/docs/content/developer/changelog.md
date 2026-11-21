@@ -1,10 +1,22 @@
 ---
 title: Changelog
 description: Releases of the Matchbox API, the SDK and Matchbox Developer.
-updated: 2026-11-10
+updated: 2026-11-19
 ---
 
 Releases of the Matchbox API, the SDK and Matchbox Developer, newest first.
+
+## Unreleased {#unreleased}
+
+- Incentives: `/v1/incentives` prices gauge incentives paid in the bridged
+  BTC wrappers mSolvBTC, mxSolvBTC and mcbBTC at the BTC price. They were
+  unpriced, so each token's `usd`, and the gauge's `totalUsd` and
+  `aprPercent`, now include them for the gauges that pay them.
+- Epochs already stored keep those tokens unpriced until they are rebuilt,
+  so a gauge's history can show a step at the change.
+- Tokens are still priced by contract address only. A token is never
+  priced by its symbol, so a token named "MUSD" at another address stays
+  unpriced.
 
 ## Version 2.1.0 {#v2-1-0}
 

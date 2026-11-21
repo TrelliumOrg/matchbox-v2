@@ -98,6 +98,16 @@ export function Sparkline({
   )
 }
 
+/**
+ * Home's positions tile counts open MUSD loans (troves, Enclave positions
+ * and Morpho positions with MUSD debt), while Borrow's "Open positions"
+ * counts every Morpho position: one heading over two counts read as a
+ * contradiction, so Home names what it counts.
+ */
+const tileLabels: Partial<Record<HomeTile["id"], string>> = {
+  positions: "Open MUSD loans",
+}
+
 export function HomeTiles({
   tiles,
 }: {
@@ -117,7 +127,7 @@ export function HomeTiles({
               <span className="grid size-7 place-items-center rounded-full bg-raised text-ink2">
                 <Glyph shape={tileIcons[tile.id]} size={15} strokeWidth={1.8} />
               </span>
-              {tile.label}
+              {tileLabels[tile.id] ?? tile.label}
             </p>
             <p className="mt-3 text-[30px] leading-tight font-[650] tabular-nums">
               <Inspect.Value
@@ -162,7 +172,7 @@ export function HomeTiles({
               <Sparkline
                 values={tile.spark}
                 days={tile.sparkDays}
-                label={`${tile.label}, last ${tile.spark.length} days`}
+                label={`${tileLabels[tile.id] ?? tile.label}, last ${tile.spark.length} days`}
               />
             )}
           </li>

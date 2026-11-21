@@ -11,6 +11,8 @@ import {
 } from "@matchbox/contracts/blockscout"
 import type {
   ScanAddressTokens,
+  ScanLiveSnapshot,
+  ScanLiveTransaction,
   ScanPartReason,
 } from "@matchbox/contracts/scan"
 import { PlatformError } from "@matchbox/server"
@@ -23,6 +25,7 @@ import { enclavePositions, ownerPositions } from "./borrow"
 import {
   addressParam,
   hashParam,
+  liveSnapshotMaxBehind,
   page,
   pathParam,
   queryOf,
@@ -31,6 +34,7 @@ import {
 import { activityItem, lockItem, servedLock } from "./items"
 import { activityForAddress, codecs } from "./lists"
 import { liveOwnerPage, scanLiveDeadlineMs, waitUntilOf } from "./live-locks"
+import { liveTransaction } from "./live-tx"
 import { labelsFor, scanLabelLimit } from "./lookups"
 import { scanQueries } from "./queries"
 import { addressTokens } from "./tokens"
@@ -175,6 +179,87 @@ function served<T>(
     : { status: "unavailable", reason: part.reason }
 }
 
+/**
+ * When the address document stops waiting for its parts, counted from the
+ * request's arrival. Matchscan gives the API 3 s for the whole document
+ * (`apiReadTimeoutMs` in apps/scan), while a Blockscout read may take the
+ * proxy's 4 s and a cold D1 read a second or more: one slow part used to
+ * hold the document past Matchscan's timeout, and every card of the page
+ * showed "Data unavailable". A part still running here is served as
+ * unavailable (`upstream`, so the document is not stored) and finishes in
+ * the background, where its proxy or memo entry is ready for the retry.
+ *
+ * Before the render come the copy run's version and the head (0.3 s each,
+ * side by side), two edge lookups (`scanLookupMs` each) and the rate-limit
+ * call (`scanSpendMs`): their time comes out of the parts' time, never on
+ * top of it. The locks part's own chain deadline (`scanLiveDeadlineMs`,
+ * 2.2 s after arrival) comes first, so it serves the stored locks rather
+ * than nothing. The labels end by 2.6 s, which leaves 0.4 s for encoding
+ * the document and the hop to Matchscan.
+ */
+export const composedPartsMs = scanLiveDeadlineMs + 100
+/** The labels read, which waits for the parts: also from arrival. */
+export const composedLabelsMs = composedPartsMs + 300
+/**
+ * The copy run's version, which keys every composed document (as long as
+ * the head read's own bound): past it the document is keyed on the time
+ * slot and not shared, as when the read fails.
+ */
+export const composedVersionMs = 300
+/** A render this slow logs where its time went. */
+export const composedSlowMs = 1_500
+
+/** Each part's time, and whether it was cut at its deadline. */
+type PartTimings = Record<string, { ms: number; late: boolean }>
+
+/**
+ * `work`, or `fallback` once the clock passes `until` (`Date.now()` ms)
+ * first. Late work is handed to `waitUntil` so it still finishes (and
+ * fills its caches), with its failure caught: the copy run's version read
+ * may reject (a D1 error) after its deadline, and nothing awaits it then.
+ * Exported for tests.
+ */
+export async function bounded<T>(
+  name: string,
+  work: Promise<T>,
+  until: number,
+  fallback: T,
+  waitUntil: (task: Promise<unknown>) => void,
+  timings: PartTimings,
+): Promise<T> {
+  const started = Date.now()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<typeof lateMark>((resolve) => {
+    timer = setTimeout(() => resolve(lateMark), Math.max(0, until - started))
+  })
+  try {
+    const result = await Promise.race([work, late])
+    timings[name] = { ms: Date.now() - started, late: result === lateMark }
+    if (result === lateMark) {
+      waitUntil(work.then(noop, noop))
+      return fallback
+    }
+    return result
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+const lateMark: unique symbol = Symbol("late")
+
+function noop(): void {}
+
+const latePart: Part<never> = { status: "unavailable", reason: "upstream" }
+
+/** The live snapshot's age when its read was late: unknown, never stale. */
+const unknownSnapshot: ScanLiveSnapshot = {
+  block: null,
+  head: null,
+  behind_blocks: null,
+  stale: null,
+  max_behind_blocks: liveSnapshotMaxBehind,
+}
+
 function isFinal(part: Part<unknown>): boolean {
   return (
     part.status === "ok" &&
@@ -196,6 +281,28 @@ function addressesIn(value: unknown, into = new Set<string>()): Set<string> {
 
 const checkpointSchema = z.object({ value: z.string().regex(/^[0-9]+$/) })
 
+/** A transaction part's block time, unix seconds. */
+function timestampOf(
+  transaction: Part<{ timestamp: string | null }>,
+): number | null {
+  return transaction.status === "ok" && transaction.data.timestamp !== null
+    ? Math.floor(Date.parse(transaction.data.timestamp) / 1000)
+    : null
+}
+
+/**
+ * Whether the copy has read past a block of this time, so our rows for its
+ * transactions are complete. False for an unknown time.
+ */
+function activityCopied(
+  checkpoint: Part<unknown>,
+  timestamp: number | null,
+): boolean {
+  if (timestamp === null || checkpoint.status !== "ok") return false
+  const copied = checkpointSchema.safeParse(checkpoint.data)
+  return copied.success && Number(copied.data.value) > timestamp + 60
+}
+
 const blockIdParam = z
   .string()
   .regex(/^(0|[1-9][0-9]{0,15}|0x[0-9a-fA-F]{64})$/)
@@ -211,6 +318,8 @@ export function registerScanEntities(
    */
   async function composed(
     c: ApiContext,
+    /** When the request arrived (`Date.now()` ms). */
+    arrived: number,
     render: () => Promise<{
       body: unknown
       final: boolean
@@ -224,9 +333,22 @@ export function registerScanEntities(
     // to read for any reason but an unbound database makes the document
     // unshareable: nothing says what data it was rendered from.
     let versionFailed = false
+    const versionTimings: PartTimings = {}
     const [run, clock] = await Promise.all([
-      scan.runVersion().then(
-        (version) => version.id,
+      bounded(
+        "version",
+        scan.runVersion().then((version): string | null => version.id),
+        arrived + composedVersionMs,
+        null,
+        waitUntilOf(c),
+        versionTimings,
+      ).then(
+        (version) => {
+          // Late: keyed like a failed read, and not shared.
+          if (version !== null) return version
+          versionFailed = true
+          return slot
+        },
         (error) => {
           versionFailed = !(
             error instanceof PlatformError && error.code === "service_disabled"
@@ -263,10 +385,63 @@ export function registerScanEntities(
     const hash = pathParam(c, "hash", hashParam)
     queryOf(c, {})
     const caller = callerOf(c)
-    return composed(c, async () => {
-      const [transaction, logs, tokenTransfers, activity, checkpoint] =
+    return composed(c, Date.now(), async () => {
+      const started = scan.nowMs()
+      const transactionRead = proxied(
+        scan,
+        c,
+        `transactions/${hash}`,
+        transactionSchema,
+        caller,
+      )
+      const checkpointRead = own(scan, () =>
+        scan.first(scanQueries.scanCursor, ["copy:activity"]),
+      )
+      const activityRead = own(scan, async () => {
+        const rows = await scan.rows(scanQueries.activityByTx, [
+          hash,
+          -1,
+          0,
+          200,
+        ])
+        return scan.mapRows(rows, activityItem).rows.map((row) => row.item)
+      })
+      // The chain is read only for a transaction the explorer or our copy
+      // has yet to reach (live-tx.ts), as soon as the explorer has said:
+      // never for one our rows already cover, nor one the copy has read
+      // past by the chain's own time (the explorer's may be missing when
+      // its part is limited or failing).
+      const liveRead = Promise.all([
+        transactionRead,
+        checkpointRead,
+        activityRead,
+      ]).then(
+        async ([
+          transaction,
+          checkpoint,
+          activity,
+        ]): Promise<Part<ScanLiveTransaction> | null> => {
+          if (scan.deps.chain?.tx === undefined) return null
+          if (activity.status === "ok" && activity.data.length > 0) return null
+          if (activityCopied(checkpoint, timestampOf(transaction))) return null
+          const read = await liveTransaction(
+            scan,
+            {
+              caller,
+              deadline: started + scanLiveDeadlineMs,
+              waitUntil: waitUntilOf(c),
+            },
+            hash,
+          )
+          if (read === null)
+            return { status: "unavailable", reason: "upstream" }
+          if (activityCopied(checkpoint, read.timestamp)) return null
+          return { status: "ok", data: read, cacheClass: null, shared: true }
+        },
+      )
+      const [transaction, logs, tokenTransfers, activity, checkpoint, live] =
         await Promise.all([
-          proxied(scan, c, `transactions/${hash}`, transactionSchema, caller),
+          transactionRead,
           proxied(scan, c, `transactions/${hash}/logs`, logsPageSchema, caller),
           proxied(
             scan,
@@ -275,18 +450,9 @@ export function registerScanEntities(
             tokenTransfersPageSchema,
             caller,
           ),
-          own(scan, async () => {
-            const rows = await scan.rows(scanQueries.activityByTx, [
-              hash,
-              -1,
-              0,
-              200,
-            ])
-            return scan.mapRows(rows, activityItem).rows.map((row) => row.item)
-          }),
-          own(scan, () =>
-            scan.first(scanQueries.scanCursor, ["copy:activity"]),
-          ),
+          activityRead,
+          checkpointRead,
+          liveRead,
         ])
       // Labels for the first 50 distinct addresses in document order.
       const named = [
@@ -295,22 +461,15 @@ export function registerScanEntities(
           served(logs),
           served(tokenTransfers),
           served(activity),
+          ...(live === null ? [] : [served(live)]),
         ]),
       ]
       const labels = await own(scan, () => labelsFor(scan, named))
-      const copied =
-        checkpoint.status === "ok"
-          ? checkpointSchema.safeParse(checkpoint.data)
-          : null
-      const timestamp =
-        transaction.status === "ok" && transaction.data.timestamp !== null
-          ? Math.floor(Date.parse(transaction.data.timestamp) / 1000)
-          : null
       // Our rows for it are complete once the copy has read past its block.
-      const activityComplete =
-        copied?.success === true &&
-        timestamp !== null &&
-        Number(copied.data.value) > timestamp + 60
+      const activityComplete = activityCopied(
+        checkpoint,
+        timestampOf(transaction),
+      )
       const final =
         isFinal(transaction) &&
         isFinal(logs) &&
@@ -327,6 +486,7 @@ export function registerScanEntities(
           activity,
           checkpoint,
           labels,
+          ...(live === null ? [] : [live]),
         ],
         body: {
           data: {
@@ -339,6 +499,7 @@ export function registerScanEntities(
             labelLimit: scanLabelLimit,
             labelsTruncated: named.length > scanLabelLimit,
             final,
+            ...(live === null ? {} : { live: served(live) }),
           },
         },
       }
@@ -346,11 +507,26 @@ export function registerScanEntities(
   })
 
   app.get("/internal/scan/entities/address/:address", (c) => {
+    // Every deadline of this document counts from here (`composedPartsMs`).
+    const arrived = Date.now()
+    const arrivedAt = scan.nowMs()
     const address = pathParam(c, "address", addressParam)
     queryOf(c, {})
     const caller = callerOf(c)
-    return composed(c, async () => {
-      const started = scan.nowMs()
+    return composed(c, arrived, async () => {
+      const renderStarted = Date.now()
+      const timings: PartTimings = {}
+      const waitUntil = waitUntilOf(c)
+      function part<T>(name: string, work: Promise<Part<T>>): Promise<Part<T>> {
+        return bounded(
+          name,
+          work,
+          arrived + composedPartsMs,
+          latePart,
+          waitUntil,
+          timings,
+        )
+      }
       const [
         summary,
         counters,
@@ -361,74 +537,106 @@ export function registerScanEntities(
         prices,
         snapshot,
       ] = await Promise.all([
-        proxied(
-          scan,
-          c,
-          `addresses/${address}`,
-          blockscoutAddressSchema,
-          caller,
+        part(
+          "summary",
+          proxied(
+            scan,
+            c,
+            `addresses/${address}`,
+            blockscoutAddressSchema,
+            caller,
+          ),
         ),
-        proxied(
-          scan,
-          c,
-          `addresses/${address}/counters`,
-          addressCountersSchema,
-          caller,
+        part(
+          "counters",
+          proxied(
+            scan,
+            c,
+            `addresses/${address}/counters`,
+            addressCountersSchema,
+            caller,
+          ),
         ),
         // The owner's first page of locks, as the chain has them now
         // (live-locks.ts: read at most once a minute per address).
-        own(scan, async () =>
-          liveOwnerPage(
-            scan,
-            {
-              caller,
-              deadline: started + scanLiveDeadlineMs,
-              waitUntil: waitUntilOf(c),
-            },
-            address,
-            await page(scan, {
-              query: scanQueries.locksByOwner,
-              codec: codecs.locksByOwner,
-              cursor: undefined,
-              limit: 25,
-              binds: (key, limit) => [address, ...(key ?? ["", ""]), limit],
-              row: lockItem,
-              keyOf: (lock) => [lock.escrow, lock.token_id] as const,
-              item: servedLock,
-            }),
+        part(
+          "locks",
+          own(scan, async () =>
+            liveOwnerPage(
+              scan,
+              {
+                caller,
+                deadline: arrivedAt + scanLiveDeadlineMs,
+                waitUntil: waitUntilOf(c),
+              },
+              address,
+              await page(scan, {
+                query: scanQueries.locksByOwner,
+                codec: codecs.locksByOwner,
+                cursor: undefined,
+                limit: 25,
+                binds: (key, limit) => [address, ...(key ?? ["", ""]), limit],
+                row: lockItem,
+                keyOf: (lock) => [lock.escrow, lock.token_id] as const,
+                item: servedLock,
+              }),
+            ),
           ),
         ),
-        own(scan, async () => {
-          const [positions, enclave] = await Promise.all([
-            ownerPositions(scan, address),
-            enclavePositions(scan, address),
-          ])
-          return {
-            owner: address,
-            morpho: positions.morpho,
-            trove: positions.trove,
-            enclave,
-            btc_usd: positions.price,
-          }
-        }),
-        own(scan, () =>
-          activityForAddress(scan, address, "any", undefined, 25),
+        part(
+          "borrow",
+          own(scan, async () => {
+            const [positions, enclave] = await Promise.all([
+              ownerPositions(scan, address),
+              enclavePositions(scan, address),
+            ])
+            return {
+              owner: address,
+              morpho: positions.morpho,
+              trove: positions.trove,
+              enclave,
+              btc_usd: positions.price,
+            }
+          }),
+        ),
+        part(
+          "activity",
+          own(scan, () =>
+            activityForAddress(scan, address, "any", undefined, 25),
+          ),
         ),
         // ERC-20 balances, first page of 50: one proxy read, refreshed by
         // the proxy at most every 4 blocks per address. Never
         // token-balances, which answers every token unpaged.
-        proxied(
-          scan,
-          c,
-          `addresses/${address}/tokens`,
-          tokenBalancesPageSchema,
-          caller,
-          new URLSearchParams({ type: "ERC-20" }),
+        part(
+          "tokens",
+          proxied(
+            scan,
+            c,
+            `addresses/${address}/tokens`,
+            tokenBalancesPageSchema,
+            caller,
+            new URLSearchParams({ type: "ERC-20" }),
+          ),
         ),
-        scan.deps.readPrices().catch(() => null),
+        bounded(
+          "prices",
+          scan.deps.readPrices().catch(() => null),
+          arrived + composedPartsMs,
+          null,
+          waitUntil,
+          timings,
+        ),
         // How old the live snapshot behind the loans is, as on every live
         // Borrow answer. Never rejects: unknown fields are null.
-        scan.liveSnapshot(),
+        bounded(
+          "snapshot",
+          scan.liveSnapshot(),
+          arrived + composedPartsMs,
+          unknownSnapshot,
+          waitUntil,
+          timings,
+        ),
       ])
       const tokens: Part<ScanAddressTokens> =
         balances.status === "ok"
@@ -447,7 +655,26 @@ export function registerScanEntities(
           ]),
         ]),
       ]
-      const labels = await own(scan, () => labelsFor(scan, named))
+      const labels = await bounded(
+        "labels",
+        own(scan, () => labelsFor(scan, named)),
+        arrived + composedLabelsMs,
+        latePart,
+        waitUntil,
+        timings,
+      )
+      const ms = Date.now() - arrived
+      if (ms >= composedSlowMs) {
+        // Which part held the document (no address: the route is enough),
+        // and how much of the time went before the render.
+        scan.deps.logger.warn({
+          message: "Composed document slow",
+          route: "/internal/scan/entities/address/{address}",
+          ms,
+          beforeRenderMs: renderStarted - arrived,
+          parts: timings,
+        })
+      }
       return {
         final: false,
         parts: [summary, counters, labels, locks, borrow, activity, tokens],
@@ -478,7 +705,7 @@ export function registerScanEntities(
     const id = pathParam(c, "id", blockIdParam)
     queryOf(c, {})
     const caller = callerOf(c)
-    return composed(c, async () => {
+    return composed(c, Date.now(), async () => {
       const [block, transactions] = await Promise.all([
         proxied(scan, c, `blocks/${id}`, blockSchema, caller),
         proxied(

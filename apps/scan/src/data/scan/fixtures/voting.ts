@@ -423,6 +423,14 @@ function poolFeeBps(pool: string): number {
   )
 }
 
+/**
+ * A series' meta as the API sends it: the copy's last ok run and whether
+ * it lags (the delayed scenario: failing runs or a halted table).
+ */
+function seriesMeta(scenario: FixtureScenario, complete: boolean) {
+  return { ...aggregateMeta(scenario, complete), stale: scenario === "delayed" }
+}
+
 function seriesAnswer(query: URLSearchParams, scenario: FixtureScenario) {
   const metric = query.get("metric") ?? ""
   const dimension = query.get("dimension") ?? ""
@@ -463,6 +471,7 @@ function seriesAnswer(query: URLSearchParams, scenario: FixtureScenario) {
         lastDay: null,
         endsOn: null,
       },
+      meta: seriesMeta(scenario, false),
     })
   }
   const lastDay = definition.liveWriter ? today : backfillEnd
@@ -529,6 +538,9 @@ function seriesAnswer(query: URLSearchParams, scenario: FixtureScenario) {
       })
       continue
     }
+    // No repayment yet today: a copy-step flow has no row for a day with
+    // nothing to count.
+    if (metric === "musd.repaid" && day(at) === today) continue
     let value =
       definition.kind === "level"
         ? magnitude * 100n + index * (magnitude / 4n + 1n) + wave
@@ -573,6 +585,10 @@ function seriesAnswer(query: URLSearchParams, scenario: FixtureScenario) {
           }
         : {}),
     },
+    meta: seriesMeta(
+      scenario,
+      points.every((point) => !point.partial),
+    ),
   })
 }
 

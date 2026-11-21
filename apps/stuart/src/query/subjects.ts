@@ -2,6 +2,7 @@ import type { Address } from "viem"
 import type { StuartContext } from "./context"
 import { shortAddress } from "./format"
 import { lower, type OwnedLock } from "./providers/chainActivity"
+import { mayCarrySecret } from "./secretShapes"
 
 // Who a question is about: a label ("SNF", "Supernormal Foundation"), a
 // gauge or lock name, "#6033", an address, or the selected wallet. Every
@@ -284,6 +285,9 @@ export async function resolveSubject(
         name = candidate
         break
       }
+      // A name is searched on Matchscan through the API Worker, which logs
+      // its request URLs: never text that may carry a key or phrase.
+      if (mayCarrySecret(raw) || mayCarrySecret(candidate)) continue
       const labels = await context.providers.chain.labelSearch(candidate)
       const exact = labels.filter(
         (label) => label.name.toLowerCase() === candidate.toLowerCase(),

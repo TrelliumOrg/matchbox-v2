@@ -120,6 +120,7 @@ html {
   --bench-fail-7: #b07d48;
   --bench-fail-8: #7f8fa6;
   --bench-fail-9: #5b7f3a;
+  --bench-fail-10: #2b7f95;
   --bench-safety-2: #7a1f17;
   --bench-some: #c9a227;
 }
@@ -142,6 +143,7 @@ html {
   --bench-fail-7: #c4945e;
   --bench-fail-8: #93a3ba;
   --bench-fail-9: #8fb36b;
+  --bench-fail-10: #5db4c9;
   --bench-safety-2: #e0796d;
   --bench-some: #b8921c;
 }

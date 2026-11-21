@@ -1,13 +1,28 @@
+import {
+  type ClaimPrices,
+  historyCaughtUp,
+  historyTokens,
+  readClaimPrices,
+} from "@matchbox/api/read-models/claim-prices"
 import { readPricesFromKv } from "@matchbox/api/read-models/prices-kv"
 import { gaugeCardsFrom } from "@matchbox/api/read-models/wallet-extras"
+import { historyBackfillCursor } from "@matchbox/api/read-models/wallet-history"
 import {
   currentKey,
+  type ReadModelData,
   type ReadModelKind,
   type ReadModelWrite,
   readReadModel,
   writeReadModels,
 } from "@matchbox/api/read-store"
-import type { Escrow, ProtocolStats } from "@matchbox/contracts/read-models"
+import {
+  type ActivityRow,
+  type Escrow,
+  type ProtocolStats,
+  type WalletActivity,
+  type WalletRewards,
+  walletRewardsSchema,
+} from "@matchbox/contracts/read-models"
 import {
   EPOCH_SECONDS,
   EPOCH_ZERO_START,
@@ -25,6 +40,7 @@ import {
 } from "../cursors"
 import { readEscrowSupply } from "../live/snapshot"
 import {
+  activityRows,
   type BuildContext,
   buildProtocol,
   buildProtocolActivity,
@@ -36,8 +52,33 @@ import {
 } from "./build"
 import { carryClaimable, type PreviousWallet } from "./carry-claimable"
 import type { ChainLock, WalletChainReader } from "./chain"
+import {
+  type DailyFillResult,
+  fillClaimValues,
+  fillDailyPrices,
+  type PriceHistoryFetch,
+} from "./claim-prices"
 import { buildGaugeHistories } from "./gauge-history"
-import { isExcludedWallet, type LockRow, type WarehouseReader } from "./reader"
+import {
+  type HistoryPlan,
+  type HistoryWrites,
+  historyTxsPerRun,
+  historyWrites,
+  openGaps,
+  planHistory,
+  postponedStates,
+  storedClaims,
+  type WalletWindow,
+  windowOf,
+  writeHistory,
+} from "./history"
+import keepClaimValues from "./keep-claim-values"
+import {
+  type ActivityEventRow,
+  isExcludedWallet,
+  type LockRow,
+  type WarehouseReader,
+} from "./reader"
 import { anyFailure, readClaimable } from "./reward-sources"
 
 // The warehouse snapshot: Neon projections into READ_DB documents. It runs
@@ -70,11 +111,14 @@ const rarelyChanging: readonly ReadModelKind[] = [
   "protocol-epoch",
 ]
 
-/** Latest wallet-facing events read per wallet. */
+/**
+ * Latest wallet-facing events a wallet's document holds. The read asks for
+ * one more, so a wallet with exactly this many is known to be whole.
+ */
 const eventsPerWallet = 80
 /** Changed wallets rebuilt per run, at most. */
 const maxChangedWallets = 300
-/** Wallets the API served live, rebuilt per run, at most. */
+/** Requested wallets read per run, at most; `requestedShare` takes fewer. */
 const maxRequestedWallets = 100
 
 /**
@@ -101,6 +145,28 @@ export function nextSweepSize(
   return Math.min(max, size)
 }
 
+/**
+ * Requested wallets (`wallet_requests`: built live by the API, or looked at
+ * while their overview was over an hour old) a run of this sweep size
+ * rebuilds at most. The rest stay queued, oldest first, for later runs.
+ */
+export function requestedShare(size: number): number {
+  return size - Math.ceil(size / 2)
+}
+
+/**
+ * Wallets the sweep reads in a run that also rebuilds `requested` wallets.
+ * Requested wallets take their places from the sweep's share, and at most
+ * `requestedShare` of them, so the two together never pass the sweep size:
+ * people looking at wallets never makes a run rebuild more wallets (its
+ * time, D1 writes and history budget stay as they were). The sweep keeps
+ * at least half its share, so while requests keep coming its full cycle at
+ * most doubles.
+ */
+export function sweepShare(size: number, requested: number): number {
+  return size - Math.min(requested, requestedShare(size))
+}
+
 export type WarehouseSnapshotDeps = {
   db: D1Database
   kv: KVNamespace
@@ -109,6 +175,21 @@ export type WarehouseSnapshotDeps = {
   trigger: RunTrigger
   /** Most wallets swept per run (the adaptive size never exceeds it). */
   sweepWallets: number
+  /**
+   * Older transactions of one wallet read back into its stored history
+   * per run (history.ts); null reads none, so histories only grow forward.
+   */
+  historyBackfillTxs?: number | null
+  /**
+   * Where BTC's and MEZO's daily history comes from, for claims' values
+   * when claimed (claim-prices.ts). Absent or null: nothing is fetched,
+   * and claims are valued from what is stored.
+   */
+  priceHistory?: {
+    fetchHistory: PriceHistoryFetch
+    /** A Demo or keyless key: CoinGecko serves the past 365 days. */
+    limitedReach: boolean
+  } | null
   nowSeconds: number
   logger: Logger
   /** Milliseconds, for the run's duration; defaults to `Date.now`. */
@@ -158,11 +239,75 @@ function historicLookup(
   }
 }
 
+/**
+ * One step of the daily price history, then every stored daily price.
+ * Never throws: a failed fill only logs (the prices stored before still
+ * value claims), and a failed read gives null (claims' values are unknown
+ * this run, and Earned carries its previous figure).
+ */
+async function claimPricesFor(
+  deps: WarehouseSnapshotDeps,
+): Promise<{ prices: ClaimPrices | null; fill: DailyFillResult | null }> {
+  let fill: DailyFillResult | null = null
+  if (deps.priceHistory !== undefined && deps.priceHistory !== null) {
+    try {
+      fill = await fillDailyPrices({
+        db: deps.db,
+        fetchHistory: deps.priceHistory.fetchHistory,
+        limitedReach: deps.priceHistory.limitedReach,
+        nowSeconds: deps.nowSeconds,
+        logger: deps.logger,
+      })
+    } catch (error) {
+      deps.logger.warn({
+        message: "claim_prices_fill_failed",
+        detail: reason(error),
+      })
+    }
+  }
+  try {
+    return { prices: await readClaimPrices(deps.db, network), fill }
+  } catch (error) {
+    deps.logger.warn({
+      message: "claim_prices_read_failed",
+      detail: reason(error),
+    })
+    return { prices: null, fill }
+  }
+}
+
+/**
+ * Stored claims written before their day was priced get their value when
+ * claimed, within what the run's history budget left. Failures only log.
+ */
+async function storeClaimValues(
+  deps: WarehouseSnapshotDeps,
+  prices: ClaimPrices | null,
+  historyRows: number,
+): Promise<{ read: number; written: number } | null> {
+  if (prices === null) return null
+  try {
+    return await fillClaimValues({
+      db: deps.db,
+      prices,
+      budget: Math.max(0, historyTxsPerRun - historyRows),
+      nowSeconds: deps.nowSeconds,
+    })
+  } catch (error) {
+    deps.logger.warn({
+      message: "claim_values_fill_failed",
+      detail: reason(error),
+    })
+    return null
+  }
+}
+
+/** The oldest requests first, so a wallet left for a later run leads it. */
 async function requestedWallets(db: D1Database): Promise<string[]> {
   const result = await db
     .prepare(
       `SELECT wallet FROM wallet_requests WHERE network = ?1
-       ORDER BY requested_at LIMIT ?2`,
+       ORDER BY requested_at, wallet LIMIT ?2`,
     )
     .bind(network, maxRequestedWallets)
     .all<{ wallet: string }>()
@@ -227,6 +372,8 @@ export type RunTimings = {
   previousMs: number
   /** Writing the run's documents to D1. */
   writeMs: number
+  /** Reading and writing wallet histories in D1 (history.ts). */
+  historyMs: number
 }
 
 /**
@@ -357,6 +504,148 @@ export function correctLocks(
   })
 }
 
+/** Events by acting wallet (lower case), in the order read. */
+function eventsByActor(
+  events: readonly ActivityEventRow[],
+): Map<string, ActivityEventRow[]> {
+  const grouped = new Map<string, ActivityEventRow[]>()
+  for (const event of events) {
+    const actor = event.actor?.toLowerCase()
+    if (actor === undefined) continue
+    grouped.set(actor, [...(grouped.get(actor) ?? []), event])
+  }
+  return grouped
+}
+
+function reason(error: unknown): string {
+  return error instanceof Error ? error.message.slice(0, 300) : "Unknown"
+}
+
+/**
+ * Each truncated wallet's claims beyond its document, for its Earned:
+ * those stored already and those this run stores (duplicates of the
+ * document's own are dropped by id when it is built). Null when they
+ * could not be read: Earned is then unknown for the plan's wallets.
+ */
+async function historyClaimsOf(
+  db: D1Database,
+  context: BuildContext,
+  plan: HistoryPlan,
+  writes: HistoryWrites | null,
+  deps: WarehouseSnapshotDeps,
+  spent: RunTimings,
+  clock: () => number,
+): Promise<Map<string, ActivityRow[]> | null> {
+  const started = clock()
+  try {
+    const stored = await storedClaims(db, [...plan.windows.keys()])
+    const claims = new Map<string, ActivityRow[]>()
+    for (const [wallet, walletClaims] of stored) {
+      const fresh = activityRows(
+        context,
+        writes?.events.get(wallet) ?? [],
+      ).filter((row) => row.type === "claim")
+      claims.set(wallet, [...walletClaims, ...fresh])
+    }
+    return claims
+  } catch (error) {
+    deps.logger.warn({
+      message: "warehouse_history_claims_failed",
+      detail: reason(error),
+    })
+    return null
+  } finally {
+    spent.historyMs += clock() - started
+  }
+}
+
+/**
+ * The stored document of a kind for these wallets (their previous Earned,
+ * or their claims' values when claimed), null where a wallet has none
+ * yet. A wallet whose read failed is left out.
+ */
+async function previousDocuments<
+  Kind extends "wallet-rewards" | "wallet-activity",
+>(
+  db: D1Database,
+  kind: Kind,
+  wallets: readonly string[],
+): Promise<Map<string, ReadModelData<Kind> | null>> {
+  const found = new Map<string, ReadModelData<Kind> | null>()
+  for (let start = 0; start < wallets.length; start += 20) {
+    await Promise.all(
+      wallets.slice(start, start + 20).map(async (wallet) => {
+        try {
+          const stored = await readReadModel(db, network, kind, wallet)
+          found.set(wallet, stored?.data ?? null)
+        } catch {
+          // Unknown: what depends on it is not written.
+        }
+      }),
+    )
+  }
+  return found
+}
+
+function sameEarned(
+  a: WalletRewards["earned"],
+  b: WalletRewards["earned"],
+): boolean {
+  const earned = walletRewardsSchema.shape.earned
+  return JSON.stringify(earned.parse(a)) === JSON.stringify(earned.parse(b))
+}
+
+function sameRewards(a: WalletRewards, b: WalletRewards): boolean {
+  return (
+    JSON.stringify(walletRewardsSchema.parse(a)) ===
+    JSON.stringify(walletRewardsSchema.parse(b))
+  )
+}
+
+/** A truncated wallet's claims beyond its document, where they are known. */
+function storedClaimsFor(
+  claims: Map<string, ActivityRow[]> | null,
+  wallet: string,
+): { storedClaims?: ActivityRow[] } {
+  const stored = claims?.get(wallet)
+  return stored === undefined ? {} : { storedClaims: stored }
+}
+
+/**
+ * Writes this run's history rows and states, or, after a failed warehouse
+ * read, only moves the read wallets back in line. Failures only log.
+ */
+async function storeHistory(
+  db: D1Database,
+  context: BuildContext,
+  plan: HistoryPlan,
+  writes: HistoryWrites | null,
+  deps: WarehouseSnapshotDeps,
+): Promise<number> {
+  try {
+    if (writes === null) {
+      await writeHistory(
+        db,
+        new Map(),
+        postponedStates(plan, deps.nowSeconds),
+        deps.nowSeconds,
+      )
+      return 0
+    }
+    const rows = new Map<string, ActivityRow[]>()
+    for (const [wallet, walletEvents] of writes.events) {
+      rows.set(wallet, activityRows(context, walletEvents))
+    }
+    return await writeHistory(db, rows, writes.states, deps.nowSeconds)
+  } catch (error) {
+    deps.logger.warn({
+      message: "warehouse_history_write_failed",
+      detail: reason(error),
+    })
+    return 0
+  }
+}
+
 export async function runWarehouseSnapshot(
   deps: WarehouseSnapshotDeps,
 ): Promise<WarehouseSnapshotResult> {
@@ -370,6 +659,7 @@ export async function runWarehouseSnapshot(
     earnedMs: 0,
     previousMs: 0,
     writeMs: 0,
+    historyMs: 0,
   }
   const warehouse = timedCalls(deps.warehouse, clock, (ms) => {
     spent.warehouseMs += ms
@@ -397,6 +687,8 @@ export async function runWarehouseSnapshot(
       })
       return { status: "skipped", reason: "Warehouse is empty" }
     }
+    // Beside the warehouse reads: a CoinGecko call about once a day.
+    const claimPricesRead = claimPricesFor(deps)
     const [
       cursor,
       sweepFrom,
@@ -404,7 +696,7 @@ export async function runWarehouseSnapshot(
       prices,
       directory,
       samples,
-      requested,
+      queued,
       supply,
     ] = await Promise.all([
       readCursor(db, blockCursor, network),
@@ -420,6 +712,12 @@ export async function runWarehouseSnapshot(
       deps.sweepWallets,
       Math.max(minSweep, Number(storedSweepSize ?? initialSweep) || minSweep),
     )
+    // The zero and burn addresses are never built; their requests are
+    // cleared below rather than left at the head of the queue.
+    const excludedRequests = queued.filter(isExcludedWallet)
+    const requested = queued
+      .filter((wallet) => !isExcludedWallet(wallet))
+      .slice(0, requestedShare(sweepSize))
     // Filled from the chain below, before any document is built.
     const poolGauges = new Map<string, string>()
     const context: BuildContext = {
@@ -429,6 +727,8 @@ export async function runWarehouseSnapshot(
       gauges: gaugeRefsFrom(directory?.data ?? null),
       cards: gaugeCardsFrom(directory?.data ?? null),
       historicPrice: historicLookup(samples),
+      // Set below, before the first claim is built.
+      claimPrices: null,
       escrowSupply: supply,
     }
 
@@ -439,14 +739,15 @@ export async function runWarehouseSnapshot(
       cursor === null
         ? []
         : await warehouse.changedWallets(Number(cursor), maxChangedWallets)
-    const swept = await warehouse.sweepWallets(sweepFrom ?? "0x", sweepSize)
+    const sweepTake = sweepShare(sweepSize, requested.length)
+    const swept = await warehouse.sweepWallets(sweepFrom ?? "0x", sweepTake)
     // Requested wallets first: someone opened them, or a run skipped them.
     // The oldest request leads (`requestedWallets` orders by time, and a
     // skipped wallet keeps its first time), so nobody waits behind the sweep.
     const wallets = [...new Set([...requested, ...changed, ...swept])].filter(
       (wallet) => !isExcludedWallet(wallet),
     )
-    const nextSweep = swept.length < sweepSize ? "0x" : (swept.at(-1) ?? "0x")
+    const nextSweep = swept.length < sweepTake ? "0x" : (swept.at(-1) ?? "0x")
 
     // The chain's locked() wins over the warehouse's lock positions, which
     // miss locks created before the indexer's escrow history and splits.
@@ -456,10 +757,62 @@ export async function runWarehouseSnapshot(
       .catch(() => new Map<string, ChainLock>())
     const locks = correctLocks(warehouseLocks, chainLocks)
     const tokenIds = [...new Set(locks.map((lock) => lock.token_id))]
-    const [warehouseVotes, events] = await Promise.all([
+    const [warehouseVotes, read] = await Promise.all([
       warehouse.activeVotes(tokenIds),
-      warehouse.activityOf(wallets, eventsPerWallet),
+      warehouse.activityOf(wallets, eventsPerWallet + 1),
     ])
+    // Each wallet's latest events. A full read keeps whole seconds only, and
+    // its wallet's older rows go to the stored history (history.ts).
+    const windows = new Map<string, WalletWindow>()
+    for (const [wallet, walletEvents] of eventsByActor(read)) {
+      windows.set(wallet, windowOf(walletEvents, eventsPerWallet))
+    }
+    const events = [...windows.values()].flatMap((window) => window.events)
+    // The stored history never fails a run: a failed step only logs, and
+    // the wallets' documents and the cursors are written as always.
+    const historyStarted = clock()
+    let historyPlan: HistoryPlan | null = null
+    // False when the history states could not be read for a reason other
+    // than missing tables: the stored claims are then unknown too.
+    let historyKnown = true
+    try {
+      historyPlan = await planHistory({
+        db,
+        windows,
+        backfillTxs: deps.historyBackfillTxs ?? null,
+      })
+    } catch (error) {
+      historyKnown = false
+      logger.warn({
+        message: "warehouse_history_plan_failed",
+        detail: reason(error),
+      })
+    }
+    spent.historyMs += clock() - historyStarted
+    let historyRead: ActivityEventRow[][] = []
+    // What the run stores; null when the read failed: nothing is stored.
+    let historyStore: HistoryWrites | null = null
+    // Truncated wallets whose stored history still stops short of their
+    // document after this run (history.ts, `openGaps`).
+    let historyOpen = new Set<string>()
+    if (historyPlan !== null && historyPlan.requests.length > 0) {
+      try {
+        historyRead = await warehouse.walletHistory(historyPlan.requests)
+        historyStore = historyWrites(historyPlan, historyRead, deps.nowSeconds)
+        historyOpen = openGaps(historyPlan, historyRead)
+      } catch (error) {
+        logger.warn({
+          message: "warehouse_history_read_failed",
+          detail: reason(error),
+          requests: historyPlan.requests.length,
+          wallets: historyPlan.requests.map((request) => request.wallet),
+        })
+        historyOpen = openGaps(historyPlan, null)
+      }
+    } else if (historyPlan !== null) {
+      historyStore = historyWrites(historyPlan, [], deps.nowSeconds)
+      historyOpen = openGaps(historyPlan, [])
+    }
     const escrowLocks = locks.flatMap((lock) => {
       const escrow = escrowForContract(lock.contract_address)
       return escrow === null ? [] : [{ escrow, tokenId: lock.token_id }]
@@ -485,7 +838,7 @@ export async function runWarehouseSnapshot(
       readClaimable(chain, warehouseVotes, {
         rank: (tokenId) => tokenRank.get(tokenId) ?? wallets.length,
         waiting: (tokenId) => waitingTokens.has(tokenId),
-        otherPools: poolsNamedIn(events),
+        otherPools: poolsNamedIn([...events, ...historyRead.flat()]),
       }),
     ])
     const { votes, sources, earned } = claimable
@@ -560,6 +913,62 @@ export async function runWarehouseSnapshot(
           : []
       }),
     )
+    const claimPricing = await claimPricesRead
+    context.claimPrices = claimPricing.prices
+    const walletClaims =
+      historyPlan === null
+        ? null
+        : await historyClaimsOf(
+            db,
+            context,
+            historyPlan,
+            historyStore,
+            deps,
+            spent,
+            clock,
+          )
+    // Truncated wallets whose claims beyond the document are unknown this
+    // run: the stored claims could not be read, or the stored history does
+    // not reach the document yet (a gap left for a later run, a failed gap
+    // read, a full one). Their Earned would miss those claims, so it
+    // carries the previous one instead until the gap closes (a missing
+    // history table is not unknown: there are no stored claims).
+    // Without the daily prices every claim's value is unknown.
+    const claimsUnknown = [...windows]
+      .filter(
+        ([wallet, window]) =>
+          context.claimPrices === null ||
+          (window.truncated &&
+            (!historyKnown ||
+              (historyPlan !== null &&
+                (walletClaims === null || historyOpen.has(wallet))))),
+      )
+      .map(([wallet]) => wallet)
+    // A token's daily history that never succeeded, or is more than a day
+    // behind (a failing source, jobs deployed before migration 0008): its
+    // claims are "not priced yet" for want of a call, and an Earned
+    // without them would drop for a while. A wallet with a pending claim
+    // waiting on such a history carries its previous Earned; its rows are
+    // valued all the same. Each token on its own: MEZO's history behind
+    // never holds back a wallet whose pending claims are BTC's.
+    const claimPrices = context.claimPrices
+    const historiesBehind =
+      claimPrices === null
+        ? []
+        : historyTokens.filter(
+            (token) => !historyCaughtUp(claimPrices, deps.nowSeconds, token),
+          )
+    const rewardsBefore = await previousDocuments(
+      db,
+      "wallet-rewards",
+      historiesBehind.length > 0 ? [...windows.keys()] : claimsUnknown,
+    )
+    // Without the daily prices, the claims' values when claimed come from
+    // the stored documents, so they are not written without them.
+    const activityBefore =
+      context.claimPrices === null
+        ? await previousDocuments(db, "wallet-activity", [...windows.keys()])
+        : new Map<string, WalletActivity | null>()
     const skipped: string[] = []
     for (const wallet of wallets) {
       const before = previous.get(wallet) ?? null
@@ -587,36 +996,80 @@ export async function runWarehouseSnapshot(
           rewardSources: sources,
           votingPower,
           earned,
+          ...storedClaimsFor(walletClaims, wallet),
         },
         boosts,
       )
-      const documents = carryClaimable({
+      const claimable = carryClaimable({
         built,
         previous: before,
         unread: unreadLocks,
         block: readBlock,
         prices: context.prices,
       })
-      writes.push(
-        {
-          ...base,
-          kind: "wallet-overview",
-          key: wallet,
-          data: documents.overview,
-        },
-        {
-          ...base,
-          kind: "wallet-rewards",
-          key: wallet,
-          data: documents.rewards,
-        },
-        {
-          ...base,
-          kind: "wallet-activity",
-          key: wallet,
-          data: documents.activity,
-        },
-      )
+      const documents =
+        context.claimPrices === null
+          ? keepClaimValues(claimable, {
+              activity: activityBefore.get(wallet),
+              rewards: rewardsBefore.get(wallet),
+            })
+          : claimable
+      const unknown =
+        claimsUnknown.includes(wallet) ||
+        built.waitingOn.some((token) => historiesBehind.includes(token))
+      const rewardsThen = rewardsBefore.get(wallet)
+      const earnedThen =
+        rewardsThen === undefined ? undefined : (rewardsThen?.earned ?? null)
+      writes.push({
+        ...base,
+        kind: "wallet-overview",
+        key: wallet,
+        data: documents.overview,
+        // Someone asked for this wallet because its overview was old: the
+        // row says it was checked now even when nothing in it changed, or
+        // the API would ask for it again on the next view
+        // (`wantsRebuild`). At most one row write a requested wallet, and
+        // none when the document changed, as it usually does.
+        ...(requestedSet.has(wallet) ? { touch: true } : {}),
+      })
+      // Unknown claims and no earlier figure read: the stored document
+      // stays as it is rather than lose its older claims for a run.
+      if (!unknown || earnedThen !== undefined) {
+        // The same figure as before is not carried: a carried Earned's
+        // basis differs, and would rewrite an unchanged document.
+        const carried =
+          unknown &&
+          earnedThen !== null &&
+          earnedThen !== undefined &&
+          !sameEarned(earnedThen, documents.rewards.earned)
+        const rewards = carried
+          ? { ...documents.rewards, earned: earnedThen }
+          : documents.rewards
+        // A carried Earned's basis is not the stored one's: a document the
+        // same as stored but for that is left alone, not rewritten.
+        const unchanged =
+          carried &&
+          rewardsThen !== undefined &&
+          rewardsThen !== null &&
+          sameRewards(rewards, rewardsThen)
+        if (!unchanged) {
+          writes.push({
+            ...base,
+            kind: "wallet-rewards",
+            key: wallet,
+            data: rewards,
+            // Earned's claims, which its USD alone would not write; a
+            // carried Earned's are not known.
+            etagBasis: carried ? "carried" : documents.earnedBasis,
+          })
+        }
+      }
+      writes.push({
+        ...base,
+        kind: "wallet-activity",
+        key: wallet,
+        data: documents.activity,
+      })
     }
 
     const current = epochStartOf(deps.nowSeconds)
@@ -712,12 +1165,22 @@ export async function runWarehouseSnapshot(
       skipUnchanged: rarelyChanging,
     })
     spent.writeMs = clock() - writeStarted
-    await clearRequests(
-      db,
-      requested.filter(
+    const historyRows =
+      historyPlan === null
+        ? 0
+        : await storeHistory(db, context, historyPlan, historyStore, deps)
+    const claimValues = await storeClaimValues(
+      deps,
+      context.claimPrices,
+      historyRows,
+    )
+    spent.historyMs += clock() - writeStarted - spent.writeMs
+    await clearRequests(db, [
+      ...requested.filter(
         (wallet) => wallets.includes(wallet) && !skipped.includes(wallet),
       ),
-    )
+      ...excludedRequests,
+    ])
     await requestAgain(db, skipped, deps.nowSeconds)
     const durationMs = clock() - startedMs
     const nextSize = nextSweepSize(sweepSize, durationMs, deps.sweepWallets)
@@ -735,6 +1198,14 @@ export async function runWarehouseSnapshot(
         sweepSizeCursor,
         network,
         String(nextSize),
+        deps.nowSeconds,
+      ),
+      // For the API: older history rows arrive only while this is on.
+      writeCursor(
+        db,
+        historyBackfillCursor,
+        network,
+        String(deps.historyBackfillTxs ?? "off"),
         deps.nowSeconds,
       ),
     ])
@@ -755,9 +1226,27 @@ export async function runWarehouseSnapshot(
       wallets: wallets.length,
       documents: writes.length,
       changed: changedRows,
+      historyRows,
+      historyRequests: historyPlan?.requests.length ?? null,
+      // Truncated wallets left for a later run by the history budget.
+      historyDeferred: historyPlan?.deferred.size ?? null,
+      historyClaimsUnknown: claimsUnknown.length,
+      // Claims' values when claimed: history calls and rows this run, and
+      // stored claims read and given their value.
+      claimPriceCalls: claimPricing.fill?.calls ?? null,
+      claimPriceRows: claimPricing.fill?.rows ?? null,
+      claimPricesFailed: claimPricing.fill?.failed ?? null,
+      claimValuesRead: claimValues?.read ?? null,
+      claimValuesWritten: claimValues?.written ?? null,
       requested: requested.length,
+      // Requests left for later runs by the requested share (up to the
+      // read's 100).
+      requestsWaiting:
+        queued.length - excludedRequests.length - requested.length,
       durationMs,
       sweepSize,
+      // The sweep's share after the requested wallets took theirs.
+      swept: swept.length,
       nextSweepSize: nextSize,
       // Where the time went. Each figure adds up the calls of its kind, and
       // calls that run side by side both count, so the sum can pass

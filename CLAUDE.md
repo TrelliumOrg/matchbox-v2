@@ -35,10 +35,12 @@ live only under `internal/`, which is never published:
 - Build everything: `pnpm build`
 - Dev (one app): `pnpm --filter @matchbox/<app> dev`
 - Test: `pnpm test` (one package: `pnpm --filter @matchbox/<pkg> test`)
-- Lint: `pnpm lint` (fix: `pnpm lint:fix`)
+- Lint: `pnpm lint` (fix: `pnpm lint:fix`), which includes the Markdown
+  link check (`pnpm check:links`)
 - Typecheck: `pnpm typecheck`
 - Secrets and public boundary: `pnpm check:secrets`, `pnpm check:trellium`,
   `pnpm test:scripts`
+- Worker entry exports (part of `pnpm lint`): `pnpm check:worker-entries`
 
 ## Code layout
 

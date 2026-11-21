@@ -47,7 +47,7 @@ function cspOptions() {
 const scanOrigin = new URL(links.scan).origin
 
 /** The shared policy allows forms to 'self' only; add where search lands. */
-export function withScanFormAction(response: Response): Response {
+function withScanFormAction(response: Response): Response {
   const policy = response.headers.get("content-security-policy")
   if (policy === null) return response
   const headers = new Headers(response.headers)

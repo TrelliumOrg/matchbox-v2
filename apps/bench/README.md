@@ -7,7 +7,7 @@ build time from one committed file, `data/results.json`, and served as a
 static asset. No page view, client navigation or control calls an API or
 reaches the Worker.
 
-Pages: the leaderboard (`/`, Doop canvas `hFp5UsQ4BA`, frame `DOXM2YuhbJ`),
+Pages: the leaderboard (`/`),
 every published question (`/questions`), the method (`/method`) and this
 run's details (`/runs`).
 
@@ -25,6 +25,13 @@ pnpm --filter @matchbox/bench dev      # :3007
 
 Run `pnpm build` before `e2e`. Ports 4203 and 4204 keep it clear of the
 other apps' previews.
+
+Nothing here needs credentials, environment values or a backend: every page
+is built from `data/results.json`. `e2e` and `lhci` need Playwright's
+Chromium (`pnpm --filter @matchbox/bench exec playwright install chromium`).
+Producing a new results file means running the benchmark with real models
+(`apps/stuart`, "Matchbench: models and effort levels"), which needs an
+Anthropic API key.
 
 ## Updating the data
 
@@ -180,8 +187,10 @@ no page loads the answers before a reader asks.
    `dist/client/404.html`.
 2. `scripts/postbuild.mjs` gives every page a `<meta>` CSP whose
    `script-src` lists the SHA-256 of each inline script on it (no
-   `unsafe-inline`), `connect-src 'self'`, strips the router from 404.html,
-   and checks every link and fragment in the built HTML.
+   `unsafe-inline`) and the host of Cloudflare's Web Analytics beacon, which
+   the zone injects into every page with no nonce, `connect-src 'self'`
+   (the beacon reports to the page's own origin), strips the router from
+   404.html, and checks every link and fragment in the built HTML.
 3. Cloudflare serves matching assets before any Worker code runs
    (`run_worker_first: false`); navigation misses get 404.html.
 4. The Worker (`src/server.ts`) only sees non-navigation requests that match
@@ -195,7 +204,7 @@ notice), SegmentedControl (Rank by), FilterTabs (the effort picker),
 SplitBar (the two cards' bars) and UntrustedText (model answers). The model
 filter is a multi-select toggle with no shared equivalent, and the charts,
 the leaderboard table and the lockup are this site's own. The approved
-Doop design is an explainer for readers outside Matchbox, so it keeps
+design is an explainer for readers outside Matchbox, so it keeps
 short explanatory sentences that the terse house copy rule would cut. It
 follows the other copy rules: no dashes, middle dots or semicolons in UI
 text, and no decorative pills (the grader's checks are a plain list).

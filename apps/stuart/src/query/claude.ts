@@ -10,6 +10,7 @@ import { z } from "zod"
 import type { StuartEffort } from "./env"
 import type { ToolOutcome } from "./outcome"
 import { IdScope } from "./outcome"
+import { redactAndClip } from "./redact"
 import { STUART_TOOLS, toolByName } from "./tools/registry"
 import { type ToolContext, toolJsonSchema } from "./tools/tool"
 
@@ -214,7 +215,7 @@ export function resetGrammarFallback(): void {
 /** Short, key-free description of an error from the Messages API. */
 function modelErrorDetail(error: unknown): string {
   if (error instanceof APIError) {
-    return `api_${error.status ?? "unknown"}: ${error.message.slice(0, 200)}`
+    return `api_${error.status ?? "unknown"}: ${redactAndClip(error.message, 200)}`
   }
   return error instanceof Error ? error.name : "unknown"
 }
@@ -584,7 +585,9 @@ export async function runClaudeTurn(input: {
           })
           continue
         }
-        outcomes.push(executed)
+        // The model's own arguments: what the result echoes of them is not
+        // an independent read (sourced.ts, ECHO_RULE).
+        outcomes.push({ ...executed, input: call.input })
         for (const item of executed.trace) input.onStatus?.(item.label)
         results.push({
           type: "tool_result",

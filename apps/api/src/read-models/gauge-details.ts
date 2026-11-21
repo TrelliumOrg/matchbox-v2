@@ -16,6 +16,7 @@ import {
   parseAbi,
 } from "viem"
 import { z } from "zod"
+import { metadataToken } from "./gauge-labels"
 import { btcTokenRef, fromRaw, sumUsd, usdValue } from "./money"
 import { tokenRegistry } from "./token-registry"
 
@@ -145,7 +146,7 @@ export function destinationFromMetadata(metadata: string | null): {
     if (fee !== null) tail.push(`${Number(fee[1]) / 10_000}%`)
     else if (cl !== null) tail.push(`CL${cl[1]}`)
     else if (/^[0-9]+pool$/.test(part)) tail.push(part)
-    else tokens.push(part.toUpperCase())
+    else tokens.push(metadataToken(part))
   }
   const destination = [tokens.join("/"), ...tail].filter(Boolean).join(" ")
   return { protocol, destination: destination.length > 0 ? destination : null }

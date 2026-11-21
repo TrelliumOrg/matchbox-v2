@@ -9,6 +9,7 @@ import type {
   Evidence,
   GaugeExplainBlock,
   GaugeRankingBlock,
+  IncentiveAmount,
   LiquidationScenarioBlock,
   LoanPositionBlock,
   MetricSummaryBlock,
@@ -29,6 +30,7 @@ import {
   formatUsd,
   formatWhole,
   shareBps,
+  shortAddress,
   usdDelta,
 } from "./format"
 import { CoinRow, GaugeMark } from "./gauge-mark"
@@ -207,6 +209,37 @@ function weightText(weight: TokenAmount): string {
   return `${formatWhole(weight.raw, weight.decimals)} ${weight.symbol}`
 }
 
+/**
+ * This epoch's incentive lines, shown when any is unpriced: an unpriced line
+ * gets a quiet "Unpriced" label and its token's short address, so a token
+ * whose on-chain symbol copies a real one ("MUSD" at another address) can
+ * be told from the real one.
+ */
+function IncentiveLines({
+  lines,
+}: {
+  lines: readonly IncentiveAmount[]
+}): ReactNode {
+  if (!lines.some((line) => line.priced === false)) return null
+  return (
+    <KeyValues
+      rows={lines.map((line, index) => ({
+        key: `incentive.${index}`,
+        label: formatToken(line),
+        value:
+          line.priced === false ? (
+            <span className="stuart-gauge-sub">
+              Unpriced
+              {line.token === undefined
+                ? null
+                : `, ${shortAddress(line.token)}`}
+            </span>
+          ) : null,
+      }))}
+    />
+  )
+}
+
 function GaugeExplain({ block }: { block: GaugeExplainBlock }): ReactNode {
   const toGo = block.additionalVeMEZO
   const reached = toGo === null || BigInt(toGo.raw) === 0n
@@ -282,6 +315,7 @@ function GaugeExplain({ block }: { block: GaugeExplainBlock }): ReactNode {
           },
         ]}
       />
+      <IncentiveLines lines={block.incentives} />
     </div>
   )
 }

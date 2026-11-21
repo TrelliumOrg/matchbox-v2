@@ -4,8 +4,9 @@ import type { ReactNode } from "react"
 /**
  * The site footer on every page (layout v2, Doop `WC_9ztyeY-`): Open Pro
  * and Open Matchscan, which moved here from the retired product rail, the
- * policies, and the machine-readable files. The guideline's Status link
- * has no page behind it, so it is left out.
+ * privacy policy, and the machine-readable files. The guideline's Status
+ * and Terms links have no page behind them, so they are left out. Every
+ * address here must be on src/shell/reviewed-links.ts (e2e/smoke.spec.ts).
  */
 
 export const outboundLinks = [
@@ -15,7 +16,6 @@ export const outboundLinks = [
 
 const policies = [
   { href: "https://matchbox.markets/privacy", label: "Privacy" },
-  { href: "https://matchbox.markets/terms", label: "Terms" },
 ] as const
 
 const files = [
@@ -24,22 +24,24 @@ const files = [
   { href: "/sitemap.xml", label: "sitemap.xml" },
 ] as const
 
+// Phones: each link is at least 40 tall itself, not only under a finger
+// (data-tap), and the rows close up to keep the footer's rhythm (D3).
 const link =
-  "rounded-md outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
+  "flex items-center rounded-md outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink max-md:min-h-10"
 
 export function SiteFooter({ home }: { home: boolean }): ReactNode {
   return (
     <footer
       className={`mx-auto max-w-[1440px] px-5 md:px-8 lg:px-10 ${home ? "pb-12" : "pb-[150px]"}`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-line pt-6 max-md:gap-y-[26px] text-[15px] text-sec">
-        <ul className="flex flex-wrap items-center gap-x-[22px] gap-y-2 max-md:gap-y-[26px]">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-line pt-6 max-md:gap-y-2 text-[15px] text-sec">
+        <ul className="flex flex-wrap items-center gap-x-[22px] gap-y-2 max-md:gap-y-0">
           {outboundLinks.map((item) => (
             <li key={item.href}>
               <a
                 href={item.href}
                 data-tap=""
-                className={`flex items-center gap-1.5 text-ink2 ${link}`}
+                className={`gap-1.5 text-ink2 ${link}`}
               >
                 <Glyph shape={shapes.arrowUpRight} size={15} strokeWidth={2} />
                 {item.label}
@@ -54,7 +56,7 @@ export function SiteFooter({ home }: { home: boolean }): ReactNode {
             </li>
           ))}
         </ul>
-        <ul className="flex flex-wrap gap-x-[22px] gap-y-2 max-md:gap-y-[26px] font-mono text-[14px]">
+        <ul className="flex flex-wrap gap-x-[22px] gap-y-2 max-md:gap-y-0 font-mono text-[14px]">
           {files.map((item) => (
             <li key={item.href}>
               <a href={item.href} data-tap="" className={link}>

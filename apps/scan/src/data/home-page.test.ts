@@ -12,8 +12,13 @@ vi.mock("@tanstack/react-start/server", () => ({
 }))
 
 const { homePage } = await import("./home.server")
-const { collateralTile, positionsTile, sparkline, validatorsTile } =
-  await import("./scan/home-views")
+const {
+  collateralTile,
+  countedBlocks,
+  positionsTile,
+  sparkline,
+  validatorsTile,
+} = await import("./scan/home-views")
 const { fixtureNow } = await import("./scan/fixtures/shared")
 
 vi.useFakeTimers({ toFake: ["Date"] })
@@ -61,6 +66,26 @@ describe("validators tile", () => {
   it("is left out with no validator", () => {
     expect(validatorsTile([row("left")], null)).toBeNull()
   })
+
+  it("says every block of the day, not the counted validators' sum", () => {
+    const day = {
+      available: true,
+      day: "2026-11-08",
+      // One validator of twenty counted: its blocks only.
+      day_total: "1082",
+      blocks_in_day: "22737",
+      missing_counts: Array.from({ length: 19 }, (_, n) => `0x${n}`),
+    }
+    expect(countedBlocks(day)).toEqual({ day: "2026-11-08", total: "22737" })
+    // An API without blocks_in_day: the sum only when nobody is missing.
+    const { blocks_in_day: _, ...older } = day
+    expect(countedBlocks(older)).toBeNull()
+    expect(countedBlocks({ ...older, missing_counts: [] })).toEqual({
+      day: "2026-11-08",
+      total: "1082",
+    })
+    expect(countedBlocks({ ...day, available: false })).toBeNull()
+  })
 })
 
 describe("borrowing tiles", () => {
@@ -90,7 +115,7 @@ describe("borrowing tiles", () => {
     expect(positionsTile({ troves: 3, enclaves: 1, markets: 7 })).toMatchObject(
       {
         value: "11",
-        detail: "1 Enclave, 7 Morpho",
+        detail: "1 Enclave, 7 MUSD Morpho",
         aside: { label: "Troves", value: "3" },
       },
     )

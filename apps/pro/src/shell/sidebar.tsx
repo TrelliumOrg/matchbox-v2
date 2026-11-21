@@ -1,4 +1,3 @@
-import type { docsOrigin, docsTopics } from "@matchbox/docs/links"
 import { FeedbackEntry, FeedbackIcon } from "@matchbox/feedback-ui/entry"
 import { useSlidingIndicator } from "@matchbox/motion"
 import { Glyph, shapes } from "@matchbox/ui/icons"
@@ -11,6 +10,7 @@ import type { ClassicRowProps } from "../classic-note/classic-note"
 import { classicUrl, useClassicNote } from "../classic-note/note-store"
 import { getWallet } from "../wallet/wallet-store"
 
+import { proDocs } from "./docs-link"
 import { LiveBlockTicker } from "./live-ticker"
 import { isActive, navItems, usePathname } from "./nav-items"
 
@@ -44,15 +44,6 @@ function NavLink({
     </Link>
   )
 }
-
-/**
- * Pro's docs section, checked against @matchbox/docs's topics at compile
- * time: renaming or removing it (or moving the docs origin) stops Pro
- * compiling. The URL is a literal rather than `docsUrl("pro")`, which would
- * put the whole topics table into every page's first paint.
- */
-const proDocs: `${typeof docsOrigin}${(typeof docsTopics)["pro"]}` =
-  "https://docs.matchbox.markets/pro"
 
 const lowerLinkClass =
   "flex size-11 items-center justify-center rounded-[22px] text-[15px] text-sec outline-none hover:text-ink2 focus-visible:outline-2 focus-visible:outline-ink lg:h-10 lg:w-full lg:justify-start lg:gap-3.5 lg:px-4 rail:size-11 rail:justify-center rail:px-0"
@@ -164,6 +155,8 @@ export function Sidebar(): ReactNode {
         <li>
           <a
             href={proDocs}
+            target="_blank"
+            rel="noreferrer noopener"
             aria-label="Documentation"
             className={lowerLinkClass}
           >

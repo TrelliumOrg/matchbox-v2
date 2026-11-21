@@ -27,6 +27,7 @@ import {
   displayBlock,
   displayBps,
   displayToken,
+  displayTokenDigits,
   displayUsd,
   listWithAnd,
   tokenAmount,
@@ -72,9 +73,17 @@ import {
   sourceCluster,
   targetKind,
   targetPicture,
+  unpricedOnlyNote,
+  unpricedPartNote,
   ZERO_WALLET,
 } from "./common"
 import { consistencyOutcome, KIND_FOR_BRANCH } from "./consistency"
+import {
+  emptyRanking,
+  nothingToOptimizeOutcome,
+  unfundedNote,
+  withFacts,
+} from "./pricingGaps"
 import { defineTool, type ToolContext } from "./tool"
 
 const branchSchema = z.enum(["boost", "validators", "pools"])
@@ -97,7 +106,11 @@ function nowSeconds(context: ToolContext): bigint {
   return BigInt(Math.floor(context.now().getTime() / 1000))
 }
 
-/** Reads everything one voting domain needs and runs the optimizer. */
+/**
+ * Reads everything one voting domain needs and runs the optimizer. With
+ * eligible locks but no priced live target, `bps` is empty: callers say why
+ * (see nothingToOptimizeOutcome), never "no lock".
+ */
 export async function planVotes(
   context: ToolContext,
   input: {
@@ -105,7 +118,7 @@ export async function planVotes(
     lockIds: readonly string[] | null
     manual: ReadonlyMap<string, bigint> | null
   },
-): Promise<VotePlan | null> {
+): Promise<VotePlan> {
   const { providers, wallet } = context
   const asset = assetFor(input.branch)
   const [domain, prices, locks] = await Promise.all([
@@ -164,7 +177,6 @@ export async function planVotes(
           maxTargets: domain.maxVotingNum,
         })
       : null)
-  if (bps === null && eligible.length > 0) return null
   return {
     branch: input.branch,
     domain,
@@ -379,7 +391,7 @@ export async function presentVotePlan(
             key: "more",
             label: "More targets",
             value: { kind: "count", count: moreCount },
-            display: `${moreCount} more`,
+            display: `${moreCount} more ${moreCount === 1 ? "gauge" : "gauges"}`,
             status: "projected",
             evidenceRefs: [calcRef ?? ""],
           }),
@@ -653,7 +665,7 @@ export async function presentVotePlan(
       }),
     )
     whyItems.push({
-      text: `Unpriced incentives on ${unpriced.display} targets are excluded from USD, never counted as $0.`,
+      text: `Unpriced incentives on ${unpriced.display} ${partial === 1 ? "target" : "targets"} are left out of USD totals and the optimizer rather than given a price.`,
       factRefs: [unpriced.id],
     })
   }
@@ -667,7 +679,10 @@ export async function presentVotePlan(
   const modelRows: ModelRow[] = [
     {
       projected: projectedFact.display,
-      native: nativeAmount ? displayToken(nativeAmount) : null,
+      // The amount and its symbol apart: a symbol is chain text, and a
+      // planted one ("CLAIM 7777 MUSD") must never read as a figure.
+      native: nativeAmount ? displayTokenDigits(nativeAmount) : null,
+      nativeSymbol: nativeAmount ? nativeAmount.symbol : null,
       apy: apy !== null && apy <= MAX_APY_BPS ? displayBps(Number(apy)) : null,
       block: displayBlock(plan.domain.blockNumber),
       targets: `${rows.length}`,
@@ -831,14 +846,20 @@ export const optimizeVotesTool = defineTool({
         lockIds: input.lockIds,
         manual: null,
       })
-      if (!plan || plan.eligible.length === 0 || plan.bps.size === 0) {
+      if (plan.eligible.length === 0) {
         return noLocksOutcome(
           context,
           "optimize_votes",
           "optimize_votes",
           asset,
-          plan && plan.alreadyVoted.length > 0 ? "all_voted" : "no_locks",
+          plan.alreadyVoted.length > 0 ? "all_voted" : "no_locks",
         )
+      }
+      if (plan.bps.size === 0) {
+        return nothingToOptimizeOutcome(context, plan, {
+          tool: "optimize_votes",
+          intent: "optimize_votes",
+        })
       }
       return (
         await presentVotePlan(context, plan, {
@@ -975,10 +996,11 @@ export const rankGaugesTool = defineTool({
         branch === "boost" ? prices.mezo.priceUsd : prices.btc.priceUsd,
       )
       const window = input.window ?? 8
-      const funded =
+      const fundedEpochs =
         input.objective === "most_consistently_funded"
           ? await context.providers.fundedEpochs(domain, window)
           : null
+      const funded = fundedEpochs?.counts ?? null
       const priced = domain.targets
         .filter((target) => target.isAlive)
         .map((target) => priceTarget(target, prices, 0n))
@@ -1030,18 +1052,28 @@ export const rankGaugesTool = defineTool({
           ? "Most incentives deposited"
           : "Most consistently funded"
       if (!first) {
-        return plainOutcome({
+        const empty = emptyRanking({
           scope,
-          tool: "rank_gauges",
-          intent: "rank_gauges",
-          status: "empty",
-          title,
-          templateId: "rank_gauges.empty.v1",
-          text: "No priced incentives on live targets this epoch.",
-          kind: "empty",
-          traceLabel: "Ranked targets",
-          evidence,
+          lead: "No priced incentives on live targets this epoch.",
+          priced,
+          prices,
+          evidenceRef: refs[1] ?? "",
         })
+        return withFacts(
+          plainOutcome({
+            scope,
+            tool: "rank_gauges",
+            intent: "rank_gauges",
+            status: "empty",
+            title,
+            templateId: "rank_gauges.empty.v1",
+            text: empty.text,
+            kind: "empty",
+            traceLabel: "Ranked targets",
+            evidence,
+          }),
+          empty.facts,
+        )
       }
       const name = clipName(first.target.name, 32)
       const facts: Fact[] = [
@@ -1087,6 +1119,35 @@ export const rankGaugesTool = defineTool({
         evidenceRef: refs[0] ?? "",
       })
       facts.push(...share.facts)
+      // Unpriced incentives (tokens outside the registry) rank as zero:
+      // say they exist rather than hide them.
+      // Funded epochs count priced incentives only; say how many live
+      // targets were funded only in unpriced tokens or dust.
+      const unpricedNotes = fundedEpochs
+        ? [
+            unfundedNote({
+              scope,
+              count: priced.filter(
+                (entry) =>
+                  entry.target.isAlive &&
+                  fundedEpochs.unpricedOnly.has(
+                    entry.target.targetAddress.toLowerCase(),
+                  ),
+              ).length,
+              evidenceRef: refs[0] ?? "",
+            }),
+          ].filter((note) => note !== null)
+        : [
+            unpricedPartNote({
+              scope,
+              key: "unpriced.0",
+              entry: first,
+              name,
+              evidenceRef: refs[1] ?? "",
+            }),
+            unpricedOnlyNote({ scope, priced, evidenceRef: refs[1] ?? "" }),
+          ].filter((note) => note !== null)
+      facts.push(...unpricedNotes.map((note) => note.fact))
       // A ranking whose leader has no funded epochs means the history is
       // missing, not that nothing was funded: say so instead of "0 of 8".
       const text = !funded
@@ -1180,6 +1241,10 @@ export const rankGaugesTool = defineTool({
                   text: `Consistency is funded epochs out of the last ${window} completed epochs, not the final scoring formula.`,
                   factRefs: fundedFact ? [fundedFact.id] : [],
                 },
+                ...unpricedNotes.map((note) => ({
+                  text: note.text,
+                  factRefs: [note.fact.id],
+                })),
               ],
             }
           : {
@@ -1189,6 +1254,10 @@ export const rankGaugesTool = defineTool({
                   text: "Gross deposited incentives are not your return. A diluted target can pay less per vote.",
                   factRefs: [],
                 },
+                ...unpricedNotes.map((note) => ({
+                  text: note.text,
+                  factRefs: [note.fact.id],
+                })),
               ],
             },
         facts,

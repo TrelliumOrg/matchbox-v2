@@ -40,7 +40,7 @@ function QuestionAnswers({
         if (event.currentTarget.open) preloadAnswers()
       }}
     >
-      <summary className="inline-flex cursor-pointer list-none items-center rounded-xl py-1 text-[14.5px] font-semibold text-ink underline decoration-mut underline-offset-4 outline-none hover:decoration-ink focus-visible:outline-2 focus-visible:outline-ink [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex cursor-pointer list-none items-center rounded-xl py-1 max-md:min-h-10 text-[14.5px] font-semibold text-ink underline decoration-mut underline-offset-4 outline-none hover:decoration-ink focus-visible:outline-2 focus-visible:outline-ink [&::-webkit-details-marker]:hidden">
         <span className="group-open:hidden">
           Show the {summary.answers} answers
         </span>
@@ -77,7 +77,7 @@ function Questions(): ReactNode {
             <li key={kind.id}>
               <a
                 href={`#${kind.id}`}
-                className="flex h-9 items-center rounded-[18px] bg-soft px-3.5 text-[14.5px] font-medium text-ink2 outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
+                className="flex h-9 items-center rounded-[18px] bg-soft px-3.5 max-md:h-10 text-[14.5px] font-medium text-ink2 outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
               >
                 <span className="[overflow-wrap:anywhere]">{kind.label}</span>
               </a>

@@ -1,4 +1,10 @@
 import {
+  APY_MIN_INCENTIVES_MICRO_USD,
+  APY_MIN_VOTES_WEI,
+  type ApyVoteUnit,
+  apyFloorMissed,
+} from "@matchbox/domain/funding"
+import {
   compareDensity,
   priceTarget,
   targetApyBps,
@@ -33,8 +39,60 @@ import {
   sourceCluster,
   targetKind,
   targetPicture,
+  unpricedOnlyNote,
+  unpricedPartNote,
 } from "./common"
+import { emptyRanking, withFacts } from "./pricingGaps"
 import type { ToolContext } from "./tool"
+
+/** "1 gauge with under $1.00 of incentives is not ranked." */
+function belowFloorNote(input: {
+  scope: ToolContext["scope"]
+  count: number
+  floor: "incentives" | "votes"
+  unit: ApyVoteUnit
+  evidenceRef: string
+}): { facts: Fact[]; text: string } | null {
+  if (input.count === 0) return null
+  const count = makeFact({
+    scope: input.scope,
+    key: `below_floor.${input.floor}`,
+    label:
+      input.floor === "incentives"
+        ? "Voted targets under the APY floor of incentives"
+        : "Voted targets under the APY floor of votes",
+    value: { kind: "count", count: input.count },
+    display: String(input.count),
+    status: "live",
+    evidenceRefs: [input.evidenceRef],
+  })
+  const votes = tokenAmount(APY_MIN_VOTES_WEI[input.unit], 18, input.unit)
+  const floor =
+    input.floor === "incentives"
+      ? makeFact({
+          scope: input.scope,
+          key: "apy_floor.incentives",
+          label: "APY floor, incentives",
+          value: { kind: "usd", usd: usd6(APY_MIN_INCENTIVES_MICRO_USD) },
+          display: displayUsd(APY_MIN_INCENTIVES_MICRO_USD),
+          status: "exact",
+          evidenceRefs: [input.evidenceRef],
+        })
+      : makeFact({
+          scope: input.scope,
+          key: "apy_floor.votes",
+          label: "APY floor, votes",
+          value: { kind: "token", amount: votes },
+          display: displayToken(votes),
+          status: "exact",
+          evidenceRefs: [input.evidenceRef],
+        })
+  const one = input.count === 1
+  return {
+    facts: [count, floor],
+    text: `${count.display} ${one ? "gauge" : "gauges"} with under ${floor.display} of ${input.floor} ${one ? "is" : "are"} not ranked.`,
+  }
+}
 
 /**
  * "Which gauge pays the most": live targets by incentives per vote (the Vote
@@ -56,13 +114,28 @@ export async function rankByApy(
     const assetPrice = priceMicroUsd(
       branch === "boost" ? prices.mezo.priceUsd : prices.btc.priceUsd,
     )
-    const priced = domain.targets
+    const live = domain.targets
       .filter((target) => target.isAlive)
       .map((target) => priceTarget(target, prices, 0n))
-      .filter((entry) => entry.incentiveMicroUsd > 0n)
+    // Unpriced incentives are worth nothing here: a target ranks only on
+    // what Matchbox can price by token address.
+    const priced = live.filter((entry) => entry.incentiveMicroUsd > 0n)
     const voted = priced.filter((entry) => entry.target.weight > 0n)
     const unvoted = priced.length - voted.length
-    const ordered = voted.sort(compareDensity).slice(0, 10)
+    // Pro's APY floors (`@matchbox/domain/funding`): no APY on under a
+    // dollar of incentives or a handful of votes, so "3,690% on $0.28"
+    // never leads Stuart's ranking while Pro's page shows "n/a".
+    const below = { incentives: 0, votes: 0 }
+    const ranked = voted.filter((entry) => {
+      const missed = apyFloorMissed({
+        incentivesMicro: entry.incentiveMicroUsd,
+        votesWei: entry.target.weight,
+        unit: asset,
+      })
+      if (missed !== null) below[missed] += 1
+      return missed === null
+    })
+    const ordered = ranked.sort(compareDensity).slice(0, 10)
     const funded = await fundedForRows(
       context,
       domain,
@@ -80,20 +153,45 @@ export async function rankByApy(
     ]
     const refs = evidence.map((item) => item.id)
     const [domainRef, priceRef, calcRef] = refs
+    const floorNotes = (["incentives", "votes"] as const).flatMap((floor) => {
+      const note = belowFloorNote({
+        scope,
+        count: below[floor],
+        floor,
+        unit: asset,
+        evidenceRef: calcRef ?? "",
+      })
+      return note === null ? [] : [note]
+    })
+    const floorText = floorNotes.map((note) => note.text).join(" ")
+    const floorFacts = floorNotes.flatMap((note) => note.facts)
     const first = ordered[0]
     if (!first) {
-      return plainOutcome({
+      const empty = emptyRanking({
         scope,
-        tool,
-        intent: "rank_gauges",
-        status: "empty",
-        title,
-        templateId: "rank_gauges.apy_empty.v1",
-        text: "No live target has priced incentives and votes this epoch.",
-        kind: "empty",
-        traceLabel: "Ranked targets",
-        evidence,
+        lead:
+          floorNotes.length === 0
+            ? "No live target has priced incentives and votes this epoch."
+            : `No live target has enough priced incentives and votes for an APY this epoch. ${floorText}`,
+        priced: live,
+        prices,
+        evidenceRef: priceRef ?? "",
       })
+      return withFacts(
+        plainOutcome({
+          scope,
+          tool,
+          intent: "rank_gauges",
+          status: "empty",
+          title,
+          templateId: "rank_gauges.apy_empty.v1",
+          text: empty.text,
+          kind: "empty",
+          traceLabel: "Ranked targets",
+          evidence,
+        }),
+        [...floorFacts, ...empty.facts],
+      )
     }
     const apyOf = (entry: typeof first) =>
       targetApyBps({
@@ -130,7 +228,8 @@ export async function rankByApy(
       total: domain.targets.length,
       evidenceRef: domainRef ?? "",
     })
-    facts.push(...share.facts)
+    facts.push(...share.facts, ...floorFacts)
+    const floorSuffix = floorText === "" ? "" : ` ${floorText}`
     let text: string
     if (firstApy !== null) {
       const apyFact = makeFact({
@@ -143,7 +242,7 @@ export async function rankByApy(
         evidenceRefs: [calcRef ?? "", priceRef ?? ""],
       })
       facts.push(apyFact)
-      text = `${domainLabel(domain)}: ${nameFact?.display} pays the most per vote this epoch, APY ${apyFact.display} on ${incentivesFact?.display} incentives. ${share.text}`
+      text = `${domainLabel(domain)}: ${nameFact?.display} pays the most per vote this epoch, APY ${apyFact.display} on ${incentivesFact?.display} incentives. ${share.text}${floorSuffix}`
     } else {
       const weight = tokenAmount(first.target.weight, 18, asset)
       const weightFact = makeFact({
@@ -156,7 +255,7 @@ export async function rankByApy(
         evidenceRefs: [domainRef ?? ""],
       })
       facts.push(weightFact)
-      text = `${domainLabel(domain)}: ${nameFact?.display} pays the most per vote this epoch, ${incentivesFact?.display} incentives on ${weightFact.display}. ${share.text}`
+      text = `${domainLabel(domain)}: ${nameFact?.display} pays the most per vote this epoch, ${incentivesFact?.display} incentives on ${weightFact.display}. ${share.text}${floorSuffix}`
     }
     const whyItems: Array<{ text: string; factRefs: string[] }> = [
       {
@@ -164,6 +263,26 @@ export async function rankByApy(
         factRefs: [],
       },
     ]
+    const partNote = unpricedPartNote({
+      scope,
+      key: "unpriced.0",
+      entry: first,
+      name,
+      evidenceRef: priceRef ?? "",
+    })
+    if (partNote) {
+      facts.push(partNote.fact)
+      whyItems.push({ text: partNote.text, factRefs: [partNote.fact.id] })
+    }
+    const onlyNote = unpricedOnlyNote({
+      scope,
+      priced: live,
+      evidenceRef: priceRef ?? "",
+    })
+    if (onlyNote) {
+      facts.push(onlyNote.fact)
+      whyItems.push({ text: onlyNote.text, factRefs: [onlyNote.fact.id] })
+    }
     if (unvoted > 0) {
       const unvotedFact = makeFact({
         scope,
@@ -264,7 +383,7 @@ export async function rankByApy(
         traceItem({
           scope,
           key: "rank",
-          label: `Ranked ${voted.length} voted targets by APY at block ${displayBlock(domain.blockNumber)}`,
+          label: `Ranked ${ranked.length} voted targets by APY at block ${displayBlock(domain.blockNumber)}`,
           tool,
         }),
       ],

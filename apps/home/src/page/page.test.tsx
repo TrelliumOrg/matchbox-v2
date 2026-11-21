@@ -16,6 +16,7 @@ import {
 import { shortAddress } from "../data/validators"
 import { ProCard, ScanCard } from "./cards"
 import { FiguresProvider } from "./live"
+import { ownRoutes, reviewedLinks } from "./reviewed-links"
 import { Classic, Footer, Header, Support } from "./sections"
 import { stuartQuestions } from "./stuart"
 
@@ -414,6 +415,20 @@ describe("the static parts", () => {
     expect(
       screen.getByRole("link", { name: "Open Classic" }).getAttribute("href"),
     ).toBe("https://app.matchbox.markets")
+  })
+
+  it("link only own routes and reviewed addresses from the footer", () => {
+    const { container } = render(<Footer />)
+    const hrefs = [...container.querySelectorAll("a[href]")].map(
+      (link) => link.getAttribute("href") ?? "",
+    )
+    expect(hrefs.length).toBeGreaterThan(0)
+    for (const href of hrefs) {
+      if (href.startsWith("/")) expect(ownRoutes).toContain(href)
+      else expect(Object.keys(reviewedLinks)).toContain(href)
+    }
+    // Classic has no Terms page (README, Open questions).
+    expect(hrefs.some((href) => href.includes("/terms"))).toBe(false)
   })
 
   it("give the phone a menu button that opens every product and the theme", () => {

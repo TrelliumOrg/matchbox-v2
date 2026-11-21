@@ -5,6 +5,7 @@ import {
   ShellEnd,
   ThemeColor,
 } from "@matchbox/app-kit/root-document"
+import { siteOrigin } from "@matchbox/docs/site"
 import { themeScript } from "@matchbox/tokens"
 import {
   createRootRoute,
@@ -21,6 +22,13 @@ import appCss from "../styles.css?url"
 
 const description =
   "Guides and reference for Matchbox Pro, Matchscan, Matchbox ID, Matchbox Developer and the Mezo concepts they share."
+
+/**
+ * The link preview card every page shares, 1200x630, drawn by packages/og
+ * (`pnpm --filter @matchbox/og cards`) into public/og.png. Pages set their
+ * own og:title, og:description and og:url (routes/$.tsx, routes/index.tsx).
+ */
+const ogImage = `${siteOrigin}/og.png`
 
 /**
  * The document every docs page is prerendered into. Two inline scripts run
@@ -71,7 +79,17 @@ export const Route = createRootRoute({
         ...base.meta,
         { property: "og:site_name", content: "Matchbox Docs" },
         { property: "og:type", content: "website" },
-        { name: "twitter:card", content: "summary" },
+        { property: "og:title", content: "Matchbox Docs" },
+        { property: "og:description", content: description },
+        { property: "og:image", content: ogImage },
+        { property: "og:image:type", content: "image/png" },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        {
+          property: "og:image:alt",
+          content: "Matchbox Docs: learn Matchbox",
+        },
+        { name: "twitter:card", content: "summary_large_image" },
       ],
       links: base.links,
     }

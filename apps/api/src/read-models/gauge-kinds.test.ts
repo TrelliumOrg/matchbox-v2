@@ -28,6 +28,9 @@ describe("MEZO gauge names", () => {
     expect(crossChainName("remote-gauge-curve-musd-2pool-b5571e76")).toBe(
       "Curve MUSD 2pool",
     )
+    expect(crossChainName("remote-gauge-curve-bdusd-musd-21a4d858")).toBe(
+      "Curve bdUSD/MUSD",
+    )
     expect(crossChainName("snf-community")).toBe("SNF Community")
     expect(crossChainName("Mezo Technical")).toBe("Mezo Technical")
     expect(crossChainFallbackName(gauge)).toBe("Cross-chain 0x4440…f4b6")
@@ -44,6 +47,9 @@ describe("MEZO gauge names", () => {
         "remote-gauge-uniswap-v4-usdc-musd-fee100-a9bf5691",
       ),
     ).toEqual({ protocol: "Uniswap v4", destination: "USDC/MUSD 0.01%" })
+    expect(
+      destinationFromMetadata("remote-gauge-curve-bdusd-musd-21a4d858"),
+    ).toEqual({ protocol: "Curve", destination: "bdUSD/MUSD" })
     expect(destinationFromMetadata("snf-community")).toEqual({
       protocol: null,
       destination: null,

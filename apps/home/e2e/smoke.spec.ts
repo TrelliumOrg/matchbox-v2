@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs"
 import { expect, type Locator, type Page, test } from "@playwright/test"
+import { ownRoutes, reviewedLinks } from "../src/page/reviewed-links"
 import { axe, spokenText, watch } from "./helpers"
 
 /**
@@ -736,4 +737,56 @@ test("a path the page lacks goes to Classic, path and query kept", async ({
     "https://app.matchbox.markets/privacy",
   )
   expect((await request.get("/", { maxRedirects: 0 })).status()).toBe(200)
+})
+
+test("links only own routes and reviewed addresses from the footer", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/")
+  const hrefs = await page
+    .locator("footer a[href]")
+    .evaluateAll((links) => links.map((link) => link.getAttribute("href")))
+  expect(hrefs.length).toBeGreaterThan(0)
+  for (const href of hrefs) {
+    if (href === null) continue
+    if (href.startsWith("/")) {
+      expect(ownRoutes).toContain(href.split("?")[0])
+      expect((await request.get(href)).status()).toBe(200)
+    } else {
+      expect(Object.keys(reviewedLinks)).toContain(href)
+    }
+  }
+})
+
+/** The `content` of each `<meta property|name="key">` in the HTML. */
+function metaTags(html: string): Map<string, string> {
+  const tags = new Map<string, string>()
+  for (const [tag] of html.matchAll(/<meta\s[^>]*>/g)) {
+    const key = /(?:property|name)="([^"]+)"/.exec(tag)?.[1]
+    const content = /content="([^"]*)"/.exec(tag)?.[1]
+    if (key !== undefined && content !== undefined) tags.set(key, content)
+  }
+  return tags
+}
+
+test("shares a 1200x630 card from an absolute address the build serves", async ({
+  request,
+}) => {
+  const tags = metaTags(await (await request.get("/")).text())
+  expect(tags.get("og:title")).toBe("Matchbox")
+  expect(tags.get("og:description")).toBeTruthy()
+  expect(tags.get("og:url")).toBe("https://matchbox.markets/")
+  expect(tags.get("og:type")).toBe("website")
+  expect(tags.get("twitter:card")).toBe("summary_large_image")
+  expect(tags.get("og:image:width")).toBe("1200")
+  expect(tags.get("og:image:height")).toBe("630")
+  expect(tags.get("og:image:alt")).toBeTruthy()
+  const image = new URL(tags.get("og:image") ?? "")
+  expect(image.origin).toBe("https://matchbox.markets")
+  const served = await request.get(image.pathname)
+  expect(served.status()).toBe(200)
+  expect(served.headers()["content-type"]).toBe("image/png")
+  const bytes = await served.body()
+  expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([1200, 630])
 })

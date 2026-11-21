@@ -1,3 +1,4 @@
+import { MUSD_CONTRACTS } from "@matchbox/chain"
 import type {
   ScanMorphoMarket,
   ScanMorphoPosition,
@@ -12,6 +13,7 @@ import {
   healthFigure,
   marketsById,
   marketView,
+  morphoOpenCounts,
   morphoPositionView,
   morphoRowView,
   stalePriceNote,
@@ -20,6 +22,7 @@ import {
   wholeUp,
 } from "./borrow-views"
 import { marketList, morphoPositions, troves } from "./fixtures/borrow"
+import { openPositionWords } from "./words"
 
 describe("risk figures round toward danger", () => {
   const trove = troves[0] as ScanTrove
@@ -312,5 +315,56 @@ describe("foldInterest", () => {
       event("0xc", "INTEREST_ACCRUED", 9),
       event("0xb", "REPAID", 4),
     ])
+  })
+})
+
+describe("open position counts across pages", () => {
+  const musd = MUSD_CONTRACTS.mainnet.musd
+  const usdc = "0x04671c72aab5ac02a03c1098314b1bb6b560c197"
+  const markets = new Map([
+    ["0xm1", { loan_token: musd }],
+    ["0xu1", { loan_token: usdc }],
+  ])
+  const owing = (market_id: string, borrow_assets = "5") => ({
+    market_id,
+    borrow_assets,
+  })
+
+  it("counts debt in every market, and the MUSD markets' share apart", () => {
+    const counts = morphoOpenCounts(
+      [
+        owing("0xm1"),
+        owing("0xu1"),
+        owing("0xu1"),
+        // Supply only: not open.
+        owing("0xu1", "0"),
+        // A market the list does not carry: every market's count only.
+        owing("0xgone"),
+      ],
+      markets,
+    )
+    expect(counts).toEqual({ all: 4, musd: 1 })
+  })
+
+  it("names the MUSD share when it differs, so Borrow ties to Home", () => {
+    expect(
+      openPositionWords({ enclaves: 1, morpho: 8, morphoMusd: 1, troves: 4 }),
+    ).toBe("1 Enclave, 8 Morpho (1 MUSD), 4 troves")
+    expect(
+      openPositionWords({ enclaves: 2, morpho: 1, morphoMusd: 1, troves: 1 }),
+    ).toBe("2 Enclaves, 1 Morpho, 1 trove")
+    expect(
+      openPositionWords({
+        enclaves: null,
+        morpho: 0,
+        morphoMusd: 0,
+        troves: 0,
+      }),
+    ).toBe("0 Morpho, 0 troves")
+  })
+
+  it("agrees with the fixture: debt in the mUSDC market is Borrow's only", () => {
+    const counts = morphoOpenCounts(morphoPositions, marketsById(marketList))
+    expect(counts).toEqual({ all: 4, musd: 2 })
   })
 })

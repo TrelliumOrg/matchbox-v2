@@ -1,10 +1,15 @@
-import { applyD1Migrations } from "cloudflare:test"
+import {
+  applyD1Migrations,
+  createExecutionContext,
+  waitOnExecutionContext,
+} from "cloudflare:test"
 import { env } from "cloudflare:workers"
 import {
   blockscoutClientHeader,
   blockscoutEndUserHeader,
 } from "@matchbox/contracts/blockscout"
 import { errorBodySchema } from "@matchbox/contracts/errors"
+import type { Gauge } from "@matchbox/contracts/market"
 import type { RateLimitPolicy } from "@matchbox/contracts/rate-limits"
 import type { Escrow } from "@matchbox/contracts/read-models"
 import {
@@ -93,6 +98,7 @@ import type {
 import type { LiveLock } from "../read-models/live-wallet"
 import { writeReadModels } from "../read-models/store"
 import { fulfilledWithin } from "../test-timing"
+import { bounded, composedLabelsMs, composedPartsMs } from "./entities"
 import {
   activityCount,
   currentEpoch,
@@ -120,6 +126,8 @@ import {
   scanChainBudgetKey,
   scanLiveDeadlineMs,
 } from "./live-locks"
+import type { LiveTxRead } from "./live-tx"
+import liveFixtures from "./live-tx.fixtures.json"
 import registerScanRoutes from "./routes"
 import { scanEndUserPolicy, scanRateLimitKey } from "./serve"
 
@@ -128,7 +136,7 @@ const blockTx =
   "0x45e0962d6c0fa8ae9d30ba18cf7351ac0fcf3c0487fd231107510ebb0db66988"
 const endUser = "aGFzaGVkLWlwLXByZWZpeC0wMDE"
 
-type Reply = { status: number; body?: unknown }
+type Reply = { status: number; body?: unknown; delayMs?: number }
 
 /** A fake Blockscout keyed by path below /api/v2/. */
 function fakeBlockscout() {
@@ -147,6 +155,9 @@ function fakeBlockscout() {
       calls.push(path)
       urls.push(url)
       const reply = replies.get(path) ?? { status: 404, body: {} }
+      if (reply.delayMs !== undefined) {
+        await new Promise((resolve) => setTimeout(resolve, reply.delayMs))
+      }
       return Response.json(reply.body ?? {}, {
         status: reply.status,
         headers: {
@@ -160,6 +171,24 @@ function fakeBlockscout() {
 
 let cacheNumber = 0
 
+/**
+ * The ExecutionContext of every request so far: the routes hand their edge
+ * and D1 writes to waitUntil, and `settled()` waits for those writes
+ * themselves, where a fixed pause was too short on a loaded machine.
+ */
+const contexts: ExecutionContext[] = []
+
+// Only this test's requests: an earlier one may have left a read that
+// never answers (on purpose) in its waitUntil.
+beforeEach(() => {
+  contexts.length = 0
+})
+
+/** Waits for the background work (waitUntil) of every request so far. */
+async function settled(): Promise<void> {
+  await Promise.all(contexts.splice(0).map(waitOnExecutionContext))
+}
+
 function harness(
   options: {
     rateLimits?: RateLimitClient | null
@@ -172,6 +201,10 @@ function harness(
     readDb?: D1Database | null
     /** Matchscan's chain readers; none by default. */
     chain?: ScanChainReaders | null
+    /** This epoch's gauges, for decoding live receipts. */
+    gauges?: () => Promise<readonly Gauge[]>
+    /** The routes' head clock; `state.clock` at once by default. */
+    clock?: () => Promise<ChainClock>
   } = {},
 ) {
   const blockscout = fakeBlockscout()
@@ -235,8 +268,9 @@ function harness(
         mezo: null,
       }),
       proxy,
-      clock: async () => state.clock,
+      clock: options.clock ?? (async () => state.clock),
       chain: options.chain ?? null,
+      gauges: options.gauges ?? null,
       logger,
       now: () => state.now,
     })
@@ -245,7 +279,9 @@ function harness(
   let current = build()
   async function get(path: string, init?: RequestInit): Promise<Response> {
     const app = await current
-    return app.request(`${base}${path}`, init)
+    const ctx = createExecutionContext()
+    contexts.push(ctx)
+    return app.request(`${base}${path}`, init, undefined, ctx)
   }
   async function json<T>(path: string, schema: z.ZodType<T>): Promise<T> {
     const response = await get(path)
@@ -1515,6 +1551,161 @@ describe("composed documents", () => {
     })
   })
 
+  it("answers by its deadline when one Blockscout read is slow, and has it next time", async () => {
+    // Slower than Matchscan's 3 s for the whole document, inside the
+    // proxy's own 4 s.
+    h.blockscout.reply(`addresses/${people.alice}`, {
+      status: 200,
+      body: { ...addressFixture, hash: people.alice },
+      delayMs: 3_300,
+    })
+    h.blockscout.reply(`addresses/${people.alice}/counters`, {
+      status: 200,
+      body: addressCounters,
+    })
+    const read = async () => {
+      const started = Date.now()
+      const response = await h.get(`/entities/address/${people.alice}`)
+      const document = scanAddressDocumentSchema.parse(
+        z.object({ data: z.unknown() }).parse(await response.json()).data,
+      )
+      return { ms: Date.now() - started, document, response }
+    }
+    const first = await read()
+    expect(first.ms).toBeLessThan(composedPartsMs + 600)
+    // That card only; the others are served.
+    expect(first.document.summary).toEqual({
+      status: "unavailable",
+      reason: "upstream",
+    })
+    expect(first.document.counters.status).toBe("ok")
+    expect(first.document.locks.status).toBe("ok")
+    expect(first.document.borrow.status).toBe("ok")
+    expect(first.document.activity.status).toBe("ok")
+    // A document missing a part for a passing reason is not kept.
+    expect(first.response.headers.get("Cache-Control")).toBe(
+      "private, no-store",
+    )
+    // The late read finished in the background: the next request has it.
+    await settled()
+    const second = await read()
+    expect(second.document.summary.status).toBe("ok")
+  })
+
+  it("answers inside Matchscan's 3 s with everything before and around the render at its worst", async () => {
+    const pause = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms))
+    // SCAN_DB whose copy-run version and label reads hang for 5 s.
+    const slowSql = /scan_status|FROM labels WHERE address IN/
+    function slowStatement(
+      statement: D1PreparedStatement,
+    ): D1PreparedStatement {
+      return new Proxy(statement, {
+        get(target, property) {
+          const value: unknown = Reflect.get(target, property, target)
+          if (typeof value !== "function") return value
+          if (property === "bind") {
+            return (...binds: unknown[]) =>
+              slowStatement(Reflect.apply(value, target, binds))
+          }
+          return async (...args: unknown[]) => {
+            await pause(5_000)
+            return Reflect.apply(value, target, args)
+          }
+        },
+      })
+    }
+    const scanDb = new Proxy(env.SCAN_DB, {
+      get(target, property) {
+        const value: unknown = Reflect.get(target, property, target)
+        if (property === "prepare") {
+          return (sql: string) =>
+            slowSql.test(sql)
+              ? slowStatement(target.prepare(sql))
+              : target.prepare(sql)
+        }
+        return typeof value === "function" ? value.bind(target) : value
+      },
+    })
+    // Edge lookups and the rate-limit call that take a second each, and a
+    // head read that takes its own 0.3 s bound.
+    const edge = await caches.open(`scan-slow-${crypto.randomUUID()}`)
+    const cache = {
+      async match(request: RequestInfo) {
+        await pause(1_000)
+        return edge.match(request)
+      },
+      put: (request: RequestInfo, response: Response) =>
+        edge.put(request, response),
+      delete: (request: RequestInfo) => edge.delete(request),
+    } as Cache
+    const memory = createMemoryRateLimitClient()
+    const rateLimits: RateLimitClient = {
+      async consume(key, policy) {
+        await pause(1_000)
+        return memory.consume(key, policy)
+      },
+    }
+    const slow = harness({
+      scanDb,
+      cache,
+      rateLimits,
+      clock: async () => {
+        await pause(300)
+        return { height: 13_200_000, lastActive: 13_100_000 }
+      },
+    })
+    // And a Blockscout read past the proxy's patience.
+    slow.blockscout.reply(`addresses/${people.alice}`, {
+      status: 200,
+      body: { ...addressFixture, hash: people.alice },
+      delayMs: 3_300,
+    })
+    slow.blockscout.reply(`addresses/${people.alice}/counters`, {
+      status: 200,
+      body: addressCounters,
+    })
+    const started = Date.now()
+    const response = await slow.get(`/entities/address/${people.alice}`)
+    const document = scanAddressDocumentSchema.parse(
+      z.object({ data: z.unknown() }).parse(await response.json()).data,
+    )
+    const ms = Date.now() - started
+    // The labels' deadline, 2.6 s after arrival, and a little for the
+    // document itself: inside Matchscan's 3 s with room for the hop.
+    expect(ms).toBeLessThan(2_900)
+    expect(ms).toBeGreaterThanOrEqual(composedLabelsMs - 50)
+    expect(document.summary).toEqual({
+      status: "unavailable",
+      reason: "upstream",
+    })
+    expect(document.counters.status).toBe("ok")
+    expect(document.labels).toEqual({})
+    // Not kept: parts were missing for passing reasons.
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store")
+  })
+
+  it("hands a late read to waitUntil with its failure caught", async () => {
+    // The copy run's version read, failing after its deadline.
+    let fail: (error: Error) => void = () => undefined
+    const version = new Promise<string>((_resolve, reject) => {
+      fail = reject
+    })
+    const handed: Promise<unknown>[] = []
+    const served = await bounded(
+      "version",
+      version,
+      Date.now() + 10,
+      null,
+      (task) => handed.push(task),
+      {},
+    )
+    expect(served).toBeNull()
+    fail(new Error("D1_ERROR: Network connection lost."))
+    expect(handed).toHaveLength(1)
+    await expect(handed[0]).resolves.toBeUndefined()
+  })
+
   it("composes a block with its transactions and the proposer's label", async () => {
     const height = block.height
     await env.SCAN_DB.prepare(
@@ -1706,6 +1897,7 @@ describe("the jobs Worker's status row", () => {
       aggregatesComplete: true,
       historyFilled: true,
       stale: false,
+      refillPending: false,
       skipped: 0,
     })
     const series = await h.json(
@@ -1715,19 +1907,36 @@ describe("the jobs Worker's status row", () => {
     expect(series.meta).toMatchObject({ asOf: scanNow - 50, stale: false })
   })
 
-  it("is stale while copies fail or a re-fill is due, and never sealed then", async () => {
+  it("is stale while copies fail, and never sealed then", async () => {
     await writeStatus(env.SCAN_DB, { consecutive_failures: 2 })
     const failing = await h.json(
       "/epochs",
       scanAggregatePageSchema(scanEpochItemSchema),
     )
-    expect(failing.meta.stale).toBe(true)
+    expect(failing.meta).toMatchObject({ stale: true, refillPending: false })
     const sealed = await h.get(`/epochs/${lastEpoch}`)
     expect(sealed.headers.get("X-Scan-Class")).toBe("run")
+  })
+
+  it("reports a due re-fill on its own, not as stale, and never seals then", async () => {
     await writeStatus(env.SCAN_DB, { refill_required: 1 })
     h.isolate()
     const refill = await h.json("/status", status)
-    expect(refill.data).toMatchObject({ stale: true, refillRequired: true })
+    expect(refill.data).toMatchObject({
+      stale: false,
+      refillRequired: true,
+      consecutiveFailures: 0,
+      halted: false,
+    })
+    const epochs = await h.json(
+      "/epochs",
+      scanAggregatePageSchema(scanEpochItemSchema),
+    )
+    expect(epochs.meta).toMatchObject({ stale: false, refillPending: true })
+    // Figures may still change: nothing is sealed while it is due.
+    expect(
+      (await h.get(`/epochs/${lastEpoch}`)).headers.get("X-Scan-Class"),
+    ).toBe("run")
   })
 
   it("keys run entries on last_ok_at, so a skipped run keeps them", async () => {
@@ -4806,6 +5015,8 @@ describe("locks as the chain has them", () => {
     lock?: (escrow: Escrow, tokenId: string) => Answer<LiveLockRead>
     owner?: (address: string) => Answer<OwnerLocks>
     latest?: Answer<LatestLockIds>
+    /** Called as each read is asked, before it answers. */
+    onAsk?: () => void
   }) {
     const reads = { lock: [] as string[], owner: [] as string[], latest: 0 }
     /**
@@ -4815,6 +5026,7 @@ describe("locks as the chain has them", () => {
      */
     const left: number[] = []
     const ask = (deadline: number) => {
+      world.onAsk?.()
       left.push(deadline - Date.now())
     }
     const readers: ScanChainReaders = {
@@ -4840,11 +5052,6 @@ describe("locks as the chain has them", () => {
   /** The harness's clock on a minute's first second. */
   function onTheMinute(live: ReturnType<typeof harness>): void {
     live.state.now = Math.ceil(live.state.now / 60_000) * 60_000
-  }
-
-  /** Lets the edge writes the last request handed to waitUntil land. */
-  async function settled(): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 20))
   }
 
   async function queued(): Promise<number> {
@@ -5181,14 +5388,26 @@ describe("locks as the chain has them", () => {
     }
   })
 
-  /** The harness's clock, running with real time from now on. */
-  function realClock(live: ReturnType<typeof harness>): void {
-    const offset = live.state.now - Date.now()
+  /**
+   * The harness's clock: standing still until the returned `start()`, then
+   * running with real time. A test starts it at its first real timer (a
+   * read that hangs, the budget's ask), so the D1 work before that, slow on
+   * a loaded machine, does not use up the route's deadline: on a real
+   * clock from the start, a busy CI runner left no time for the live read.
+   * What still runs on real time is that timer, and the checks hold unless
+   * it fires more than a second and a half late.
+   */
+  function realClock(live: ReturnType<typeof harness>): () => void {
+    const frozen = live.state.now
+    let offset: number | null = null
     Object.defineProperty(live.state, "now", {
-      get: () => Date.now() + offset,
+      get: () => (offset === null ? frozen : Date.now() + offset),
       set: () => undefined,
       configurable: true,
     })
+    return () => {
+      offset ??= frozen - Date.now()
+    }
   }
 
   const visitor = (user: string) => ({
@@ -5201,9 +5420,14 @@ describe("locks as the chain has them", () => {
   it("answers a lock not stored inside Matchscan's 3 s when every read hangs", async () => {
     // The route's one deadline fits Matchscan's wait, with time to render.
     expect(scanLiveDeadlineMs + 500).toBeLessThanOrEqual(matchscanWaitMs)
-    const chain = fakeChain({ lock: () => "hang", latest: "hang" })
+    let startClock = (): void => undefined
+    const chain = fakeChain({
+      lock: () => "hang",
+      latest: "hang",
+      onAsk: () => startClock(),
+    })
     const live = harness({ chain: chain.readers })
-    realClock(live)
+    startClock = realClock(live)
     for (const path of ["/locks/vebtc/3", "/locks/vebtc/6100"]) {
       // A guard against a hang only; the bound is the deadlines below.
       const response = await fulfilledWithin(live.get(path), 10_000)
@@ -5226,14 +5450,21 @@ describe("locks as the chain has them", () => {
         lock: chainLock({ escrow, tokenId }),
       }),
     })
+    let startClock = (): void => undefined
     const unreachable: RateLimitClient = {
-      consume: (key, policy) =>
-        key.startsWith("scan:live:") || key === scanChainBudgetKey
-          ? new Promise(() => undefined)
-          : createMemoryRateLimitClient(() => Date.now()).consume(key, policy),
+      consume: (key, policy) => {
+        if (key.startsWith("scan:live:") || key === scanChainBudgetKey) {
+          startClock()
+          return new Promise(() => undefined)
+        }
+        return createMemoryRateLimitClient(() => Date.now()).consume(
+          key,
+          policy,
+        )
+      },
     }
     const live = harness({ chain: chain.readers, rateLimits: unreachable })
-    realClock(live)
+    startClock = realClock(live)
     // The budget's wait fits inside the route's deadline.
     expect(budgetCallMs).toBeLessThan(scanLiveDeadlineMs)
     const body = await fulfilledWithin(
@@ -5359,5 +5590,234 @@ describe("locks as the chain has them", () => {
     live.state.clock = { ...live.state.clock, height: 13_200_500 }
     const withdrawn = await page()
     expect(withdrawn.nextCursor).not.toBeNull()
+  })
+})
+
+describe("a transaction the explorer and the copy have yet to reach", () => {
+  const [vote, claim] = liveFixtures.receipts
+  if (vote === undefined || claim === undefined) throw new Error("fixtures")
+
+  function mined(receipt: NonNullable<typeof vote>): LiveTxRead {
+    return {
+      state: "mined",
+      transaction: {
+        from: receipt.from,
+        to: receipt.to,
+        value: "0",
+        nonce: 3,
+        gas_limit: "900000",
+        gas_price: "1000",
+        input: receipt.input,
+        input_truncated: false,
+        method: "vote",
+      },
+      receipt: {
+        status: "success",
+        block_number: receipt.blockNumber,
+        position: receipt.position,
+        gas_used: "500000",
+        effective_gas_price: "1000",
+        created: null,
+        logs: receipt.logs,
+        logs_truncated: false,
+      },
+      timestamp: receipt.timestamp,
+      head: receipt.blockNumber + 2,
+      locks: null,
+    }
+  }
+
+  const unknownTx: LiveTxRead = {
+    state: "unknown",
+    transaction: null,
+    receipt: null,
+    timestamp: null,
+    head: null,
+    locks: null,
+  }
+
+  function txReader(answer: (hash: string) => Promise<LiveTxRead>) {
+    const reads: string[] = []
+    const readers: ScanChainReaders = {
+      lock: () => Promise.reject(new ClaimableUnread("unused")),
+      owner: () => Promise.reject(new ClaimableUnread("unused")),
+      latest: () => Promise.reject(new ClaimableUnread("unused")),
+      tx: (hash) => {
+        reads.push(hash)
+        return answer(hash)
+      },
+    }
+    return { readers, reads }
+  }
+
+  async function documentOf(response: Response) {
+    expect(response.status).toBe(200)
+    return scanTransactionDocumentSchema.parse(
+      z.object({ data: z.unknown() }).parse(await response.json()).data,
+    )
+  }
+
+  const gauges = async (): Promise<Gauge[]> =>
+    liveFixtures.known.map((reward) => ({
+      voter: "boost",
+      network: "mezo",
+      gaugeAddress: reward.gauge,
+      isAlive: true,
+      weight: null,
+      bribeContract: reward.address,
+      vebtcTokenId: null,
+      beneficiary: null,
+      boostMultiplier: null,
+    }))
+
+  it("reads a mined transaction Blockscout lacks from the chain, decoded", async () => {
+    const chain = txReader(async () => mined(vote))
+    const h = harness({ chain: chain.readers })
+    const document = await documentOf(await h.get(`/entities/tx/${vote.hash}`))
+    expect(document.transaction).toEqual({
+      status: "unavailable",
+      reason: "not_found",
+    })
+    expect(document.final).toBe(false)
+    if (document.live?.status !== "ok") throw new Error("no live part")
+    const live = document.live.data
+    expect(live.state).toBe("mined")
+    expect(live.receipt?.block_number).toBe(vote.blockNumber)
+    const copied = liveFixtures.rows.filter((row) => row.tx_hash === vote.hash)
+    expect(live.activity.map((row) => row.id)).toEqual(
+      copied.map((row) => row.id),
+    )
+    expect(live.activity.map((row) => row.gauge)).toEqual(
+      copied.map((row) => row.gauge),
+    )
+    expect(chain.reads).toEqual([vote.hash])
+  })
+
+  it("decodes a claim through the snapshot's reward contracts", async () => {
+    const without = harness({
+      chain: txReader(async () => mined(claim)).readers,
+    })
+    const bare = await documentOf(
+      await without.get(`/entities/tx/${claim.hash}`),
+    )
+    const withGauges = harness({
+      chain: txReader(async () => mined(claim)).readers,
+      gauges,
+    })
+    const full = await documentOf(
+      await withGauges.get(`/entities/tx/${claim.hash}`),
+    )
+    if (bare.live?.status !== "ok" || full.live?.status !== "ok") {
+      throw new Error("no live part")
+    }
+    const copied = liveFixtures.rows.filter((row) => row.tx_hash === claim.hash)
+    expect(full.live.data.activity).toEqual(copied)
+    expect(bare.live.data.activity.length).toBeLessThan(copied.length)
+  })
+
+  it("says the chain has never seen a hash, for one block", async () => {
+    const chain = txReader(async () => unknownTx)
+    const h = harness({ chain: chain.readers })
+    const hash = `0x${"5e".repeat(32)}`
+    const document = await documentOf(await h.get(`/entities/tx/${hash}`))
+    expect(document.live).toMatchObject({
+      status: "ok",
+      data: { state: "unknown", activity: [] },
+    })
+    await h.get(`/entities/tx/${hash}`)
+    expect(chain.reads).toHaveLength(1)
+    h.state.now += 4_000
+    h.state.clock = {
+      ...h.state.clock,
+      height: (h.state.clock.height ?? 0) + 1,
+    }
+    await h.get(`/entities/tx/${hash}`)
+    expect(chain.reads).toHaveLength(2)
+  })
+
+  it("serves the document without the chain when the read fails", async () => {
+    const chain = txReader(() => Promise.reject(new ClaimableUnread("down")))
+    const h = harness({ chain: chain.readers })
+    const response = await h.get(`/entities/tx/${vote.hash}`)
+    const document = await documentOf(response)
+    expect(document.live).toEqual({ status: "unavailable", reason: "upstream" })
+    // Not stored for the next caller.
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store")
+  })
+
+  it("does not read the chain once the copy has the transaction", async () => {
+    await env.SCAN_DB.prepare(
+      "UPDATE scan_cursors SET value = '1900000000' WHERE name = 'copy:activity'",
+    ).run()
+    const chain = txReader(async () => mined(vote))
+    const h = harness({ chain: chain.readers })
+    h.blockscout.reply(`transactions/${blockTx}`, {
+      status: 200,
+      body: { ...transaction, has_error_in_internal_transactions: false },
+    })
+    const document = await documentOf(await h.get(`/entities/tx/${blockTx}`))
+    expect(document.live).toBeUndefined()
+    expect(chain.reads).toEqual([])
+  })
+
+  it("sends no live part for an old transaction while Blockscout is failing", async () => {
+    // The copy is past the block by the chain's own time; the explorer's
+    // time is missing.
+    await env.SCAN_DB.prepare(
+      "UPDATE scan_cursors SET value = ?1 WHERE name = 'copy:activity'",
+    )
+      .bind(String(vote.timestamp + 3_600))
+      .run()
+    const chain = txReader(async () => mined(vote))
+    const h = harness({ chain: chain.readers })
+    h.blockscout.reply(`transactions/${vote.hash}`, { status: 503 })
+    const document = await documentOf(await h.get(`/entities/tx/${vote.hash}`))
+    expect(document.transaction.status).toBe("unavailable")
+    expect(document.live).toBeUndefined()
+  })
+
+  it("never reads the chain for a transaction our rows already cover", async () => {
+    await env.SCAN_DB.prepare(
+      "UPDATE scan_cursors SET value = '1' WHERE name = 'copy:activity'",
+    ).run()
+    await env.SCAN_DB.prepare(
+      `INSERT INTO activity (id, tx_hash, log_index, block_number, timestamp,
+         epoch_start, action_type, source, contract_address, tx_from, actor,
+         recipient, extra)
+       VALUES ('covered-1', ?1, 0, ?2, ?3, ?4, 'BOOST_POKE', 'BOOST_VOTER',
+         ?5, ?6, NULL, NULL, '{}')`,
+    )
+      .bind(
+        vote.hash,
+        vote.blockNumber,
+        vote.timestamp,
+        vote.timestamp - (vote.timestamp % 604_800),
+        vote.to,
+        vote.from,
+      )
+      .run()
+    const chain = txReader(async () => mined(vote))
+    const h = harness({ chain: chain.readers })
+    h.blockscout.reply(`transactions/${vote.hash}`, { status: 503 })
+    const document = await documentOf(await h.get(`/entities/tx/${vote.hash}`))
+    expect(document.activity.status).toBe("ok")
+    expect(document.live).toBeUndefined()
+    expect(chain.reads).toEqual([])
+  })
+
+  it("reads the chain while Blockscout has it and the copy does not", async () => {
+    await env.SCAN_DB.prepare(
+      "UPDATE scan_cursors SET value = '1' WHERE name = 'copy:activity'",
+    ).run()
+    const chain = txReader(async () => mined(vote))
+    const h = harness({ chain: chain.readers })
+    h.blockscout.reply(`transactions/${blockTx}`, {
+      status: 200,
+      body: { ...transaction, has_error_in_internal_transactions: false },
+    })
+    const document = await documentOf(await h.get(`/entities/tx/${blockTx}`))
+    expect(document.transaction.status).toBe("ok")
+    expect(document.live?.status).toBe("ok")
+    expect(chain.reads).toEqual([blockTx])
   })
 })

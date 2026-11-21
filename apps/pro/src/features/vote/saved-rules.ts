@@ -60,7 +60,10 @@ export function primaryLabel(locks: readonly Lock[], epoch: number): string {
 /**
  * Where a selection's ballot for one gauge type starts: the first picked
  * lock's saved split (pending or ready), kept to gauges of that type, else
- * the locks' current votes in it.
+ * the locks' current votes in it. Either way only gauges the list shows: a
+ * vote on a gauge Pro does not list (a MEZO gauge the Mezo app leaves out)
+ * could be neither seen nor edited on the ballot, and signing would spread
+ * its share over the visible picks. It still shows as a vote replaced.
  */
 export function startingBallot(
   locks: readonly Lock[],
@@ -75,5 +78,5 @@ export function startingBallot(
     const picks = saved.picks.filter(([id]) => inKind(id))
     if (picks.length > 0) return new Map(picks)
   }
-  return ballotFromLock(locks, kind)
+  return new Map([...ballotFromLock(locks, kind)].filter(([id]) => inKind(id)))
 }

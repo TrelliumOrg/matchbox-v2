@@ -14,8 +14,6 @@ const fakeChain = {
   delayMs: 0,
   /** Transactions in each block the fake RPC serves. */
   transactions: 1,
-  /** RPC requests answered (control paths excluded). */
-  calls: 0,
 }
 
 async function fakeRpc(request: Request): Promise<Response> {
@@ -46,7 +44,6 @@ async function fakeRpc(request: Request): Promise<Response> {
   if (url.hostname !== "rpc.fake") {
     return new Response("unexpected outbound fetch", { status: 599 })
   }
-  fakeChain.calls += 1
   if (fakeChain.delayMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, fakeChain.delayMs))
   }
@@ -104,7 +101,10 @@ export default defineConfig(async () => {
             SCAN_MIGRATIONS: scanMigrations,
             MARKET_MIGRATIONS: marketMigrations,
             HEADS_RPC_URLS: "https://rpc.fake/",
-            HEADS_POLL_MS: "250",
+            // Longer than any test, so a hub never polls on its own timer
+            // while one runs: the BlockHub tests run its alarm and lapse its
+            // interval themselves (block-hub.workers.test.ts).
+            HEADS_POLL_MS: "60000",
             HEADS_STALE_MS: "300",
           },
           outboundService: fakeRpc,
@@ -114,9 +114,11 @@ export default defineConfig(async () => {
     test: {
       include: ["src/**/*.workers.test.ts"],
       // These tests page through lists a request at a time inside the
-      // Workers runtime; on a loaded full run (every package at once) a
-      // few take over vitest's 5 s default though they pass alone.
-      testTimeout: 20_000,
+      // Workers runtime, after Miniflare boots and applies the migrations:
+      // up to 16 s for one test on the CI laptop. The same limits locally
+      // and in CI (CONTRIBUTING.md, Tests); they only catch a hang.
+      testTimeout: 30_000,
+      hookTimeout: 60_000,
     },
   }
 })

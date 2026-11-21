@@ -388,10 +388,30 @@ test.describe("while the copy step has halted tables", () => {
       const response = await page.goto(path)
       expect(response?.status(), path).toBe(200)
       await expect(
-        page.getByRole("status").filter({ hasText: /^Some data is delayed/ }),
+        page.getByRole("status").filter({
+          hasText:
+            /^Some data is delayed: votes and activity are behind the chain/,
+        }),
         path,
       ).toBeVisible()
     }
+    await expect(page.getByText(/^Some figures may disagree/)).toHaveCount(0)
+  })
+})
+
+test.describe("while a re-fill of the copy is due", () => {
+  test.use({ extraHTTPHeaders: { "x-scan-fixture": "refill" } })
+
+  test("pages say figures may disagree, not that data is delayed", async ({
+    page,
+  }) => {
+    await page.goto("/gauges")
+    await expect(
+      page
+        .getByRole("status")
+        .filter({ hasText: /^Some figures may disagree/ }),
+    ).toBeVisible()
+    await expect(page.getByText(/^Some data is delayed/)).toHaveCount(0)
   })
 })
 

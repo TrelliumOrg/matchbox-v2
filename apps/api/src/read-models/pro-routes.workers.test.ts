@@ -1,5 +1,10 @@
-import { applyD1Migrations } from "cloudflare:test"
+import {
+  applyD1Migrations,
+  createExecutionContext,
+  waitOnExecutionContext,
+} from "cloudflare:test"
 import { env } from "cloudflare:workers"
+import { API_REQUEST_LOG_LAYOUT } from "@matchbox/contracts/api-request-log"
 import {
   activityCategory,
   type GaugeCard,
@@ -37,6 +42,7 @@ import {
   demoWalletOverview,
   demoWalletRewards,
 } from "@matchbox/contracts/read-models/fixtures"
+import { createLogger, type Logger } from "@matchbox/logger"
 import { errorHandler, notFoundHandler } from "@matchbox/server"
 import { Hono } from "hono"
 import type { PublicClient } from "viem"
@@ -44,6 +50,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { z } from "zod"
 import type { ApiEnv } from "../context"
 import { cors } from "../middleware/cors"
+import { type RequestLogSink, requestLog } from "../middleware/request-log"
 import { fulfilledWithin, rejectedWithin } from "../test-timing"
 import { silentLogger } from "../testing"
 import type { BalanceReader } from "./balances"
@@ -63,13 +70,16 @@ import { pricesKvKey, readPricesFromKv } from "./publish"
 import registerInternalProRoutes, {
   forgetClaimableReads,
   forgetLiveBuilds,
+  forgetStaleRequests,
   liveWalletDeadlineMs,
 } from "./routes"
 import {
   currentKey,
+  type ReadDatabase,
   type ReadModelKind,
   type ReadModelWrite,
   readReadModel,
+  staleWalletSeconds,
   writeReadModels,
 } from "./store"
 
@@ -156,32 +166,82 @@ const balances: BalanceReader = async () => ({
   ]),
 })
 
+/**
+ * The ExecutionContext of every request so far. The routes hand their edge
+ * cache and D1 writes to waitUntil; `settled()` waits for those writes
+ * themselves, where a fixed pause was too short on a loaded machine.
+ */
+const contexts: ExecutionContext[] = []
+
+// Only this test's requests: an earlier test may have left a build that
+// never finishes (on purpose) in its waitUntil.
+beforeEach(() => {
+  contexts.length = 0
+})
+
+/** Waits for the background work (waitUntil) of every request so far. */
+async function settled(): Promise<void> {
+  await Promise.all(contexts.splice(0).map(waitOnExecutionContext))
+}
+
+/** Serves each request with its own ExecutionContext, kept for `settled()`. */
+function withContexts(hono: Hono<ApiEnv>): Hono<ApiEnv> {
+  const request = hono.request
+  hono.request = (input, init) => {
+    const ctx = createExecutionContext()
+    contexts.push(ctx)
+    return request(input, init, undefined, ctx)
+  }
+  return hono
+}
+
 function app(
   options: {
     live?: boolean
-    balances?: boolean
+    balances?: boolean | BalanceReader
     claimable?: LiveClaimableReader
     lockCount?: LockCountReader
     locks?: LiveLocksReader
     /** The wallet build for wallets outside the sweep; the fake by default. */
     wallet?: LiveWalletReader
+    /** READ_DB, or a wrapper around it. */
+    readDb?: ReadDatabase
+    cache?: Cache | null
+    /** Request log data points (REQUEST_LOG); none by default. */
+    requestLog?: RequestLogSink
+    logger?: Logger
   } = {},
 ) {
   const hono = new Hono<ApiEnv>()
+  if (options.requestLog !== undefined) {
+    hono.use(
+      "*",
+      requestLog({
+        sink: options.requestLog,
+        now: () => new Date(),
+        logger: createLogger({ sink: () => undefined }),
+      }),
+    )
+  }
   hono.use("*", cors())
   hono.onError(errorHandler())
   hono.notFound(notFoundHandler)
   registerInternalProRoutes(hono, {
-    readDb: env.READ_DB,
+    readDb: options.readDb ?? env.READ_DB,
     readPrices: () => readPricesFromKv(env.PRICES),
-    cache: null,
+    cache: options.cache ?? null,
     heads: null,
     network: "mezo",
     liveWallet: options.live === false ? null : (options.wallet ?? liveWallet),
     liveClaimable: options.claimable ?? null,
     lockCount: options.lockCount ?? null,
     liveLocks: options.locks ?? null,
-    balances: options.balances === false ? null : balances,
+    balances:
+      options.balances === false
+        ? null
+        : typeof options.balances === "function"
+          ? options.balances
+          : balances,
     identity: async (address) =>
       address === liveWalletAddress
         ? {
@@ -194,8 +254,9 @@ function app(
           }
         : { address, status: "unavailable", mezoId: null, linkedAccounts: [] },
     nowSeconds: () => demoNow,
+    logger: options.logger ?? null,
   })
-  return hono
+  return withContexts(hono)
 }
 
 beforeEach(async () => {
@@ -211,6 +272,7 @@ beforeEach(async () => {
   // The live caches are per isolate, and every test shares one.
   forgetClaimableReads()
   forgetLiveBuilds()
+  forgetStaleRequests()
 })
 
 async function json(path: string, init?: RequestInit) {
@@ -392,7 +454,7 @@ describe("wallets outside the sweep", () => {
     // One RPC build serves all three routes.
     expect(liveReads).toBe(1)
     // Let the background writes land.
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await settled()
     const stored = await readReadModel(
       env.READ_DB,
       "mezo",
@@ -412,7 +474,7 @@ describe("wallets outside the sweep", () => {
     )
     expect(status).toBe(200)
     expect(walletOverviewResponseSchema.parse(body).data.locks).toEqual([])
-    await new Promise((resolve) => setTimeout(resolve, 20))
+    await settled()
     const rows = await env.READ_DB.prepare(
       "SELECT count(*) AS n FROM read_models WHERE doc_key = ?1",
     )
@@ -1324,5 +1386,254 @@ describe("gauge votes kept as the chain has them", () => {
         "max-age=30",
       )
     })
+  })
+})
+
+describe("a shared document whose read fails", () => {
+  /** READ_DB whose next `left` document reads fail as D1 does when cold. */
+  function flaky(failures: { left: number }): ReadDatabase {
+    return {
+      prepare(query: string) {
+        if (failures.left > 0 && query.includes("FROM read_models")) {
+          failures.left -= 1
+          throw new Error("D1_ERROR: Network connection lost.")
+        }
+        return env.READ_DB.prepare(query)
+      },
+      batch: (statements) => env.READ_DB.batch(statements),
+    }
+  }
+
+  it("answers after one failed D1 read instead of 500", async () => {
+    const failures = { left: 1 }
+    const response = await app({ readDb: flaky(failures) }).request(
+      "/internal/pro/protocol",
+    )
+    expect(response.status).toBe(200)
+    expect(failures.left).toBe(0)
+    protocolResponseSchema.parse(await response.json())
+  })
+
+  it("serves the last good answer while the document cannot be read", async () => {
+    const cache = await caches.open(`last-good-${crypto.randomUUID()}`)
+    const url = "http://localhost/internal/pro/protocol"
+    // A database object of its own per request: the isolate's memo of the
+    // current documents is kept per database.
+    const good = await app({ cache, readDb: flaky({ left: 0 }) }).request(url)
+    expect(good.status).toBe(200)
+    const body = await good.text()
+    await settled()
+    // The cached answer has expired, and the stored document is one this
+    // API cannot parse (written by a jobs version it does not know).
+    await cache.delete(new Request(url))
+    await env.READ_DB.prepare(
+      "UPDATE read_models SET body = '{}' WHERE kind = 'protocol'",
+    ).run()
+    const served = await app({ cache, readDb: flaky({ left: 0 }) }).request(url)
+    expect(served.status).toBe(200)
+    expect(served.headers.get("X-Cache")).toBe("stale-if-error")
+    expect(served.headers.get("Cache-Control")).toBe("no-store")
+    expect(await served.text()).toBe(body)
+  })
+
+  it("counts a last good answer in the request log, apart from other 200s", async () => {
+    const cache = await caches.open(`last-good-${crypto.randomUUID()}`)
+    const url = "http://localhost/internal/pro/protocol"
+    const points: { blobs: string[] }[] = []
+    const sink = {
+      writeDataPoint: (point: { blobs: string[] }) => points.push(point),
+    }
+    const read = () =>
+      app({ cache, readDb: flaky({ left: 0 }), requestLog: sink }).request(url)
+    expect((await read()).status).toBe(200)
+    await settled()
+    await cache.delete(new Request(url))
+    await env.READ_DB.prepare(
+      "UPDATE read_models SET body = '{}' WHERE kind = 'protocol'",
+    ).run()
+    expect((await read()).status).toBe(200)
+    const servedFrom = API_REQUEST_LOG_LAYOUT.servedFrom
+    expect(servedFrom).toBe("blob11")
+    expect(points.map((point) => point.blobs[10])).toEqual(["", "last-good"])
+  })
+
+  it("logs a document it cannot read without what it read", async () => {
+    const lines: string[] = []
+    const logger = createLogger({
+      format: "json",
+      level: "debug",
+      sink: (_level, line) => lines.push(line),
+    })
+    const gauge = "0x1111111111111111111111111111111111111111"
+    // A body that is not JSON, then a document the schema rejects at a
+    // record key (an address).
+    await env.READ_DB.prepare(
+      "UPDATE read_models SET body = 'secret-body-text' WHERE kind = 'protocol'",
+    ).run()
+    await env.READ_DB.prepare(
+      `INSERT INTO read_models
+         (network, kind, doc_key, body, etag, block, source, updated_at)
+       VALUES ('mezo', 'gauge-funding', 'current', ?1, 'e', 1, 'warehouse', 1)`,
+    )
+      .bind(
+        JSON.stringify({
+          window: 4,
+          throughEpoch: 9,
+          gauges: { [gauge]: { recent: "secret-value", total: 1, streak: 1 } },
+        }),
+      )
+      .run()
+    for (const path of ["protocol", "gauges/consistency"]) {
+      const response = await app({ logger }).request(`/internal/pro/${path}`)
+      expect(response.status).toBe(500)
+    }
+    const logged = lines.join(" ")
+    expect(logged).toContain("Read model render failed")
+    expect(logged).toContain("SyntaxError")
+    expect(logged).toContain("invalid_type at gauges.{address}.recent")
+    expect(logged).not.toContain("secret-body-text")
+    expect(logged).not.toContain("secret-value")
+    expect(logged).not.toContain(gauge)
+  })
+
+  it("is never served for a wallet: a wallet route fails instead", async () => {
+    // Only shared documents keep a last good answer. A wallet's would be a
+    // cache entry per wallet, and an old one could show a wallet as it was
+    // before its owner's own transaction.
+    const cache = await caches.open(`last-good-${crypto.randomUUID()}`)
+    const url = `http://localhost/internal/pro/wallets/${demoWallet}/overview`
+    const good = await app({ cache, readDb: flaky({ left: 0 }) }).request(url)
+    expect(good.status).toBe(200)
+    await settled()
+    await cache.delete(new Request(url))
+    // Both tries of the render fail.
+    forgetClaimableReads()
+    const failures = { left: 10 }
+    const served = await app({ cache, readDb: flaky(failures) }).request(url)
+    expect(failures.left).toBeLessThan(10)
+    expect(served.status).toBe(500)
+    expect(served.headers.get("X-Cache")).not.toBe("stale-if-error")
+  })
+
+  it("does not try a live balance read again: its client retries itself", async () => {
+    let reads = 0
+    const response = await app({
+      balances: async () => {
+        reads += 1
+        throw new Error("HTTP request failed")
+      },
+    }).request(`/internal/pro/wallets/${demoWallet}/balances`)
+    expect(response.status).toBe(500)
+    expect(reads).toBe(1)
+  })
+
+  it("still fails when there is no earlier answer to serve", async () => {
+    await env.READ_DB.prepare(
+      "UPDATE read_models SET body = '{}' WHERE kind = 'protocol'",
+    ).run()
+    const cache = await caches.open(`last-good-${crypto.randomUUID()}`)
+    const response = await app({
+      cache,
+      readDb: flaky({ left: 0 }),
+    }).request("/internal/pro/protocol")
+    expect(response.status).toBe(500)
+  })
+})
+
+describe("a stored wallet someone looks at", () => {
+  async function store(updatedAt: number): Promise<void> {
+    await writeReadModels(env.READ_DB, [
+      {
+        ...base,
+        updatedAt,
+        kind: "wallet-overview",
+        key: demoWallet,
+        data: demoWalletOverview,
+      },
+      {
+        ...base,
+        updatedAt,
+        kind: "wallet-rewards",
+        key: demoWallet,
+        data: demoWalletRewards,
+      },
+    ])
+  }
+  async function requested(): Promise<string[]> {
+    const rows = await env.READ_DB.prepare(
+      "SELECT wallet FROM wallet_requests",
+    ).all<{ wallet: string }>()
+    return rows.results.map((row) => row.wallet)
+  }
+
+  it("is queued for the next snapshot once it is over an hour old", async () => {
+    await store(demoNow - staleWalletSeconds - 60)
+    const hono = app()
+    for (const kind of ["overview", "rewards", "overview"]) {
+      const response = await hono.request(
+        `/internal/pro/wallets/${demoWallet}/${kind}`,
+      )
+      expect(response.status).toBe(200)
+    }
+    await settled()
+    expect(await requested()).toEqual([demoWallet])
+  })
+
+  it("is left to the sweep while it is recent", async () => {
+    await store(demoNow - 600)
+    const response = await app().request(
+      `/internal/pro/wallets/${demoWallet}/overview`,
+    )
+    expect(response.status).toBe(200)
+    await settled()
+    expect(await requested()).toEqual([])
+  })
+
+  it("is not queued for its activity, which a rebuild leaves as it was", async () => {
+    // A quiet wallet's activity document holds no block, so a rebuild that
+    // finds no new events writes nothing and it stays hours old. Queued on
+    // its age, it was asked for again on every view after every rebuild.
+    await writeReadModels(env.READ_DB, [
+      {
+        ...base,
+        updatedAt: demoNow - 6 * staleWalletSeconds,
+        kind: "wallet-activity",
+        key: demoWallet,
+        data: { address: demoWallet, rows: [], nextCursor: null },
+      },
+    ])
+    const response = await app().request(
+      `/internal/pro/wallets/${demoWallet}/activity`,
+    )
+    expect(response.status).toBe(200)
+    await settled()
+    expect(await requested()).toEqual([])
+  })
+
+  it("is not queued without locks: only its events change it", async () => {
+    await writeReadModels(env.READ_DB, [
+      {
+        ...base,
+        updatedAt: demoNow - staleWalletSeconds - 60,
+        kind: "wallet-overview",
+        key: demoWallet,
+        data: { ...demoWalletOverview, locks: [] },
+      },
+      {
+        ...base,
+        updatedAt: demoNow - staleWalletSeconds - 60,
+        kind: "wallet-rewards",
+        key: demoWallet,
+        data: demoWalletRewards,
+      },
+    ])
+    for (const kind of ["overview", "rewards"]) {
+      const response = await app().request(
+        `/internal/pro/wallets/${demoWallet}/${kind}`,
+      )
+      expect(response.status).toBe(200)
+    }
+    await settled()
+    expect(await requested()).toEqual([])
   })
 })

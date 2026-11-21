@@ -15,7 +15,7 @@ import {
 } from "@tanstack/react-router"
 import { type ReactNode, Suspense } from "react"
 import { canonicalHash } from "../data/canonical"
-import { getTransactionPage, type Headline } from "../data/entities"
+import type { Headline } from "../data/entities"
 import type { ActivityView } from "../data/scan/activity-view"
 import type { LogView, TransferView, TxDetail } from "../data/views"
 import {
@@ -29,7 +29,9 @@ import {
 } from "../explorer/parts"
 import { ActivityList, Sentence } from "../explorer/sentence"
 import { ShowAll } from "../explorer/show-all"
+import { getTxPage } from "../explorer/tx-page"
 import { deferred } from "../shell/deferred"
+import { useRefreshWhile } from "../shell/entity-not-found"
 
 /** A loan's panels: their own chunk, loaded only for a loan transaction. */
 const WhatChanged = deferred(() =>
@@ -56,7 +58,7 @@ export const Route = createFileRoute("/tx/$hash")({
     if (hash !== params.hash) {
       throw redirect({ to: "/tx/$hash", params: { hash }, statusCode: 301 })
     }
-    const page = await getTransactionPage({ data: { hash } })
+    const page = await getTxPage({ data: { hash } })
     if (page.tx.status === "missing") throw notFound()
     return { hash, ...page, now: Math.floor(Date.now() / 1000) }
   },
@@ -257,10 +259,20 @@ function Title({
   return <Sentence parts={headline.parts} />
 }
 
+/** Half an hour: past it, a page still indexing waits for a reload. */
+const indexingMs = 30 * 60_000
+
+const liveNote = {
+  pending: "In the mempool, waiting for a block",
+  mined: "Live from the chain, full details once indexed",
+  indexing: "Live from the chain, full details once indexed",
+}
+
 function TransactionPage(): ReactNode {
-  const { hash, tx, logs, activity, headline, labelsCapped, loan, now } =
+  const { hash, tx, logs, activity, headline, labelsCapped, loan, now, live } =
     Route.useLoaderData()
   const loanView = loan?.status === "ok" ? loan.data : null
+  useRefreshWhile(`index:${hash}`, live !== null, indexingMs)
   return (
     <>
       <Breadcrumbs.Root className="mt-8 max-xl:mt-5">
@@ -306,6 +318,9 @@ function TransactionPage(): ReactNode {
             </p>
           )}
           <HashChip.Root value={hash} kind="hash" className="mt-1 text-sec" />
+          <p role="status" className="mt-2 text-[14px] text-sec empty:hidden">
+            {live === null ? null : liveNote[live]}
+          </p>
         </div>
       </header>
       {loan === null ? null : (

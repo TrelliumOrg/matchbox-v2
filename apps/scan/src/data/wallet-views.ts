@@ -249,7 +249,9 @@ export function veMezoVotes(
     power += own
     locked += centsOf(lock.locked.usd)
     projected += centsOf(lock.projected?.usd ?? null)
-    if (lock.vote.status !== "voted") continue
+    // A vote kept by a lock with no power left (expired) votes nothing:
+    // not "Voted in Epoch N" beside 0% of power used.
+    if (lock.vote.status !== "voted" || own === 0n) continue
     epoch = epochIndexFor(lock.vote.epoch.start)
     const cast =
       lock.vote.byVoter.length > 0
@@ -360,10 +362,65 @@ export type StreakView = {
   squares: { epoch: number; voted: boolean; current: boolean }[]
 }
 
+/** What a vote row needs to say which epoch it counts for. */
+export type StreakVote = {
+  epoch_start: number
+  escrow: string
+  token_id: string
+}
+
+/** What a lock needs to say whether it had voting power at a time. */
+export type StreakLock = {
+  escrow: string
+  token_id: string
+  unlock_at: number | null
+  is_permanent: boolean
+  withdrawn_at: number | null
+  merged_at: number | null
+}
+
 /**
- * A voting streak from the epochs in which the wallet's locks had votes
- * (cast that epoch or carried over). The current epoch counts once its
- * votes are in; until then the streak runs to the epoch before.
+ * Whether a lock had voting power at `at`: permanent or not yet unlocked,
+ * and not withdrawn or merged away by then. A lock with no unlock time
+ * known counts as having power.
+ */
+export function hadPower(lock: StreakLock, at: number): boolean {
+  if (lock.withdrawn_at !== null && lock.withdrawn_at <= at) return false
+  if (lock.merged_at !== null && lock.merged_at <= at) return false
+  return lock.is_permanent || lock.unlock_at === null || lock.unlock_at > at
+}
+
+/**
+ * The epochs the wallet voted in: an epoch counts when any of its locks
+ * had a vote then (cast or carried over) and had voting power at the
+ * epoch's start. A vote carries into every later epoch until the lock
+ * votes again, so an expired lock's last vote would otherwise keep a
+ * streak going long after the wallet stopped. A vote whose lock is not
+ * in `locks` (not read) counts, as before.
+ */
+export function votedEpochs(
+  votes: readonly StreakVote[],
+  locks: readonly StreakLock[] | null,
+): Set<number> {
+  const byLock = new Map(
+    (locks ?? []).map((lock) => [
+      `${lock.escrow.toLowerCase()}:${lock.token_id}`,
+      lock,
+    ]),
+  )
+  const voted = new Set<number>()
+  for (const vote of votes) {
+    const lock = byLock.get(`${vote.escrow.toLowerCase()}:${vote.token_id}`)
+    if (lock !== undefined && !hadPower(lock, vote.epoch_start)) continue
+    voted.add(epochIndexFor(vote.epoch_start))
+  }
+  return voted
+}
+
+/**
+ * A voting streak from the epochs in which the wallet voted (votedEpochs).
+ * The current epoch counts once its votes are in; until then the streak
+ * runs to the epoch before.
  */
 export function voteStreak(
   voted: ReadonlySet<number>,

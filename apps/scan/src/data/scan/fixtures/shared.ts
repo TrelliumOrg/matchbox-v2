@@ -10,6 +10,7 @@ export type FixtureScenario =
   | "filling"
   | "delayed"
   | "partial"
+  | "refill"
 
 export type FixtureAnswer = { status: number; body: unknown }
 
@@ -106,11 +107,11 @@ export function aggregateMeta(scenario: FixtureScenario, complete = true) {
     complete: scenario === "filling" ? false : complete,
     asOf: fixtureAsOf,
     // The API's fill status beside each answer (aggregatesComplete,
-    // historyFilled, stale): ignored by today's schema, required by the
-    // status contract the API is adding.
+    // historyFilled, stale, refillPending).
     aggregatesComplete: scenario !== "filling",
     historyFilled: true,
     stale: false,
+    refillPending: scenario === "refill",
     skipped: 0,
   }
 }

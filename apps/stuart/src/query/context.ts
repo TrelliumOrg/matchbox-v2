@@ -32,6 +32,7 @@ import {
 } from "./providers/protocol"
 import {
   claimableFromRewards,
+  type FundedEpochs,
   fundedEpochsFromProfiles,
   gaugeHistoryFromProfile,
   lockVoteStateFromOverview,
@@ -66,6 +67,7 @@ import {
   type ZapQuote,
   type ZapRoute,
 } from "./providers/zap"
+import { redactAndClip } from "./redact"
 
 // Everything a Stuart tool may read. Live implementations read the API
 // Worker's read models (gauges, wallets, prices) and, for what those do not
@@ -84,10 +86,7 @@ export type StuartProviders = {
     tokenIds: readonly bigint[],
     targets: readonly Address[],
   ) => Promise<LockVoteState[]>
-  fundedEpochs: (
-    domain: VotingDomain,
-    window: number,
-  ) => Promise<Map<string, number>>
+  fundedEpochs: (domain: VotingDomain, window: number) => Promise<FundedEpochs>
   claimable: (
     domain: VotingDomain,
     owner: Address,
@@ -169,6 +168,10 @@ export type StuartContext = {
   choice: string | null
   now: () => Date
   secret: string
+  // 64-hex ids (lowercase, 0x-prefixed) this turn's tools returned or
+  // confirmed (outcome.ts, verifiedIdsOf): chain reads and evidence links,
+  // never text the user typed. A support report keeps only these.
+  verified?: ReadonlySet<string>
 }
 
 class RequestMemo<T> {
@@ -269,7 +272,10 @@ export function createLiveProviders(input: LiveProviderInput): StuartProviders {
       input.log({
         message: "stuart.reward_contracts_unavailable",
         branch,
-        error: error instanceof Error ? error.message.slice(0, 200) : "unknown",
+        error:
+          error instanceof Error
+            ? redactAndClip(error.message, 200)
+            : "unknown",
       })
       return new Map<string, RewardContracts>()
     }
@@ -404,7 +410,9 @@ export function createLiveProviders(input: LiveProviderInput): StuartProviders {
           input.log({
             message: "stuart.protocol_chain_unavailable",
             error:
-              error instanceof Error ? error.message.slice(0, 200) : "unknown",
+              error instanceof Error
+                ? redactAndClip(error.message, 200)
+                : "unknown",
           })
           return null
         }),

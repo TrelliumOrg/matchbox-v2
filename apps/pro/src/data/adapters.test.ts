@@ -10,7 +10,7 @@ import { epochStartOf } from "@matchbox/domain"
 import { describe, expect, it } from "vitest"
 import { sharesOfAll } from "../components/lock-cards"
 import { votedIn } from "../features/vote/ballot"
-import { voter } from "./adapters"
+import { gaugeDisplayName, gaugeRef, voter } from "./adapters"
 
 const now = Math.floor(Date.now() / 1000)
 const thisEpoch = epochStartOf(now)
@@ -111,5 +111,18 @@ describe("a lock's votes, per voter", () => {
     // One time for both voters: either type counts as voted.
     expect(votedIn(lock, "vebtc")).toBe(true)
     expect(votedIn(lock, "mezo")).toBe(true)
+  })
+})
+
+describe("gauge names", () => {
+  it("drops the spaces a hand-typed profile name came with", () => {
+    // SNF's profile name is "SNF ": its title read "SNF , Matchbox Pro".
+    const ref = gaugeRef({ ...demoGauges.kilnLabs, name: "SNF " })
+    expect(ref.name).toBe("SNF")
+    expect(gaugeDisplayName("  Kiln Labs\t")).toBe("Kiln Labs")
+  })
+
+  it("keeps a name of spaces only, which the schema allows", () => {
+    expect(gaugeDisplayName(" ")).toBe(" ")
   })
 })

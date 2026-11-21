@@ -1,4 +1,5 @@
 import type { GaugePicture } from "@matchbox/contracts/read-models"
+import type { PricedTarget } from "@matchbox/domain/voteMath"
 import type {
   Evidence,
   Fact,
@@ -42,6 +43,7 @@ export async function fundedForRows(
   if (targets.length === 0) return new Map()
   return context.providers
     .fundedEpochs({ ...domain, targets: [...targets] }, FUNDED_WINDOW)
+    .then((funded) => funded.counts)
     .catch(() => null)
 }
 
@@ -125,6 +127,69 @@ export function fundedShareFacts(input: {
   return {
     facts: [funded, total],
     text: `${funded.display} of ${total.display} carry incentives this epoch.`,
+  }
+}
+
+/** "1 unpriced incentive" / "3 unpriced incentives". */
+export function unpricedIncentives(count: number, display: string): string {
+  return `${display} unpriced ${count === 1 ? "incentive" : "incentives"}`
+}
+
+/**
+ * Live targets whose incentives are all unpriced: tokens the registry does
+ * not list by address, whatever their symbol says. They count as zero value,
+ * so rankings and the optimizer leave them out; this says so, so they are
+ * never silently hidden. Null when there are none.
+ */
+export function unpricedOnlyNote(input: {
+  scope: IdScope
+  priced: readonly PricedTarget[]
+  evidenceRef: string
+}): { fact: Fact; text: string } | null {
+  const count = input.priced.filter(
+    (entry) => entry.target.isAlive && entry.pricingStatus === "unpriced",
+  ).length
+  if (count === 0) return null
+  const fact = makeFact({
+    scope: input.scope,
+    key: "unpriced_only",
+    label: "Targets with only unpriced incentives",
+    value: { kind: "count", count },
+    display: String(count),
+    status: "unpriced",
+    evidenceRefs: [input.evidenceRef],
+  })
+  return {
+    fact,
+    text: `${fact.display} live ${count === 1 ? "target has" : "targets have"} only unpriced incentives, tokens with no verified price, so ${count === 1 ? "it is" : "they are"} not ranked.`,
+  }
+}
+
+/**
+ * For a target with some priced and some unpriced incentives: how many
+ * are unpriced and left out of its USD figure. Null when all are priced.
+ */
+export function unpricedPartNote(input: {
+  scope: IdScope
+  key: string
+  entry: PricedTarget
+  name: string
+  evidenceRef: string
+}): { fact: Fact; text: string } | null {
+  const count = input.entry.unpricedTokens.length
+  if (count === 0) return null
+  const fact = makeFact({
+    scope: input.scope,
+    key: input.key,
+    label: "Unpriced incentives",
+    value: { kind: "count", count },
+    display: String(count),
+    status: "unpriced",
+    evidenceRefs: [input.evidenceRef],
+  })
+  return {
+    fact,
+    text: `${input.name} also has ${unpricedIncentives(count, fact.display)}, not counted in its USD figure.`,
   }
 }
 

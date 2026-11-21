@@ -28,9 +28,28 @@ describe("bench results contract", () => {
     expect(parsed.failureTypes.map((type) => type.id)).toEqual(
       benchFailureTypes.map((type) => type.id),
     )
-    expect(parsed.rejectionTypes.map((type) => type.id)).toEqual(
-      benchRejectionReasons.map((type) => type.id),
-    )
+    // A published file keeps the reasons that existed when it was
+    // written: each is a known reason, in the contract's order, and the
+    // contract adds new reasons only after them.
+    const known = benchRejectionReasons.map((type) => type.id)
+    const listed = parsed.rejectionTypes.map((type) => type.id)
+    expect(listed.every((id) => known.includes(id))).toBe(true)
+    expect(known.slice(0, listed.length)).toEqual(listed)
+  })
+
+  it("lists every rejection reason Stuart records, new ones last", () => {
+    expect(benchRejectionReasons.map((type) => type.id)).toEqual([
+      "too_many_sentences",
+      "too_long",
+      "unsourced",
+      "claim",
+      "greeting",
+      "empty",
+      "reply_unsourced",
+      "reply_claim",
+      "reply_empty",
+      "instruction",
+    ])
   })
 
   it("refuses rejection reasons that do not add up to the total", () => {

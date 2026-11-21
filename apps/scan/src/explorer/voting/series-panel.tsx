@@ -1,6 +1,9 @@
 import * as SeriesChart from "@matchbox/ui/series-chart"
 import type { ReactNode } from "react"
-import type { SeriesPanelData } from "../../data/scan/series-views"
+import {
+  backfillNote,
+  type SeriesPanelData,
+} from "../../data/scan/series-views"
 import { Figure, PanelEmpty, reserveOf, Stats, type StatView } from "./parts"
 
 /**
@@ -59,7 +62,9 @@ export function SeriesBody({
         readout="figure"
       />
       {data.endsOn === null ? null : (
-        <p className="mt-2 text-[14px] text-sec">Ends {data.endsOn}</p>
+        <p className="mt-2 text-[14px] text-sec">
+          Ends {data.endsOn}, {backfillNote.toLowerCase()}
+        </p>
       )}
     </>
   )

@@ -143,7 +143,10 @@ describe("scan fixtures", () => {
       expect(parsed.success, metric).toBe(true)
       const points = parsed.data?.data.points ?? []
       expect(points.length, metric).toBeGreaterThan(0)
-      if (definition.liveWriter) {
+      if (metric === "musd.repaid") {
+        // No repayment yet today: a sparse flow has no row for it.
+        expect(points.at(-1)?.day, metric).not.toBe(today)
+      } else if (definition.liveWriter) {
         expect(points.at(-1), metric).toMatchObject({
           day: today,
           partial: true,

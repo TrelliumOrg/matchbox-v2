@@ -5,6 +5,7 @@ import type { ReactNode } from "react"
 import { warmBodies } from "../content/bodies"
 import { hasPage, loadPage } from "../content/page-data"
 import { DocPage } from "../shell/doc-page"
+import pageTitle from "../shell/page-title"
 
 /**
  * Every docs page but home, by path. The loader only warms the page's JSON
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/$")({
     const page = manifest.pages[pathOf(params._splat)]
     if (page === undefined) return {}
     const url = `${siteOrigin}${page.path}`
-    const title = `${page.title}, Matchbox Docs`
+    const title = pageTitle(page, manifest.pages)
     const description = loaderData?.description ?? ""
     return {
       meta: [

@@ -1,7 +1,7 @@
 ---
 title: Vote
 description: Split your locks' votes across gauges on the Vote screen, sign one vote per lock, and change them later.
-updated: 2026-11-10
+updated: 2026-11-19
 topics:
   - pro.vote.again#voting-again-this-epoch
   - pro.vote.optimize#optimize
@@ -54,6 +54,10 @@ Pro checks each vote first, then asks for one signature per lock. Two locks, two
 ::figure{drawing="vote" caption="The Vote screen, wide. The numbers match the steps above." label="The Vote screen: the gauge type list, the locks to vote with, the gauge grid and the ballot"}
 
 The ballot rail sits on the right on wide screens. Narrower screens show a bar at the bottom instead, without the share steppers.
+
+An APY on a few cents or a handful of votes says nothing about what a vote earns. So it reads n/a under $1 of incentives or under 0.001 veBTC or 10,000 veMEZO of votes, and None only when nothing is funded.
+
+Incentives in a token Pro cannot price read Unpriced beside its coin. A token in the Matchbox token registry still counts as funding, and any other token never does.
 
 :::note[Votes carry over]
 A lock keeps its votes from epoch to epoch until you vote again or it is reset. A new vote replaces the old one.

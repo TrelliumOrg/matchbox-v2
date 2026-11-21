@@ -1,4 +1,6 @@
+import { shortAddress } from "@matchbox/domain/format"
 import * as SeriesChart from "@matchbox/ui/series-chart"
+import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import type { Section } from "../../data/explorer"
 import type { DexView, TvlView } from "../../data/network"
@@ -20,6 +22,65 @@ import type { PeriodView } from "../voting/range"
  * chart's day reads out in its panel's figure when hovered, touched or
  * focused.
  */
+
+/** Inline up to this many; more fold into a count you can open. */
+const unpricedInline = 3
+
+const isAddress = /^0x[0-9a-fA-F]{40}$/
+
+function TokenName({ token }: { token: string }): ReactNode {
+  if (!isAddress.test(token)) return token
+  return (
+    <Link
+      to="/address/$address"
+      params={{ address: token.toLowerCase() }}
+      className="rounded-sm font-mono underline decoration-line underline-offset-4 outline-none hover:decoration-ink focus-visible:outline-2 focus-visible:outline-ink"
+    >
+      {shortAddress(token)}
+    </Link>
+  )
+}
+
+function TokenNames({ tokens }: { tokens: readonly string[] }): ReactNode {
+  return tokens.map((token, index) => (
+    <span key={token}>
+      {index === 0 ? null : ", "}
+      <TokenName token={token} />
+    </span>
+  ))
+}
+
+/**
+ * The tokens a figure leaves out for want of a price: named when there
+ * are a few, else counted ("17 tokens") with the list behind it. A row of
+ * raw addresses told nobody anything.
+ */
+function Unpriced({
+  tokens,
+  className,
+}: {
+  tokens: readonly string[]
+  className: string
+}): ReactNode {
+  if (tokens.length === 0) return null
+  if (tokens.length <= unpricedInline) {
+    return (
+      <p className={className}>
+        No price: <TokenNames tokens={tokens} />
+      </p>
+    )
+  }
+  return (
+    <details className={className}>
+      <summary className="w-fit cursor-pointer rounded-sm outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink">
+        No price: {tokens.length} tokens
+      </summary>
+      <p className="mt-1 [overflow-wrap:anywhere]">
+        <TokenNames tokens={tokens} />
+      </p>
+    </details>
+  )
+}
 
 function Chart({
   name,
@@ -87,11 +148,10 @@ export function TvlPanel({
               Not counted: {tvl.missing.join(", ")}
             </p>
           )}
-          {tvl.unpriced.length === 0 ? null : (
-            <p className="mt-1 text-[14px] text-sec">
-              No price: {tvl.unpriced.join(", ")}
-            </p>
-          )}
+          <Unpriced
+            tokens={tvl.unpriced}
+            className="mt-1 text-[14px] text-sec"
+          />
           {tvl.history === null ? null : (
             <>
               <Chart
@@ -184,11 +244,10 @@ export function DexPanel({
               ))}
             </ul>
           )}
-          {data.unpriced.length === 0 ? null : (
-            <p className="mt-3 text-[14px] text-sec">
-              No price: {data.unpriced.join(", ")}
-            </p>
-          )}
+          <Unpriced
+            tokens={data.unpriced}
+            className="mt-3 text-[14px] text-sec"
+          />
         </>
       )}
     </Panel>

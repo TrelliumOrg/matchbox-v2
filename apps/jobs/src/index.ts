@@ -7,12 +7,14 @@ import {
 import type { Prices } from "@matchbox/contracts/read-models"
 import { logger } from "@matchbox/logger"
 import { priceCacheMaxAgeSeconds, refreshSeconds } from "./coingecko-budget"
+import { liveCron, priceCron, warehouseCron } from "./crons"
 import { crossChainHourly, crossChainMinute } from "./crosschain/entry"
 import { type JobsEnv, parseJobsEnv } from "./env"
 import { createLiveChainReader, runLiveSnapshot } from "./live/snapshot"
 import { runPriceJob } from "./prices"
 import { scanLive, scanPriceClose, scanUptime, startScan } from "./scan/run"
 import { createWalletChainReader } from "./warehouse/chain"
+import { coingeckoHistory } from "./warehouse/claim-prices"
 import { createWarehouseReader, neonQueryRunner } from "./warehouse/reader"
 import {
   runWarehouseSnapshot,
@@ -32,10 +34,6 @@ import {
 // 15-minute ingest it calls `env.JOBS.warehouseSnapshot()` through a service
 // binding, so the Neon reads land in the same compute wake window.
 
-export const priceCron = "* * * * *"
-export const liveCron = "*/5 * * * *"
-export const warehouseCron = "3,18,33,48 * * * *"
-
 function nowSeconds(): number {
   return Math.floor(Date.now() / 1000)
 }
@@ -54,7 +52,7 @@ function mezoClient(env: JobsEnv) {
   return createMezoClient(env.MEZO_RPC_URLS ?? undefined)
 }
 
-export async function prices(env: JobsEnv): Promise<Prices> {
+async function prices(env: JobsEnv): Promise<Prices> {
   const rpcUrls = env.MEZO_RPC_URLS ?? []
   const now = nowSeconds()
   const refresh = refreshSeconds(
@@ -86,7 +84,7 @@ export async function prices(env: JobsEnv): Promise<Prices> {
 }
 
 /** The live snapshot; returns the block it read. */
-export async function live(env: JobsEnv): Promise<number> {
+async function live(env: JobsEnv): Promise<number> {
   const summary = await runLiveSnapshot({
     db: env.READ_DB,
     chain: createLiveChainReader(
@@ -101,7 +99,7 @@ export async function live(env: JobsEnv): Promise<number> {
   return summary.block
 }
 
-export async function warehouse(
+async function warehouse(
   env: JobsEnv,
   trigger: "chained" | "cron",
   afterWarehouseReads?: () => Promise<void>,
@@ -119,6 +117,17 @@ export async function warehouse(
     chain: createWalletChainReader(mezoClient(env)),
     trigger,
     sweepWallets: env.WAREHOUSE_SWEEP_WALLETS,
+    historyBackfillTxs: env.WAREHOUSE_HISTORY_BACKFILL_TXS,
+    // Claims' values when claimed: about one CoinGecko call a token a day
+    // (README "CoinGecko call budget").
+    priceHistory: {
+      fetchHistory: coingeckoHistory({
+        apiKey: env.COINGECKO_API_KEY,
+        plan: env.COINGECKO_API_PLAN,
+      }),
+      limitedReach:
+        env.COINGECKO_API_KEY === null || env.COINGECKO_API_PLAN === "demo",
+    },
     nowSeconds: nowSeconds(),
     logger: logger.child({ task: "warehouse-snapshot", trigger }),
     ...(afterWarehouseReads === undefined ? {} : { afterWarehouseReads }),

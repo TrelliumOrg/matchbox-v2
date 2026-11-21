@@ -30,6 +30,13 @@ export default defineConfig(async () => {
         },
       }),
     ],
-    test: { include: ["src/**/*.workers.test.ts"] },
+    test: {
+      include: ["src/**/*.workers.test.ts"],
+      // Miniflare boots a Workers runtime and applies the D1 migrations.
+      // The same limits locally and in CI (CONTRIBUTING.md, Tests); they
+      // only catch a hang.
+      testTimeout: 30_000,
+      hookTimeout: 60_000,
+    },
   }
 })

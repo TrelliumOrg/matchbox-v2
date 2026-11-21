@@ -1,7 +1,10 @@
+import { getTokenPriceType } from "@matchbox/chain"
 import type {
   ActivityRow,
   Allocation,
   ChainHead,
+  ClaimEstimate,
+  ClaimValue,
   EpochRef,
   GaugeCard,
   GaugeDirectory,
@@ -22,7 +25,19 @@ import type {
   WalletRewards,
 } from "@matchbox/contracts/read-models"
 import { EPOCH_SECONDS, epochNumberFor, epochStartOf } from "@matchbox/domain"
-import { poolTypeDescription, poolTypeLabel } from "@matchbox/domain/pool-type"
+import {
+  apyMinVotes,
+  FUNDED_MIN_MICRO_USD,
+  type Funding,
+  funding,
+  usdTextToMicro,
+} from "@matchbox/domain/funding"
+import {
+  nameWithPoolType,
+  poolTypeDescription,
+  poolTypeLabel,
+} from "@matchbox/domain/pool-type"
+import { kindOrder } from "../features/gauge/kinds"
 import {
   formatCompact,
   formatDate,
@@ -37,7 +52,9 @@ import type {
   ActivityEvent,
   ActivityFilter,
   ActivityPage,
+  ClaimEstimateView,
   GaugeKind,
+  GaugeKindTotals,
   GaugeList,
   GaugeMeta,
   GaugeProfile,
@@ -57,6 +74,7 @@ import type {
   Voter,
   VoteUnit,
   Wallet,
+  WhenClaimed,
 } from "./view-models"
 
 /**
@@ -99,6 +117,54 @@ function isPositive(decimal: string): boolean {
   return /[1-9]/.test(decimal)
 }
 
+/**
+ * Whether a gauge's incentive tokens fund it, by the rule Stuart shares
+ * (`@matchbox/domain/funding`): registry tokens by address, an unpriced
+ * registry token as funding of unknown size, an unregistered token never.
+ * Decided here, on the server, so the browser gets flags and no maths.
+ */
+function incentivesFunding(tokens: readonly SharedTokenAmount[]): Funding {
+  return funding(
+    tokens
+      .filter((token) => isPositive(token.amount))
+      .map((token) => {
+        const registered = getTokenPriceType(token.token.address) !== "unknown"
+        return {
+          address: token.token.address,
+          registered,
+          usdMicro:
+            !registered || token.usd === null
+              ? null
+              : usdTextToMicro(token.usd),
+        }
+      }),
+  )
+}
+
+/**
+ * Micro-USD to the cent, half up, as the API rounds each token's USD.
+ * Pro shows and judges a gauge's incentives by its registry tokens'
+ * dollars (`Funding.pricedMicro`), never by the API's total: a token
+ * outside the registry may carry any USD value, and adds none.
+ */
+function microToUsd(micro: bigint): string {
+  const cents = (micro + 5_000n) / 10_000n
+  return `${cents / 100n}.${(cents % 100n).toString().padStart(2, "0")}`
+}
+
+/** The flags a gauge's view model carries, from its funding. */
+function fundingFlags(result: Funding): {
+  funded: boolean
+  priced: boolean
+  unpriced: number
+} {
+  return {
+    funded: result.status === "funded",
+    priced: result.pricedMicro >= FUNDED_MIN_MICRO_USD,
+    unpriced: result.unpriced,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Gauges, tokens, locks
 // ---------------------------------------------------------------------------
@@ -124,12 +190,22 @@ function picture(shared: GaugePicture, address: string, name: string): Picture {
   }
 }
 
+/**
+ * A gauge's name without the spaces around it. Profile names are typed by
+ * hand: SNF's came as "SNF ", and its page title read "SNF , Matchbox Pro"
+ * (19 Nov 2026). A name of spaces only stays as it is.
+ */
+export function gaugeDisplayName(name: string): string {
+  const trimmed = name.trim()
+  return trimmed === "" ? name : trimmed
+}
+
 export function gaugeRef(shared: SharedGaugeRef): GaugeRef {
   const hue = hueOf(shared.address)
   return {
     address: shared.address,
     voter: shared.voter,
-    name: shared.name,
+    name: gaugeDisplayName(shared.name),
     poolLabel:
       shared.voter === "pools"
         ? poolTypeLabel({
@@ -200,6 +276,50 @@ export function tokenAmount(shared: SharedTokenAmount): TokenAmount {
   }
 }
 
+/** A claim's estimate while its day settles; nothing otherwise. */
+function estimateOf(
+  atClaim: ClaimValue | undefined,
+  estimate: ClaimEstimate | undefined,
+): { estimate?: ClaimEstimateView } {
+  if (atClaim !== undefined || estimate === undefined) return {}
+  return {
+    estimate: {
+      usd: estimate.usd,
+      finalOn: Date.parse(`${estimate.finalOn}T00:00:00Z`) / 1000,
+      tokens: estimate.tokens.map((token) => ({
+        token: token.token.toLowerCase(),
+        usd: token.usd,
+      })),
+    },
+  }
+}
+
+/** A claim's value when claimed, by its tokens; nothing while pending. */
+function whenClaimedOf(
+  tokens: readonly SharedTokenAmount[],
+  atClaim: ClaimValue | undefined,
+): { whenClaimed?: WhenClaimed } {
+  if (atClaim === undefined) return {}
+  const day = atClaim.tokens[0]?.day
+  return {
+    whenClaimed: {
+      usd: atClaim.usd,
+      complete: atClaim.tokens.every((token) => token.price !== null),
+      pricedAt: day === undefined ? 0 : Date.parse(`${day}T00:00:00Z`) / 1000,
+      tokens: atClaim.tokens.map((value, index) => ({
+        token: value.token.toLowerCase(),
+        symbol:
+          tokens.find(
+            (amount) => amount.token.address.toLowerCase() === value.token,
+          )?.token.symbol ??
+          tokens[index]?.token.symbol ??
+          "",
+        usd: value.usd,
+      })),
+    },
+  }
+}
+
 function lockRef(shared: SharedLockRef): LockRef {
   return { kind: shared.escrow, tokenId: shared.tokenId }
 }
@@ -207,6 +327,18 @@ function lockRef(shared: SharedLockRef): LockRef {
 export function gaugeSummary(card: GaugeCard): GaugeSummary {
   const kind = gaugeKind(card.gauge)
   const meta = gaugeMeta(card, kind)
+  const result = incentivesFunding(card.incentives.tokens)
+  const flags = fundingFlags(result)
+  const incentivesUsd = microToUsd(result.pricedMicro)
+  const votes = toWei(card.votes)
+  const minVotes = apyMinVotes({
+    funded: flags.funded,
+    incentivesUsd,
+    unit: voteUnitFor(kind),
+  })
+  // The API works its APY out from its own total. When that counts
+  // dollars the registry does not, the APY is not Pro's to show.
+  const apiCountsMore = usdTextToMicro(card.incentives.usd) > result.pricedMicro
   return {
     ...gaugeRef(card.gauge),
     kind,
@@ -223,11 +355,21 @@ export function gaugeSummary(card: GaugeCard): GaugeSummary {
             tickSpacing: card.gauge.tickSpacing,
           })
         : null),
-    apyBps: card.apy === null ? null : percentToBps(card.apy),
-    incentivesUsd: card.incentives.usd,
+    // No APY unless funded, and no headline on a few cents or a handful
+    // of votes (P6).
+    apyBps:
+      card.apy === null ||
+      minVotes === null ||
+      BigInt(votes) < minVotes ||
+      apiCountsMore
+        ? null
+        : percentToBps(card.apy),
+    incentivesUsd,
     incentiveTokens: card.incentives.tokens.map((token) => token.token.symbol),
+    ...flags,
+    apyMinVotes: minVotes === null ? null : minVotes.toString(),
     veBtcWeight: card.vebtcWeight ?? "0",
-    votes: toWei(card.votes),
+    votes,
     optimalVotes: card.optimalVotes === null ? null : toWei(card.optimalVotes),
   }
 }
@@ -392,8 +534,10 @@ export function activityEvent(
           kind: "claim",
           usd: row.rewards.usd,
           tokens: row.rewards.tokens.map(tokenAmount),
+          ...whenClaimedOf(row.rewards.tokens, row.atClaim),
+          ...estimateOf(row.atClaim, row.estimate),
           locks: row.locks.map(lockRef),
-          gauges: row.gauges.map((gauge) => gauge.name),
+          gauges: row.gauges.map((gauge) => gaugeDisplayName(gauge.name)),
         },
       }
     case "lock-create":
@@ -503,7 +647,9 @@ export function withGaugeNames(
         ...vote,
         gauge: {
           ...vote.gauge,
-          name: names.get(vote.gauge.address.toLowerCase()) ?? vote.gauge.name,
+          name: gaugeDisplayName(
+            names.get(vote.gauge.address.toLowerCase()) ?? vote.gauge.name,
+          ),
         },
       })),
     })),
@@ -612,32 +758,85 @@ export function voter(
 }
 
 export function gaugeList(shared: GaugeDirectory, block?: number): GaugeList {
+  const gauges = shared.gauges.map(gaugeSummary)
   return {
     ...(block === undefined ? {} : { block }),
     epoch: shared.epoch.number,
     total: shared.gauges.length,
-    funded: shared.gauges.filter((card) => isPositive(card.incentives.usd))
-      .length,
-    gauges: shared.gauges.map(gaugeSummary),
+    funded: gauges.filter((gauge) => gauge.funded).length,
+    fundedKinds: fundedKinds(gauges),
+    kindTotals: kindTotals(gauges),
+    gauges,
   }
 }
 
+/** Count and this epoch's incentives per type (Vote's type cards). */
+function kindTotals(gauges: readonly GaugeSummary[]): GaugeKindTotals {
+  const micro = new Map<GaugeKind, bigint>()
+  const count = new Map<GaugeKind, number>()
+  for (const gauge of gauges) {
+    count.set(gauge.kind, (count.get(gauge.kind) ?? 0) + 1)
+    micro.set(
+      gauge.kind,
+      (micro.get(gauge.kind) ?? 0n) + usdTextToMicro(gauge.incentivesUsd),
+    )
+  }
+  return Object.fromEntries(
+    kindOrder.map((kind) => [
+      kind,
+      {
+        count: count.get(kind) ?? 0,
+        incentivesUsd: microToUsd(micro.get(kind) ?? 0n),
+      },
+    ]),
+  ) as GaugeKindTotals
+}
+
 /**
- * The signed-out Overview. Counts and totals come from the summary, which
- * covers every gauge; `top` is the directory's own page of funded gauges
- * by incentives. Counting or ranking a page of the directory here is what
- * once read "13 of 50 gauges funded" with 782 gauges, over a top four
- * that had no incentives.
+ * The types with funded gauges, most priced incentives first (`/vote`'s
+ * default type, P3). A type funded only by unpriced registry tokens comes
+ * after every priced one, in the types' own order.
+ */
+function fundedKinds(gauges: readonly GaugeSummary[]): GaugeKind[] {
+  const totals = new Map<GaugeKind, bigint>()
+  for (const gauge of gauges) {
+    if (!gauge.funded) continue
+    const priced = gauge.priced ? usdTextToMicro(gauge.incentivesUsd) : 0n
+    totals.set(gauge.kind, (totals.get(gauge.kind) ?? 0n) + priced)
+  }
+  return kindOrder
+    .filter((kind) => totals.has(kind))
+    .sort((left, right) => {
+      const a = totals.get(left) ?? 0n
+      const b = totals.get(right) ?? 0n
+      return a === b ? 0 : a > b ? -1 : 1
+    })
+}
+
+/**
+ * The signed-out Overview. Totals come from the summary, which covers
+ * every gauge; `top` is the directory's own page of funded gauges by
+ * incentives. Counting or ranking a page of the directory as if it were
+ * the directory is what once read "13 of 50 gauges funded" with 782
+ * gauges, over a top four that had no incentives.
+ *
+ * The API counts a gauge with any incentive token as funded, dust
+ * included, so its count is never Pro's. Pro counts the page by
+ * `@matchbox/domain/funding`. When the page is not the whole list, the
+ * rest may hold funded gauges, those funded only by unpriced tokens
+ * sorting after the dust, so the count reads "100+".
  */
 export function home(summary: ProSummary, top: GaugeDirectory): Home {
+  const funded = top.gauges.map(gaugeSummary).filter((gauge) => gauge.funded)
   return {
     epoch: summary.epoch.number,
     incentivesUsd: summary.incentives.usd,
-    gaugesFunded: summary.fundedCount,
+    gaugesFunded: funded.length,
+    gaugesFundedMore: top.gauges.length < top.total,
     gaugesTotal: summary.gaugeCount,
     veMezoVoted: toWei(summary.totalVotes),
     veMezoLocked: toWei(summary.stats.vemezoLocked),
-    topGauges: top.gauges.slice(0, 4).map(gaugeSummary),
+    topGauges: funded.slice(0, 4),
   }
 }
 
@@ -663,11 +862,16 @@ export function gaugeProfile(shared: GaugeProfileReadModel): GaugeProfile {
   ].flatMap((row) =>
     row.value === null ? [] : [{ label: row.label, value: row.value }],
   )
+  const gauge = gaugeSummary(card)
   return {
-    gauge: gaugeSummary(card),
+    gauge,
     about: shared.description,
+    // No change beside an APY Pro does not show: "n/a" over "+12.57 vs
+    // Epoch 48" would credit a dust gauge with a rising APY.
     apyChangeBps:
-      shared.apyChange === null ? null : percentToBps(shared.apyChange),
+      shared.apyChange === null || gauge.apyBps === null
+        ? null
+        : percentToBps(shared.apyChange),
     strategy,
     details: gaugeDetailRows(shared.details),
     owner: shared.owner,
@@ -678,7 +882,7 @@ export function gaugeProfile(shared: GaugeProfileReadModel): GaugeProfile {
     })),
     incentivesHistory: shared.incentivesHistory.map((entry) => ({
       epoch: entry.epoch.number,
-      usd: entry.incentives.usd,
+      usd: microToUsd(incentivesFunding(entry.incentives.tokens).pricedMicro),
       tokens: entry.incentives.tokens.map(tokenAmount),
       paysAt: entry.paysAt,
       paid: entry.status === "paid",
@@ -701,7 +905,14 @@ export function rewards(shared: WalletRewards): Rewards {
       tokens: shared.readyToClaim.tokens.map(tokenAmount),
     },
     projected: null,
-    earned: shared.earned,
+    earned: {
+      usd: shared.earned.usd,
+      fromEpoch: shared.earned.fromEpoch,
+      toEpoch: shared.earned.toEpoch,
+      ...(shared.earned.whenClaimed === undefined
+        ? {}
+        : { whenClaimed: shared.earned.whenClaimed }),
+    },
     locks: shared.byLock.map((entry) => ({
       lock: lockRef(entry.lock),
       usd: entry.rewards.usd,
@@ -709,7 +920,7 @@ export function rewards(shared: WalletRewards): Rewards {
       gauges: entry.gauges.map((gauge) => ({
         address: gauge.gauge.address,
         voter: gauge.gauge.voter,
-        name: gauge.gauge.name,
+        name: gaugeDisplayName(gauge.gauge.name),
         usd: gauge.usd,
       })),
       projectedUsd: null,
@@ -726,6 +937,8 @@ export function rewards(shared: WalletRewards): Rewards {
         kind: "claim",
         usd: claim.rewards.usd,
         tokens: claim.rewards.tokens.map(tokenAmount),
+        ...whenClaimedOf(claim.rewards.tokens, claim.atClaim),
+        ...estimateOf(claim.atClaim, claim.estimate),
         locks: [],
         gauges: [],
       },
@@ -740,7 +953,9 @@ function lockActor(shared: SharedLockRef): ProtocolEvent["actor"] {
 function where(gauges: readonly SharedGaugeRef[]): ProtocolEvent["where"] {
   const first = gauges[0]
   if (first === undefined) return { label: "None", gauge: null }
-  if (gauges.length === 1) return { label: first.name, gauge: gaugeRef(first) }
+  if (gauges.length === 1) {
+    return { label: gaugeDisplayName(first.name), gauge: gaugeRef(first) }
+  }
   return { label: `${gauges.length} gauges`, gauge: gaugeRef(first) }
 }
 
@@ -856,15 +1071,13 @@ export function protocolEvent(row: ActivityRow): ProtocolEvent {
   }
 }
 
+/**
+ * The line under a funded gauge's name. A pool's type is in its name
+ * ("BTC/MUSD CL200"), so its line is its address, as a validator's is:
+ * the pool description it had was the icon's hidden label, and the row
+ * showed an icon over nothing (P7, 19 Nov 2026).
+ */
 function fundedSubline(shared: SharedGaugeRef): string {
-  if (shared.voter === "pools") {
-    return (
-      poolTypeDescription({
-        poolType: shared.poolType,
-        tickSpacing: shared.tickSpacing,
-      }) ?? "Pool"
-    )
-  }
   if (shared.vebtcTokenId !== null && !shared.name.includes("#")) {
     return `veBTC #${shared.vebtcTokenId}`
   }
@@ -884,12 +1097,36 @@ function protocolStats(stats: SharedProtocol["stats"]): Protocol["stats"] {
   }
 }
 
+/** Funded by `@matchbox/domain/funding`, as everywhere in Pro: no dust. */
+function fundedOnly(
+  funded: SharedProtocol["funded"]["gauges"],
+): SharedProtocol["funded"]["gauges"] {
+  return funded.filter(
+    (entry) => incentivesFunding(entry.incentives.tokens).status === "funded",
+  )
+}
+
 function fundedGauges(
   funded: SharedProtocol["funded"]["gauges"],
 ): Protocol["funded"] {
-  return funded.map((entry) => ({
+  return fundedOnly(funded).map(fundedGauge)
+}
+
+function fundedGauge(
+  entry: SharedProtocol["funded"]["gauges"][number],
+): Protocol["funded"][number] {
+  const result = incentivesFunding(entry.incentives.tokens)
+  const flags = fundingFlags(result)
+  return {
     id: entry.gauge.address,
-    name: entry.gauge.name,
+    // Pools that share a pair apart: "BTC/MUSD CL200", "BTC/MUSD Volatile".
+    name: nameWithPoolType(
+      gaugeDisplayName(entry.gauge.name),
+      poolTypeLabel({
+        poolType: entry.gauge.poolType,
+        tickSpacing: entry.gauge.tickSpacing,
+      }),
+    ),
     kind: gaugeKind(entry.gauge),
     subline: fundedSubline(entry.gauge),
     picture:
@@ -900,10 +1137,12 @@ function fundedGauges(
           }
         : picture(entry.gauge.picture, entry.gauge.address, entry.gauge.name),
     gauge: entry.gauge.voter === "boost" ? entry.gauge.address : null,
-    usd: entry.incentives.usd,
+    usd: microToUsd(result.pricedMicro),
     tokens: entry.incentives.tokens.map((token) => token.token.symbol),
+    priced: flags.priced,
+    unpriced: flags.unpriced,
     deposits: entry.deposits,
-  }))
+  }
 }
 
 /** Dollar strings with two decimals: `a - b`, signed. */
@@ -967,8 +1206,16 @@ export function protocol(
       viewing === null
         ? fundedGauges(shared.funded.gauges)
         : fundedGauges(snapshot?.funded.gauges ?? []),
+    // The API's count less the dust it listed (its list is every funded
+    // gauge, so this is the count of gauges above a cent).
     fundedTotal:
-      viewing === null ? shared.funded.count : (snapshot?.funded.count ?? 0),
+      viewing === null
+        ? shared.funded.count -
+          (shared.funded.gauges.length -
+            fundedOnly(shared.funded.gauges).length)
+        : (snapshot?.funded.count ?? 0) -
+          ((snapshot?.funded.gauges.length ?? 0) -
+            fundedOnly(snapshot?.funded.gauges ?? []).length),
     // The feed is what is happening now. A past epoch has no feed of its
     // own, and showing today's events under it would pass them off as its.
     events: viewing === null ? shared.feed.rows.map(protocolEvent) : [],

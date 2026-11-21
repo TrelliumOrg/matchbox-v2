@@ -581,6 +581,10 @@
     "description": "Releases of the Matchbox API, the SDK and Matchbox Developer.",
     "headings": [
       {
+        "title": "Unreleased",
+        "url": "https://docs.matchbox.markets/developer/changelog#unreleased"
+      },
+      {
         "title": "Version 2.1.0",
         "url": "https://docs.matchbox.markets/developer/changelog#v2-1-0"
       },
@@ -857,7 +861,7 @@
     "title": "Prepare vote",
     "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-vote",
     "section": "developer",
-    "description": "A ballot the user specified as a list (e.g",
+    "description": "A ballot the user specified as a list (e.g. '30% to Boar, 70% to ChooseMe')",
     "headings": [
       {
         "title": "Input",
@@ -870,7 +874,7 @@
     "title": "Prepare vote script",
     "url": "https://docs.matchbox.markets/developer/mcp/tools/prepare-vote-script",
     "section": "developer",
-    "description": "A pasted vote script or governance post with 'N% to <gauge>' lines (e.g",
+    "description": "A pasted vote script or governance post with 'N% to <gauge>' lines (e.g. '25% to the BTC/MUSD-200 pool, 20% to the MUSD Savings Vault')",
     "headings": [
       {
         "title": "Input",
@@ -1409,6 +1413,14 @@
       {
         "title": "Other places to claim",
         "url": "https://docs.matchbox.markets/pro/rewards#other-places"
+      },
+      {
+        "title": "Value when claimed",
+        "url": "https://docs.matchbox.markets/pro/rewards#value-when-claimed"
+      },
+      {
+        "title": "Download CSV",
+        "url": "https://docs.matchbox.markets/pro/rewards#download-csv"
       }
     ]
   },

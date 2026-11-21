@@ -1,9 +1,17 @@
 import { expect, type Page, test } from "@playwright/test"
+import openDialog from "./dialog"
+import { rememberWallet } from "./own-wallet"
 
 /** The demo wallet (it has a Mezo ID, pyke.mezo) and an empty wallet. */
 const userAddress = "0x7c21095156ab25e989c3c084bcb06037c6539e0b"
 const user = `/${userAddress}`
 const empty = "/0x3f90c2d4e6f8a0b1c3d5e7f9a1b3c5d7e9f0a17c"
+/**
+ * A wallet like the live one with veBTC lock #6033: its lock card loads the
+ * boost band and it voted across every validator and pool gauge (see
+ * `boostedWallet` in src/data/fixture-api.ts).
+ */
+const boosted = "/0x6033000000000000000000000000000000000003"
 
 /** Fails the test on any console error or uncaught exception. */
 function watchErrors(page: Page): string[] {
@@ -18,7 +26,7 @@ function watchErrors(page: Page): string[] {
 const routes = [
   { name: "Overview signed out", path: "/", text: "Incentives this epoch" },
   { name: "Overview", path: user, text: "Claimable" },
-  { name: "Overview, no locks", path: empty, text: "New lock" },
+  { name: "Overview, no locks", path: empty, text: "Available to lock" },
   { name: "Vote", path: `${user}/vote`, text: "Kiln Labs" },
   {
     name: "Vote, no voting power",
@@ -41,6 +49,26 @@ const routes = [
     text: "Incentive to Sats Collective",
   },
   { name: "Activity, none", path: `${empty}/activity`, text: "No activity" },
+  // The demo wallet's veBTC lock has no boost gauge, so no page above drew
+  // the band's skeleton, the one loading state the server renders with an
+  // inline script: a CSP violation on every load and, in the dark theme, a
+  // hydration error reached the live site unseen (19 Nov 2026).
+  { name: "Overview, veBTC lock with a boost", path: boosted, text: "#700" },
+  {
+    name: "Vote, veBTC lock with a boost",
+    path: `${boosted}/vote`,
+    text: "#700",
+  },
+  {
+    name: "Rewards, veBTC lock with a boost",
+    path: `${boosted}/rewards`,
+    text: "Nothing to claim",
+  },
+  {
+    name: "Activity, veBTC lock with a boost",
+    path: `${boosted}/activity`,
+    text: "Voted with #700",
+  },
   { name: "Protocol", path: "/protocol", text: "Incentives this epoch" },
   {
     name: "Gauge profile",
@@ -49,16 +77,40 @@ const routes = [
   },
 ]
 
+// Both themes: the server cannot see the theme, so anything that renders
+// by it shows up as a hydration error in the dark one only.
 for (const route of routes) {
-  test(`${route.name} renders without console errors`, async ({ page }) => {
-    const errors = watchErrors(page)
-    const response = await page.goto(route.path)
-    expect(response?.status()).toBe(200)
-    await expect(page.getByText(route.text).first()).toBeVisible()
-    await page.waitForLoadState("networkidle")
-    expect(errors).toEqual([])
-  })
+  for (const colorScheme of ["light", "dark"] as const) {
+    test(`${route.name} renders without console errors (${colorScheme})`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme })
+      const errors = watchErrors(page)
+      const response = await page.goto(route.path)
+      expect(response?.status()).toBe(200)
+      await expect(page.getByText(route.text).first()).toBeVisible()
+      await page.waitForLoadState("networkidle")
+      expect(errors).toEqual([])
+    })
+  }
 }
+
+test("a veBTC lock's boost band loads with no console error", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "dark" })
+  const errors = watchErrors(page)
+  await page.goto(boosted)
+  // The band replaces its skeleton once the gauge directory has loaded.
+  await expect(
+    page
+      .getByText(/veMEZO (to go|over)/)
+      .filter({ visible: true })
+      .first(),
+  ).toBeVisible()
+  await page.waitForLoadState("networkidle")
+  expect(errors).toEqual([])
+})
 
 test("old ?address= links redirect to clean wallet paths", async ({ page }) => {
   const response = await page.request.get(`/vote?address=${userAddress}`, {
@@ -110,6 +162,8 @@ test("Vote shows each type, and a voted lock saves for the next epoch", async ({
   page,
   isMobile,
 }) => {
+  // The demo wallet as this browser's own: only its owner saves a ballot.
+  await rememberWallet(page, userAddress)
   const errors = watchErrors(page)
   await page.goto(`${user}/vote`)
   await page.waitForLoadState("networkidle")
@@ -131,7 +185,8 @@ test("Vote shows each type, and a voted lock saves for the next epoch", async ({
     .filter({ visible: true })
     .first()
     .click()
-  await expect(page).toHaveURL(new RegExp(`/${userAddress}/vote/validators$`))
+  // Your own wallet's links are plain paths.
+  await expect(page).toHaveURL(/\/vote\/validators$/)
   await expect(page.getByRole("checkbox", { name: /#4120/ })).toBeVisible()
   if (!isMobile) {
     await page.getByRole("button", { name: /^Funded/ }).click()
@@ -376,9 +431,12 @@ test("the Account panel opens Appearance and switches the theme", async ({
   isMobile,
 }) => {
   test.skip(isMobile, "one viewport is enough")
+  await rememberWallet(page, userAddress)
   await page.goto(user)
   await page.waitForLoadState("networkidle")
-  await page.getByRole("button", { name: /^Account/ }).click()
+  await openDialog(page, () =>
+    page.getByRole("button", { name: /^Account/ }).click(),
+  )
   await page.getByRole("button", { name: /^Appearance/ }).click()
   await page.getByRole("radio", { name: "Dark" }).click()
   await expect(page.locator("html")).toHaveAttribute("data-theme", "graphite")
@@ -391,9 +449,12 @@ test("the Account panel lists tokens beyond BTC, MEZO and MUSD", async ({
   isMobile,
 }) => {
   test.skip(isMobile, "one viewport is enough")
+  await rememberWallet(page, userAddress)
   await page.goto(user)
   await page.waitForLoadState("networkidle")
-  await page.getByRole("button", { name: /^Account/ }).click()
+  await openDialog(page, () =>
+    page.getByRole("button", { name: /^Account/ }).click(),
+  )
   const panel = page.getByRole("dialog")
   await expect(panel.getByText("Savings MUSD")).toBeVisible()
   await expect(panel.getByText("620.00 sMUSD")).toBeVisible()
@@ -556,6 +617,8 @@ test("pages Protocol epochs by 6 on phones", async ({ page, isMobile }) => {
 })
 
 test("a wallet with no locks sees what it could lock", async ({ page }) => {
+  // Your own empty wallet: someone else's shows no Lock buttons.
+  await rememberWallet(page, empty.slice(1))
   await page.goto(empty)
   await expect(page.getByText("Available to lock")).toBeVisible()
   await expect(page.getByText("Claimable")).toHaveCount(0)
@@ -567,8 +630,10 @@ test("the signed-out Overview counts every gauge and lists funded ones", async (
   page,
 }) => {
   await page.goto("/")
-  // The demo directory has 8 gauges; the summary, not a page of it, counts.
-  await expect(page.getByText(/of 8 gauges funded/)).toBeVisible()
-  await expect(page.getByRole("link", { name: "See all 8" })).toBeVisible()
+  // The fixture directory has 52 gauges, 39 with an incentive token. One
+  // has less than a cent and one only an unregistered token, neither of
+  // which is funding (P6).
+  await expect(page.getByText(/37 of 52 gauges funded/)).toBeVisible()
+  await expect(page.getByRole("link", { name: "See all 52" })).toBeVisible()
   await expect(page.getByText("No incentives")).toHaveCount(0)
 })

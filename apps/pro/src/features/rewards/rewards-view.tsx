@@ -4,14 +4,23 @@ import * as ListRow from "@matchbox/ui/list-row"
 import * as PillButton from "@matchbox/ui/pill-button"
 import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
-import { ActivityRow } from "../../components/activity-row"
+import {
+  ActivityRow,
+  DownloadNotice,
+  EarlierFooter,
+  useEarlierPages,
+} from "../../components/activity-row"
 import { ClaimableAsOfNote } from "../../components/claimable-as-of"
 import { Coins } from "../../components/coins"
 import { Usd } from "../../components/money"
-import type { Rewards } from "../../data/view-models"
+import type {
+  ActivityEvent,
+  ActivityPage,
+  Rewards,
+} from "../../data/view-models"
 import { formatDay, formatTokenWithSymbol, formatUsd } from "../../lib/format"
 import { gaugeName } from "../../lib/gauge-name"
-import { useViewer } from "../../lib/viewer"
+import { useViewer, useViewingOther } from "../../lib/viewer"
 import { useLive } from "../../live/live-context"
 import { PageTitle, SectionHeading, underlineLink } from "../../shell/page"
 import { EmptyState } from "../../shell/states"
@@ -35,6 +44,35 @@ export function earnedRange(earned: Rewards["earned"]): string {
     return `, Epoch ${fromEpoch ?? toEpoch}`
   }
   return `, Epoch ${fromEpoch} to ${toEpoch}`
+}
+
+function claimsCount(count: number, kind = ""): string {
+  return `${count} ${kind}${count === 1 ? "claim" : "claims"}`
+}
+
+/**
+ * The claims Earned leaves out, or null: "No price for 2 claims, 1 recent
+ * claim not included yet, 1 older claim not priced yet". A recent claim
+ * (its day still settling, shown as an estimate) is left out until its
+ * day's price settles, so Earned only ever goes up when it does. An older
+ * one waits for a price past its day. A document without the split names
+ * neither.
+ */
+export function earnedGaps(earned: Rewards["earned"]): string | null {
+  const gaps = earned.whenClaimed
+  if (gaps === undefined) return null
+  const recent = Math.min(gaps.settling ?? 0, gaps.pending)
+  const older = gaps.pending - recent
+  const parts = [
+    gaps.unpriced === 0 ? null : `No price for ${claimsCount(gaps.unpriced)}`,
+    recent === 0 ? null : `${claimsCount(recent, "recent ")} not included yet`,
+    older === 0
+      ? null
+      : gaps.settling === undefined
+        ? `${claimsCount(older)} not included yet`
+        : `${claimsCount(older, "older ")} not priced yet`,
+  ].filter((part) => part !== null)
+  return parts.length === 0 ? null : parts.join(", ")
 }
 
 /** Where a lock's rewards come from: its gauges, the lock, the amount. */
@@ -98,11 +136,57 @@ function Source({
   )
 }
 
-export function RewardsView({ data }: { data: Rewards }): ReactNode {
+/**
+ * The latest claims, then the claims of the pages loaded after them, one
+ * row a transaction (the rewards document names a claim by its
+ * transaction, Activity by its first event).
+ */
+export function claimHistory(
+  latest: readonly ActivityEvent[],
+  earlier: readonly ActivityEvent[],
+): ActivityEvent[] {
+  const seen = new Set(latest.map((event) => event.tx))
+  const merged = [...latest]
+  for (const event of earlier) {
+    if (event.detail.kind !== "claim" || seen.has(event.tx)) continue
+    seen.add(event.tx)
+    merged.push(event)
+  }
+  return merged.sort((a, b) => b.at - a.at)
+}
+
+/** Earned counts claims older than the latest ones the page lists. */
+export function hasEarlierClaims(
+  earned: Rewards["earned"],
+  latest: readonly ActivityEvent[],
+): boolean {
+  if (earned.fromEpoch === null || latest.length === 0) return false
+  return earned.fromEpoch < Math.min(...latest.map((event) => event.epoch))
+}
+
+export function RewardsView({
+  data,
+  loadClaims,
+}: {
+  data: Rewards
+  /** Reads a page of the wallet's claims; undefined reads the first. */
+  loadClaims?: (cursor: string | undefined) => Promise<ActivityPage>
+}): ReactNode {
   const viewer = useViewer()
+  // Someone else's rewards: only their owner can claim them.
+  const other = useViewingOther()
   const nothing = isZero(data.claimable.usd)
   const { market } = useLive()
-  const claims = data.history.filter((event) => event.detail.kind === "claim")
+  const latest = data.history.filter((event) => event.detail.kind === "claim")
+  const earlier = useEarlierPages(
+    data.address,
+    {
+      cursor: hasEarlierClaims(data.earned, latest) ? undefined : null,
+      pending: false,
+    },
+    loadClaims,
+  )
+  const claims = claimHistory(latest, earlier.events)
   // With nothing left to claim, the projection is the headline.
   const takeover = nothing ? data.projected : null
   const sources = nothing
@@ -156,6 +240,8 @@ export function RewardsView({ data }: { data: Rewards }): ReactNode {
         <div className="mt-6 flex flex-wrap gap-2.5">
           {nothing ? (
             <PillButton.Root disabled>Nothing to claim</PillButton.Root>
+          ) : other ? (
+            <PillButton.Root disabled>Viewing only</PillButton.Root>
           ) : (
             <>
               <PillButton.Root
@@ -198,14 +284,23 @@ export function RewardsView({ data }: { data: Rewards }): ReactNode {
           </p>
         )}
         {/* The API sends a zero placeholder until claim history is summed. */}
-        {isZero(data.earned.usd) ? null : (
-          <p className="mt-2 text-[15px] text-sec tabular-nums">
-            Earned{" "}
-            <b className="font-semibold text-ink">
-              {formatUsd(data.earned.usd, "cents")}
-            </b>
-            {earnedRange(data.earned)}
-          </p>
+        {isZero(data.earned.usd) && earnedGaps(data.earned) === null ? null : (
+          <>
+            <p className="mt-2 text-[15px] text-sec tabular-nums">
+              {data.earned.whenClaimed === undefined
+                ? "Earned"
+                : "Earned, value when claimed"}{" "}
+              <b className="font-semibold text-ink">
+                {formatUsd(data.earned.usd, "cents")}
+              </b>
+              {earnedRange(data.earned)}
+            </p>
+            {earnedGaps(data.earned) === null ? null : (
+              <p className="mt-1 text-[14px] text-sec tabular-nums">
+                {earnedGaps(data.earned)}
+              </p>
+            )}
+          </>
         )}
       </section>
       {sources.length === 0 ? null : (
@@ -216,7 +311,7 @@ export function RewardsView({ data }: { data: Rewards }): ReactNode {
               <Source
                 key={`${entry.lock.kind}-${entry.lock.tokenId}`}
                 entry={entry}
-                claim={sources.length > 1}
+                claim={sources.length > 1 && !other}
               />
             ))}
           </ListRow.List>
@@ -226,26 +321,49 @@ export function RewardsView({ data }: { data: Rewards }): ReactNode {
         <SectionHeading
           action={
             claims.length === 0 ? null : (
-              <Link
-                to="/activity"
-                search={{ filter: "claims" }}
-                className={underlineLink}
-              >
-                See all
-              </Link>
+              <span className="flex gap-5">
+                {/* No `download`: a refusal comes back as a page with a
+                    message, which `download` would save as the file. */}
+                <a
+                  href={`/${data.address}/rewards.csv`}
+                  className={underlineLink}
+                >
+                  Download CSV
+                </a>
+                <Link
+                  to="/activity"
+                  search={{ filter: "claims" }}
+                  className={underlineLink}
+                >
+                  See all
+                </Link>
+              </span>
             )
           }
         >
           History
         </SectionHeading>
+        <DownloadNotice className="mt-2" />
         {claims.length === 0 ? (
           <EmptyState icon={shapes.gift} title="No claims" variant="plain" />
         ) : (
-          <ListRow.List className="mt-3">
-            {claims.map((event) => (
-              <ActivityRow key={event.id} event={event} context="summary" />
-            ))}
-          </ListRow.List>
+          <>
+            <ListRow.List className="mt-3">
+              {claims.map((event) => (
+                <ActivityRow key={event.id} event={event} context="summary" />
+              ))}
+            </ListRow.List>
+            {earlier.more || earlier.pending || earlier.events.length > 0 ? (
+              <EarlierFooter
+                events={claims}
+                more={earlier.more}
+                pending={earlier.pending}
+                added={earlier.added}
+                state={earlier.state}
+                onMore={earlier.loadMore}
+              />
+            ) : null}
+          </>
         )}
       </section>
     </>

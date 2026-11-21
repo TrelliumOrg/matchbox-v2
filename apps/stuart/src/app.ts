@@ -77,6 +77,7 @@ import {
 } from "./query/providers/rewardContracts"
 import { createMezoClient, rpcUrlsFrom } from "./query/providers/rpc"
 import { checkStuartLimits, type StuartRoute } from "./query/rateLimit"
+import { redactAndClip, redactLogEvent } from "./query/redact"
 import { refreshProposal } from "./query/refresh"
 import { searchQuery } from "./query/search"
 import {
@@ -204,7 +205,8 @@ export const defaultDeps: StuartAppDeps = {
 
 function logWith(logger: Logger): (event: LogEvent) => void {
   return function log(event) {
-    const { message, ...fields } = event
+    // Every Stuart log line is redacted here, whatever its source.
+    const { message, ...fields } = redactLogEvent(event)
     logger.info({
       message: typeof message === "string" ? message : "stuart.event",
       ...fields,
@@ -213,7 +215,7 @@ function logWith(logger: Logger): (event: LogEvent) => void {
 }
 
 function errorText(error: unknown): string {
-  return error instanceof Error ? error.message.slice(0, 200) : "unknown"
+  return error instanceof Error ? redactAndClip(error.message, 200) : "unknown"
 }
 
 let saltWarned = false

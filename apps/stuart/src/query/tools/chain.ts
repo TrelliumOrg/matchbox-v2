@@ -17,6 +17,7 @@ import {
 import {
   clipName,
   displayToken,
+  displayTokenDigits,
   listWithAnd,
   shortAddress,
   tokenAmount,
@@ -102,6 +103,8 @@ const untilSchema = z
   )
 
 const DEFAULT_DAYS = 90
+/** How far back the largest holders' claims are read. */
+const HOLDER_FLOW_DAYS = 60
 /** Locks read per question for compounded rebases and chain fees. */
 const MAX_LOCKS = 16
 const ACTIVITY_LOCKS = 8
@@ -398,7 +401,9 @@ export const resolveHolderTool = defineTool({
               address: member.address,
               short: shortAddress(member.address),
               role: member.role,
-              source: member.source,
+              // Where the link was read: it may quote a gauge's or a
+              // label's name, so it is a name for sourcing.
+              sourceName: member.source,
               signers: String(
                 signers.get(member.address.toLowerCase())?.length ?? 0,
               ),
@@ -989,7 +994,12 @@ export const traceRewardsTool = defineTool({
         // part of 5.00 MUSD sent", without the amount in front.
         // `short`: without the "part of N sent" batch total, to make room.
         const short = new Set<FlowBucket>()
-        const where = (bucket: FlowBucket, brief = short.has(bucket)) => {
+        // `named` false: without names read from chain, for model rows.
+        const where = (
+          bucket: FlowBucket,
+          brief = short.has(bucket),
+          named = true,
+        ) => {
           const verb = batchVerb(bucket.kind)
           const batch =
             verb !== null && larger(bucket) && !brief
@@ -997,7 +1007,8 @@ export const traceRewardsTool = defineTool({
                 ? `, part of a ${amountOf(bucket.batchTotal)} add`
                 : `, part of ${amountOf(bucket.batchTotal)} ${verb}`
               : ""
-          return `${clipName(bucketText(bucket.label), 60)}${batch}`
+          const label = named ? bucket.label : bucket.plain
+          return `${clipName(bucketText(label), 60)}${batch}`
         }
         const render = (bucket: FlowBucket, brief = short.has(bucket)) => {
           const passive = PASSIVE_KINDS.has(bucket.kind)
@@ -1109,11 +1120,15 @@ export const traceRewardsTool = defineTool({
           }
           const text = render(bucket)
           parts.push(text)
+          // Names read from chain go in their own fields, never in the
+          // text a row's numbers and addresses are sourced from.
           rows.push({
-            token: token.symbol,
-            claimed: claimed.display,
-            amount: amount.display,
-            destination: where(bucket, false),
+            // Amounts as digits: the symbol, chain text, is its own field.
+            symbol: token.symbol,
+            claimed: withoutSymbol(claimed.display, token.symbol),
+            amount: withoutSymbol(amount.display, token.symbol),
+            destination: where(bucket, false, false),
+            destinationName: bucket.names.join(", ") || null,
             tx: bucket.tx,
           })
           if (bucket.tx !== null && txLinks.length < 6) {
@@ -1233,12 +1248,13 @@ export const traceRewardsTool = defineTool({
       for (const claim of result.claims.slice(-12)) {
         rows.push({
           claim: displayDate(claim.at),
-          token: claim.symbol,
-          amount: displayToken(
+          symbol: claim.symbol,
+          amount: displayTokenDigits(
             tokenAmount(claim.amount, claim.decimals, claim.symbol),
           ),
           kind: claim.kind,
-          from: claim.source ?? shortAddress(claim.from),
+          from: shortAddress(claim.from),
+          fromName: claim.source,
           by: shortAddress(claim.member),
           lock: claim.lock,
           tx: claim.tx,
@@ -1887,7 +1903,7 @@ export const compareHoldersTool = defineTool({
           // Names are optional.
         }
       }
-      const period = lastDays(context.now(), 60)
+      const period = lastDays(context.now(), HOLDER_FLOW_DAYS)
       const habits = new Map<string, Record<string, number>>()
       // Holders whose history was cut short or could not be read.
       const short: Address[] = []
@@ -1957,8 +1973,7 @@ export const compareHoldersTool = defineTool({
             key: "method",
             kind: "calculation",
             label: "Claimed first, FIFO",
-            source:
-              "Each claim's largest outcome to the end of the period, last 60 days",
+            source: `Each claim's largest outcome to the end of the period, last ${HOLDER_FLOW_DAYS} days`,
             fetchedAt,
             status: "deterministic",
             calculationVersion: FLOW_METHOD_VERSION,
@@ -2039,6 +2054,22 @@ export const compareHoldersTool = defineTool({
             ...(labelFact ? [labelFact.id] : []),
             ...habitFacts.map((fact) => fact.id),
           ],
+          // The line's values one by one, names apart: the line itself
+          // quotes the holder's and the top gauge's names.
+          row: {
+            holder: who.display,
+            name: labelFact?.display ?? null,
+            locked: locked.display,
+            locks: lockCount.display,
+            // Lock ids from the escrow: a gauge without a profile is named
+            // after its lock ("veBTC #5910"), which `name` cannot source.
+            lockIds: holder.locks
+              .map((lock) => `${lock.asset} #${lock.tokenId}`)
+              .join(", "),
+            gauges: latest === 0 ? "no votes recorded" : gaugeFact.display,
+            gaugeName: topFact?.display ?? null,
+            claims: habitText,
+          } satisfies ModelRow,
         }
       })
       const count = book.count("holders", "Holders", holders.length)
@@ -2097,11 +2128,16 @@ export const compareHoldersTool = defineTool({
           }),
         ],
         model: {
-          rows: lines.map((line) => ({ holder: line.text })),
+          rows: [
+            ...lines.map((line) => line.row),
+            ...(input.measure === "rewards"
+              ? [{ window: `last ${HOLDER_FLOW_DAYS} days` }]
+              : []),
+          ],
           notes:
             input.measure === "rewards"
               ? [
-                  "Claims are classified by each claim's largest outcome to the end of the period (claimed first, FIFO), last 60 days, including rebases and chain fees compounded into each holder's two largest locks while the holder owned them. Gauge payouts are not claims.",
+                  `Claims are classified by each claim's largest outcome to the end of the period (claimed first, FIFO), last ${HOLDER_FLOW_DAYS} days, including rebases and chain fees compounded into each holder's two largest locks while the holder owned them. Gauge payouts are not claims.`,
                   "Not read here: native BTC sends, locks past the two largest, and transfers past two pages per holder.",
                   ...(partial
                     ? [
@@ -2121,3 +2157,10 @@ export const compareHoldersTool = defineTool({
 })
 
 export { destinationLabel }
+
+/** "50.00 MUSD" less its symbol: "50.00". Other text is left as it is. */
+function withoutSymbol(display: string, symbol: string): string {
+  return display.endsWith(` ${symbol}`)
+    ? display.slice(0, -(symbol.length + 1))
+    : display
+}

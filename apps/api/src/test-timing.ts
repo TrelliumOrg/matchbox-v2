@@ -13,10 +13,37 @@
  * still finish it after the budget. Tests of whole routes check the
  * deadline each read was given instead, and use this only as a hang guard.
  * It needs real timers: under `vi.useFakeTimers()` the budget never fires
- * unless time is advanced, and the race proves nothing.
+ * unless time is advanced, and the race proves nothing. Where the code
+ * under test reads its deadline from `Date.now()` and waits on its own
+ * timers, prefer fake timers and `settlement`: one clock, moved by the
+ * test, so the check is of the exact millisecond and not of the machine.
  *
  * Never imported by the Worker.
  */
+
+/**
+ * Whether `work` has settled yet, and with what error. For fake timers:
+ * read it after each `vi.advanceTimersByTimeAsync`.
+ */
+export function settlement(work: Promise<unknown>): {
+  settled: boolean
+  error: unknown
+} {
+  const state: { settled: boolean; error: unknown } = {
+    settled: false,
+    error: undefined,
+  }
+  work.then(
+    () => {
+      state.settled = true
+    },
+    (error: unknown) => {
+      state.settled = true
+      state.error = error
+    },
+  )
+  return state
+}
 
 /** "late" when `work` had not settled once a timer of `ms` fired. */
 export async function settleWithin<T>(

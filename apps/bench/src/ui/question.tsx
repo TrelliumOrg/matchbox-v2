@@ -89,7 +89,7 @@ function CardShown({ parts }: { parts: ShownParts }): ReactNode {
   if (parts.title === "" && parts.card.length === 0) return null
   return (
     <details className="group/card mt-2.5">
-      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-lg py-0.5 text-[13px] font-medium text-sec outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-lg py-0.5 max-md:min-h-10 text-[13px] font-medium text-sec outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink [&::-webkit-details-marker]:hidden">
         <svg
           aria-hidden="true"
           width="10"
@@ -280,7 +280,7 @@ export function QuestionStepper({
     )
   }
   const button =
-    "flex h-9 cursor-pointer items-center rounded-[18px] px-3.5 text-[14.5px] font-medium text-ink2 outline-none hover:bg-bg focus-visible:outline-2 focus-visible:outline-ink"
+    "flex h-9 cursor-pointer items-center rounded-[18px] px-3.5 text-[14.5px] font-medium text-ink2 max-md:h-10 outline-none hover:bg-bg focus-visible:outline-2 focus-visible:outline-ink"
   return (
     <>
       <div className="mt-14 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">

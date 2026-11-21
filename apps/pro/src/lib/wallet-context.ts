@@ -50,6 +50,13 @@ export function resetWalletLookup(): void {
 
 let own: string | null | undefined
 let names: Map<string, string> | undefined
+const ownListeners = new Set<() => void>()
+
+/** Told when the own wallet changes (see `useOwnWallet`). */
+export function subscribeOwnWallet(listener: () => void): () => void {
+  ownListeners.add(listener)
+  return () => ownListeners.delete(listener)
+}
 
 function readMeta(): string | null {
   return (
@@ -82,6 +89,7 @@ export function setOwnWallet(address: string | null): void {
   } catch {
     // Plain paths still work for this tab.
   }
+  for (const listener of ownListeners) listener()
 }
 
 /** Remembers a Mezo ID learned later (a lookup), for clean links to it. */

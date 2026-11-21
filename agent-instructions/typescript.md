@@ -1,6 +1,6 @@
 ### TypeScript and JavaScript
 
-- Use the workspace tsconfig base via @matchbox/config-ts . Use the base tsconfig to define broad type-checking rules, and define build-specific rules that exempt e.g. tests in a package-local extended `tsconfig.build.json`.
+- Every package's `tsconfig.json` extends the root `tsconfig.base.json`, which holds the broad type-checking rules. Put package-specific rules in the package's own `tsconfig.json` (or a second one for a separate target, such as a Worker).
 - Use TypeScript with explicit types (avoid `any`)
 - Prefix unused variables with underscore (\_varName)
 - Always camelCase for variables, functions, classes (PascalCase), etc.

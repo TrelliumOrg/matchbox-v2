@@ -24,7 +24,8 @@ import { votingFixtures } from "./voting"
  * API does without its database, `limited` answers 429, `filling` answers
  * aggregates as not computed yet, `delayed` has the copy step halt tables
  * (`/status`), `partial` has the cross-chain pools on Mezo with no daily
- * row (GeckoTerminal answering 429 for Mezo's pools).
+ * row (GeckoTerminal answering 429 for Mezo's pools), `refill` has a re-fill of
+ * the copy due (`/status`) with nothing behind.
  */
 
 export type { FixtureScenario }
@@ -34,7 +35,8 @@ export function fixtureScenario(header: string | null): FixtureScenario {
     header === "limited" ||
     header === "filling" ||
     header === "delayed" ||
-    header === "partial"
+    header === "partial" ||
+    header === "refill"
     ? header
     : "normal"
 }

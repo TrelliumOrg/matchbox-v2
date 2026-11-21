@@ -19,7 +19,6 @@ import { getShell } from "../data/shell-fn"
 import { AppShell } from "../shell/app-shell"
 import { AppearanceHost } from "../shell/appearance"
 import { walletOptions } from "../shell/wallet-options"
-import { shareTags } from "../site"
 import appCss from "../styles.css?url"
 
 const description =
@@ -30,23 +29,14 @@ export const Route = createRootRoute({
   // The shell's head and prices are a starting point: the head store moves
   // on from there, so client navigations never refetch them.
   staleTime: Number.POSITIVE_INFINITY,
-  head: ({ matches }) => {
-    const base = rootHead({
+  // The link preview tags are the Worker's (share-card.ts), not script.
+  head: () =>
+    rootHead({
       title: "Matchscan",
       description,
       font: figtreeLatin,
       stylesheet: appCss,
-    })
-    const share = shareTags(
-      matches.at(-1)?.pathname ?? "/",
-      "Matchscan",
-      description,
-    )
-    return {
-      meta: [...base.meta, ...share.meta],
-      links: [...base.links, ...share.links],
-    }
-  },
+    }),
   shellComponent: RootDocument,
   component: RootComponent,
   notFoundComponent: lazyRouteComponent(

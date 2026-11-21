@@ -64,6 +64,7 @@ const context: BuildContext = {
   gauges: new Map([[poolGauge, sMusd]]),
   cards: new Map(),
   historicPrice: () => null,
+  claimPrices: null,
 }
 
 const lock: LockRow = {

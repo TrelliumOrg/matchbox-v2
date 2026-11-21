@@ -342,9 +342,6 @@ export function Footer(): ReactNode {
         <a href={links.privacy} data-tap="">
           Privacy
         </a>
-        <a href={links.terms} data-tap="">
-          Terms
-        </a>
         {import.meta.env.VITE_FEEDBACK_URL ? (
           <FeedbackEntry
             endpoint={import.meta.env.VITE_FEEDBACK_URL}

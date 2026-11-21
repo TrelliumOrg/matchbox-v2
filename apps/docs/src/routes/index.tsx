@@ -5,7 +5,7 @@ import { Glyph, type GlyphShape, shapes } from "@matchbox/ui/icons"
 import { Kbd } from "@matchbox/ui/kbd"
 import * as Prose from "@matchbox/ui/prose"
 import { createFileRoute } from "@tanstack/react-router"
-import { type ReactNode, useEffect } from "react"
+import { Fragment, type ReactNode, useEffect } from "react"
 import { DocLink } from "../content/doc-link"
 import { DogDisc } from "../shell/dog"
 import { outboundLinks } from "../shell/site-footer"
@@ -30,6 +30,9 @@ export const Route = createFileRoute("/")({
   }),
   component: Home,
 })
+
+/** Phones: a link standing on its own is at least 40 tall (D3). */
+const phoneTap = "max-md:inline-flex max-md:min-h-10 max-md:items-center"
 
 type Product = {
   name: string
@@ -152,6 +155,7 @@ function published(path: string): boolean {
   return manifest.pages[path] !== undefined
 }
 
+/** On a phone it wraps only between words, never inside the package name. */
 const install = "pnpm add @matchbox-dev/sdk"
 
 function Home(): ReactNode {
@@ -251,14 +255,14 @@ function Home(): ReactNode {
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
                     <DocLink
                       href={`/${product.section}`}
-                      className={`w-fit text-[15px] font-semibold ${Prose.linkClass}`}
+                      className={`w-fit text-[15px] font-semibold ${phoneTap} ${Prose.linkClass}`}
                     >
                       All {product.name.replace("Matchbox ", "")} pages
                     </DocLink>
                     {product.open === undefined ? null : (
                       <a
                         href={product.open.href}
-                        className="flex items-center gap-1 rounded-md text-[15px] whitespace-nowrap text-sec outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
+                        className="flex items-center gap-1 rounded-md text-[15px] whitespace-nowrap text-sec outline-none max-md:min-h-10 hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
                       >
                         <Glyph
                           shape={shapes.arrowUpRight}
@@ -287,7 +291,7 @@ function Home(): ReactNode {
             </h2>
             <DocLink
               href="/concepts"
-              className={`text-[15px] font-semibold ${Prose.linkClass}`}
+              className={`text-[15px] font-semibold ${phoneTap} ${Prose.linkClass}`}
             >
               All concepts
             </DocLink>
@@ -335,7 +339,7 @@ function Home(): ReactNode {
           <h2 id="build" className="text-[22px] font-[650] text-ink">
             Build on Matchbox
           </h2>
-          <p className="mt-3 flex flex-wrap gap-x-[22px] gap-y-2 text-[15px]">
+          <p className="mt-3 flex flex-wrap gap-x-[22px] gap-y-2 text-[15px] max-md:gap-y-0">
             {[
               { path: "/developer", label: "Quickstart" },
               { path: "/developer/reference", label: "API reference" },
@@ -347,18 +351,25 @@ function Home(): ReactNode {
                 <DocLink
                   key={item.path}
                   href={item.path}
-                  className={`font-semibold ${Prose.linkClass}`}
+                  className={`font-semibold ${phoneTap} ${Prose.linkClass}`}
                 >
                   {item.label}
                 </DocLink>
               ))}
           </p>
         </div>
-        <div className="flex h-14 w-full max-w-[470px] items-center gap-3 rounded-2xl bg-bg pr-2 pl-5 font-mono text-[14.5px] text-ink">
+        <div className="flex min-h-14 w-full max-w-[470px] items-center gap-3 rounded-2xl bg-bg py-2 pr-2 pl-5 font-mono text-[14.5px] text-ink">
           <span aria-hidden="true" className="text-sec">
             $
           </span>
-          <code className="min-w-0 flex-1 truncate">{install}</code>
+          <code className="min-w-0 flex-1 sm:truncate">
+            {install.split(" ").map((word, index) => (
+              <Fragment key={word}>
+                {index === 0 ? null : " "}
+                <span className="whitespace-nowrap">{word}</span>
+              </Fragment>
+            ))}
+          </code>
           <CopyButton source={install} />
         </div>
       </section>

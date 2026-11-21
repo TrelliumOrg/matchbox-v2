@@ -4,10 +4,12 @@ import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import type { IdentityAccountView } from "../../shared/contracts"
 import { AccountPill } from "./account-pill"
+import { footerLinkClass, SiteLinks } from "./site-footer"
 
 /**
  * Header (lockup, account menu when signed in), the page, and its foot:
- * Feedback at the bottom right, outside every consent step.
+ * the Matchbox links, and Feedback at the bottom right, outside every
+ * consent step.
  */
 export function Shell({
   account,
@@ -31,18 +33,19 @@ export function Shell({
       <main className="flex flex-1 flex-col px-5 pb-16 md:px-10">
         {children}
       </main>
-      {import.meta.env.VITE_FEEDBACK_URL ? (
-        <footer className="flex justify-end px-5 pb-10 md:px-10">
+      <footer className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-5 pb-8 md:px-10">
+        <SiteLinks />
+        {import.meta.env.VITE_FEEDBACK_URL ? (
           <FeedbackEntry
             endpoint={import.meta.env.VITE_FEEDBACK_URL}
             surface="id"
-            className="flex cursor-pointer items-center gap-2 rounded-md text-[15px] text-sec outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink"
+            className={`${footerLinkClass} cursor-pointer gap-2 text-[15px] text-sec`}
           >
             <FeedbackIcon size={16} strokeWidth={1.9} />
             Feedback
           </FeedbackEntry>
-        </footer>
-      ) : null}
+        ) : null}
+      </footer>
     </div>
   )
 }

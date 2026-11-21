@@ -13,6 +13,12 @@ const description =
 
 const origin = "https://matchbox.markets"
 
+/**
+ * The link preview card, 1200x630, drawn by packages/og
+ * (`pnpm --filter @matchbox/og cards`) into public/og.png.
+ */
+const ogImage = `${origin}/og.png`
+
 export const Route = createRootRoute({
   head: () => {
     const base = rootHead({
@@ -29,7 +35,15 @@ export const Route = createRootRoute({
         { property: "og:title", content: "Matchbox" },
         { property: "og:description", content: description },
         { property: "og:url", content: `${origin}/` },
-        { name: "twitter:card", content: "summary" },
+        { property: "og:image", content: ogImage },
+        { property: "og:image:type", content: "image/png" },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        {
+          property: "og:image:alt",
+          content: "Matchbox: use Mezo with Matchbox",
+        },
+        { name: "twitter:card", content: "summary_large_image" },
       ],
       links: [...base.links, { rel: "canonical", href: `${origin}/` }],
     }

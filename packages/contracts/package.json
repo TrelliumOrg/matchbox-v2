@@ -90,6 +90,10 @@
       "types": "./src/read-models/index.ts",
       "default": "./src/read-models/index.ts"
     },
+    "./read-models/history-csv": {
+      "types": "./src/read-models/history-csv.ts",
+      "default": "./src/read-models/history-csv.ts"
+    },
     "./read-models/fixtures": {
       "types": "./src/read-models/fixtures.ts",
       "default": "./src/read-models/fixtures.ts"

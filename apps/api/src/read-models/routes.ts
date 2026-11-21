@@ -21,15 +21,31 @@ import {
   watchClientIdSchema,
   watchKindSchema,
 } from "@matchbox/contracts/read-models"
+import {
+  type HistoryCsvKind,
+  historyCsvFileName,
+} from "@matchbox/contracts/read-models/history-csv"
 import { decimalToScaledBigInt } from "@matchbox/domain"
-import { PlatformError } from "@matchbox/server"
+import type { Logger } from "@matchbox/logger"
+import { PlatformError, type RateLimitClient } from "@matchbox/server"
 import type { Hono } from "hono"
 import { z } from "zod"
+import { callerOf } from "../blockscout/endpoint"
 import type { ApiContext, ApiEnv } from "../context"
 import { ifNoneMatchMatches } from "../http"
 import { type BalanceReader, walletBalances } from "./balances"
+import {
+  type ClaimPrices,
+  coverageStamp,
+  readClaimPrices,
+} from "./claim-prices"
 import { withDirectoryIncentives } from "./epoch-incentives"
 import { kindTotals } from "./gauges"
+import {
+  exportAnonymousPolicy,
+  exportEndUserPolicy,
+  historyCsvStream,
+} from "./history-export"
 import type { IdentityReader } from "./identity"
 import {
   type ClaimableAsOf,
@@ -51,6 +67,7 @@ import {
   type LiveWalletDocuments,
   type LiveWalletReader,
 } from "./live-wallet"
+import proDirectory from "./pro-gauges"
 import { repriceWalletOverview, repriceWalletRewards } from "./reprice"
 import {
   currentKey,
@@ -59,10 +76,22 @@ import {
   type ReadModelWrite,
   readModelEtag,
   readReadModel,
+  readReadModelMeta,
   type StoredReadModel,
+  wantsRebuild,
   writeReadModels,
 } from "./store"
 import { gaugeCardsFrom } from "./wallet-extras"
+import {
+  afterDocument,
+  type HistoryState,
+  isHistoryCursor,
+  mayBePending,
+  parseHistoryCursor,
+  readHistoryBackfill,
+  readHistoryPage,
+  readHistoryState,
+} from "./wallet-history"
 import {
   addWatchItem,
   readWatchList,
@@ -110,13 +139,26 @@ export type InternalProDeps = {
   balances?: BalanceReader | null
   /** Mezo ID lookups (api.mezo.org); null disables the route. */
   identity?: IdentityReader | null
+  /**
+   * Buckets for the CSV downloads, by Pro's end-user key. Absent or null:
+   * not limited (tests, local dev). Fails open, as the API's other limits.
+   */
+  rateLimits?: RateLimitClient | null
   /** Unix seconds; defaults to the wall clock. */
   nowSeconds?: () => number
+  /** Render failures and retries; absent logs nothing. */
+  logger?: Logger | null
 }
 
 /** Seconds a response may be served from the edge cache and the browser. */
 const ttl = {
   wallet: { browser: 15, edge: 30 },
+  /**
+   * A page of a wallet's stored history that cannot change but for a row
+   * rewritten (rare): one with older pages after it, or the last of a
+   * complete history. Older rows added by the backfill come after it.
+   */
+  history: { browser: 600, edge: 3_600 },
   shared: { browser: 30, edge: 60 },
   prices: { browser: 15, edge: 30 },
   /** About one block. */
@@ -164,18 +206,110 @@ function background(c: ApiContext, task: Promise<unknown>): void {
 }
 
 /**
+ * How long a shared route's last good answer is kept beside its cached
+ * one, to serve when a render fails (`cached`, `lastGood`).
+ */
+export const lastGoodSeconds = 86_400
+
+function lastGoodKey(url: string): Request {
+  const copy = new URL(url)
+  copy.searchParams.set("_matchbox_last_good", "1")
+  return new Request(copy.toString(), { method: "GET" })
+}
+
+/**
+ * A render failure a second try or an earlier answer may cure: anything
+ * but a `PlatformError`, which is a deliberate answer (a 404, a refused
+ * query, a wallet still building). A D1 error ("Network connection
+ * lost", an overloaded database), a document the API's schema rejects
+ * (written by a jobs version the API does not know yet) or a bug in a
+ * builder is one.
+ */
+function curable(error: unknown): boolean {
+  return !(error instanceof PlatformError)
+}
+
+/** A path segment for a log: never an address (a record key). */
+function pathSegment(segment: PropertyKey): string {
+  if (typeof segment === "number") return String(segment)
+  if (typeof segment !== "string") return "?"
+  return /^0x/i.test(segment) ? "{address}" : segment.slice(0, 40)
+}
+
+/**
+ * An error for the log, without what was read: a schema error says which
+ * checks failed where (its message would quote the issues, which name
+ * record keys), and a JSON error only that the body was not JSON (V8's
+ * message quotes the start of it).
+ */
+function errorText(error: unknown): string {
+  if (error instanceof z.ZodError) {
+    const issues = error.issues
+      .slice(0, 3)
+      .map(
+        (issue) => `${issue.code} at ${issue.path.map(pathSegment).join(".")}`,
+      )
+    return `ZodError: ${error.issues.length} issues: ${issues.join("; ")}`.slice(
+      0,
+      200,
+    )
+  }
+  if (error instanceof SyntaxError) return "SyntaxError: not JSON"
+  return error instanceof Error
+    ? `${error.name}: ${error.message.slice(0, 200)}`
+    : "Unknown"
+}
+
+/**
+ * `render`, tried once more when it fails in a way a second read may
+ * cure (`curable`): one failed D1 read on a cold isolate is no reason to
+ * answer 500. Not with `retry: false`, for a route whose reader retries
+ * on its own.
+ */
+async function renderTwice(
+  c: ApiContext,
+  deps: InternalProDeps,
+  render: () => Promise<Rendered>,
+  retry: boolean,
+): Promise<Rendered> {
+  try {
+    return await render()
+  } catch (error) {
+    if (!retry || !curable(error)) throw error
+    deps.logger?.warn({
+      message: "Read model render failed, retrying",
+      route: c.get("routeTemplate") ?? null,
+      error: errorText(error),
+    })
+    return render()
+  }
+}
+
+/**
  * Edge cache around `render`. The cache key is the URL alone (no
  * conditional headers), so one cached 200 answers every client; the ETag
  * comparison happens here, per request.
+ *
+ * A render that fails twice in a curable way (`renderTwice`) is answered
+ * with the route's last good answer when `lastGood` is set and one is
+ * kept (a day, under its own key), marked `no-store` and `X-Cache:
+ * stale-if-error`, rather than with a 500. Only for shared documents:
+ * they are few, so the extra cache entry each costs is too.
+ *
+ * `retry: false` leaves out the second try, for a route whose render is a
+ * live chain read on a client that retries by itself: a second try would
+ * double a failing read's time and its RPC requests.
  */
 async function cached(
   c: ApiContext,
   deps: InternalProDeps,
   render: () => Promise<Rendered>,
+  options: { lastGood?: boolean; retry?: boolean } = {},
 ): Promise<Response> {
-  const key = new Request(new URL(c.req.url).toString(), { method: "GET" })
+  const url = new URL(c.req.url).toString()
+  const key = new Request(url, { method: "GET" })
   if (deps.cache !== null) {
-    const hit = await deps.cache.match(key)
+    const hit = await deps.cache.match(key).catch(() => undefined)
     const etag = hit?.headers.get("ETag")
     if (hit !== undefined && etag !== null && etag !== undefined) {
       c.header("X-Cache", "hit")
@@ -194,20 +328,73 @@ async function cached(
       })
     }
   }
-  const rendered = await render()
+  let rendered: Rendered
+  try {
+    rendered = await renderTwice(c, deps, render, options.retry !== false)
+  } catch (error) {
+    const fallback =
+      options.lastGood === true && deps.cache !== null && curable(error)
+        ? await deps.cache.match(lastGoodKey(url)).catch(() => undefined)
+        : undefined
+    deps.logger?.error({
+      message: "Read model render failed",
+      route: c.get("routeTemplate") ?? null,
+      error: errorText(error),
+      served: fallback === undefined ? "error" : "last-good",
+    })
+    if (fallback === undefined) throw error
+    c.header("X-Cache", "stale-if-error")
+    c.set("cacheStatus", "full")
+    // Counted in the request log (REQUEST_LOG blob11), not only logged.
+    c.set("servedFrom", "last-good")
+    return c.body(await fallback.text(), 200, {
+      ETag: fallback.headers.get("ETag") ?? "",
+      "Cache-Control": noStoreControl,
+      "Content-Type": "application/json; charset=utf-8",
+    })
+  }
   // An answer that is behind what the request asked for is not kept.
   if (deps.cache !== null && rendered.cacheControl !== noStoreControl) {
-    const stored = new Response(JSON.stringify(rendered.body), {
-      headers: {
-        ETag: `"${rendered.etag}"`,
-        "Cache-Control": rendered.cacheControl,
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    })
-    background(c, deps.cache.put(key, stored))
+    const body = JSON.stringify(rendered.body)
+    const headers = {
+      ETag: `"${rendered.etag}"`,
+      "Content-Type": "application/json; charset=utf-8",
+    }
+    background(
+      c,
+      deps.cache.put(
+        key,
+        new Response(body, {
+          headers: { ...headers, "Cache-Control": rendered.cacheControl },
+        }),
+      ),
+    )
+    if (options.lastGood === true) {
+      background(
+        c,
+        deps.cache.put(
+          lastGoodKey(url),
+          new Response(body, {
+            headers: {
+              ...headers,
+              "Cache-Control": `public, s-maxage=${lastGoodSeconds}`,
+            },
+          }),
+        ),
+      )
+    }
     c.header("X-Cache", "miss")
   }
   return send(c, rendered)
+}
+
+/** `cached` for a shared document: its last good answer is kept. */
+function sharedCached(
+  c: ApiContext,
+  deps: InternalProDeps,
+  render: () => Promise<Rendered>,
+): Promise<Response> {
+  return cached(c, deps, render, { lastGood: true })
 }
 
 const noStoreControl = "no-store"
@@ -479,6 +666,47 @@ function liveDocument(kind: WalletKind, documents: LiveWalletDocuments) {
   }
 }
 
+/**
+ * Stale wallets someone looks at are put on the warehouse snapshot's list
+ * (`wallet_requests`, see `wantsRebuild` in the store). The jobs side takes
+ * requested wallets out of the sweep's share of a run, so this never makes
+ * a run larger. One isolate asks for a wallet at most this often.
+ */
+const staleRequestSeconds = 900
+const staleRequests = new Map<string, number>()
+
+/** For tests: forget which wallets this isolate asked for. */
+export function forgetStaleRequests(): void {
+  staleRequests.clear()
+}
+
+/** Queues a stored wallet for the next run when `wantsRebuild` says so. */
+function queueIfStale(
+  c: ApiContext,
+  deps: InternalProDeps,
+  address: string,
+  overview: StoredReadModel<"wallet-overview">,
+): void {
+  const now = nowOf(deps)
+  if (!wantsRebuild(overview, now)) return
+  const key = `${deps.network}:${address}`
+  const asked = staleRequests.get(key)
+  if (asked !== undefined && now - asked < staleRequestSeconds) return
+  staleRequests.delete(key)
+  staleRequests.set(key, now)
+  if (staleRequests.size > 1_000) {
+    const oldest = staleRequests.keys().next().value
+    if (oldest !== undefined) staleRequests.delete(oldest)
+  }
+  // One row at most per wallet (ON CONFLICT DO NOTHING), never awaited.
+  background(
+    c,
+    requestWallet(requireDb(deps), deps.network, address, now).catch(
+      () => undefined,
+    ),
+  )
+}
+
 /** A stored wallet document, else the live build's; 404 without either. */
 async function walletDocument<Kind extends WalletKind>(
   c: ApiContext,
@@ -646,6 +874,7 @@ function walletClaimable(
       walletDocument(c, deps, "wallet-overview", address),
       walletDocument(c, deps, "wallet-rewards", address),
     ])
+    queueIfStale(c, deps, address, overview)
     const stored: WalletClaimable = {
       overview,
       rewards,
@@ -960,6 +1189,42 @@ function envelope(data: unknown, meta: ReadModelMeta) {
 
 const pageSize = { default: 25, max: 100 }
 
+/**
+ * A wallet's stored history state; null without one, or without the table
+ * (READ_DB before migration 0007), when paging ends with the document.
+ */
+async function historyState(
+  deps: InternalProDeps,
+  address: string,
+): Promise<HistoryState | null> {
+  try {
+    return await readHistoryState(requireDb(deps), deps.network, address)
+  } catch {
+    return null
+  }
+}
+
+/** The backfill setting, read only where an answer may say `pending`. */
+async function historyBackfill(
+  deps: InternalProDeps,
+  state: HistoryState | null,
+): Promise<boolean> {
+  return mayBePending(state)
+    ? readHistoryBackfill(requireDb(deps), deps.network)
+    : false
+}
+
+/**
+ * What a stored-history page depends on besides its cursor: how far back
+ * the history is stored, whether that is all, and whether more is coming.
+ * Rows added at the top of the history do not change a page below them.
+ */
+function historyEtag(state: HistoryState | null, backfill: boolean): string {
+  return state === null
+    ? "h0"
+    : `h${state.low.ts}${state.complete ? "c" : ""}${backfill ? "b" : ""}`
+}
+
 /** Cursor = the id of the last row on the previous page. */
 function pageActivity(
   rows: readonly ActivityRow[],
@@ -983,6 +1248,132 @@ function pageActivity(
     rows: page,
     nextCursor: more && last !== undefined ? last.id : null,
   }
+}
+
+/** A download costs one from the visitor's bucket; a refusal is a 429. */
+async function spendExport(c: ApiContext, deps: InternalProDeps) {
+  if (deps.rateLimits === undefined || deps.rateLimits === null) return
+  const caller = callerOf(c)
+  const client = caller.client ?? "unknown"
+  let allowed = true
+  let retryAfter = 1
+  try {
+    const verdict = await deps.rateLimits.consume(
+      `pro-export:${client}:${caller.endUser ?? "anonymous"}`,
+      caller.endUser === null ? exportAnonymousPolicy : exportEndUserPolicy,
+    )
+    allowed = verdict.allowed
+    retryAfter = Math.max(1, verdict.retryAfterSeconds)
+  } catch {
+    // Fails open, as the rest of the API's limits do.
+  }
+  if (!allowed) {
+    throw new PlatformError("rate_limited", {
+      headers: { "Retry-After": String(retryAfter) },
+    })
+  }
+}
+
+/**
+ * A wallet's whole stored activity, or its claims, as a CSV download
+ * (history-export.ts). The same wallet rules as the activity route (its
+ * document, else the live build), the edge cache in front, the wallet
+ * TTLs, and an ETag over what the file depends on, so a repeat download
+ * of an unchanged history is a 304 that reads no page.
+ *
+ * A download that misses the edge costs one from the visitor's bucket,
+ * before anything is read: a refused one reads nothing, and a 404 costs
+ * one too. Only a request with `If-None-Match` reads first, as a matching
+ * one is a free 304. A HEAD reads nothing and costs nothing: it gets the
+ * file's headers without its ETag.
+ */
+async function exportCsv(
+  c: ApiContext,
+  deps: InternalProDeps,
+  address: string,
+  kind: HistoryCsvKind,
+): Promise<Response> {
+  const key = new Request(new URL(c.req.url).toString(), { method: "GET" })
+  const conditional = c.req.header("If-None-Match")
+  if (deps.cache !== null) {
+    const hit = await deps.cache.match(key)
+    const etag = hit?.headers.get("ETag")
+    if (hit !== undefined && etag !== null && etag !== undefined) {
+      c.header("X-Cache", "hit")
+      if (ifNoneMatchMatches(conditional, etag)) {
+        c.set("cacheStatus", "not-modified")
+        return c.body(null, 304, { ETag: etag })
+      }
+      c.set("cacheStatus", "full")
+      return new Response(hit.body, { status: 200, headers: hit.headers })
+    }
+  }
+  const fileName = historyCsvFileName(address, kind, nowOf(deps))
+  if (c.req.method === "HEAD") {
+    c.set("cacheStatus", "full")
+    return c.body(null, 200, {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${fileName}"`,
+    })
+  }
+  if (conditional === undefined) await spendExport(c, deps)
+  const db = requireDb(deps)
+  let stored: Awaited<ReturnType<typeof walletDocument<"wallet-activity">>>
+  try {
+    stored = await walletDocument(c, deps, "wallet-activity", address)
+  } catch (error) {
+    // A 404 costs a download too.
+    if (conditional !== undefined) await spendExport(c, deps)
+    throw error
+  }
+  const state = await historyState(deps, address)
+  const backfill = await historyBackfill(deps, state)
+  let prices: ClaimPrices | null
+  try {
+    prices = await readClaimPrices(db, deps.network)
+  } catch {
+    // Claims not valued yet say so in the file.
+    prices = null
+  }
+  const etag = `"csv-${await shortHash(
+    [
+      kind,
+      stored.etag,
+      historyEtag(state, backfill),
+      state?.high.ts ?? "-",
+      prices === null ? "x" : coverageStamp(prices),
+      fileName,
+    ].join(":"),
+  )}"`
+  const headers = {
+    ETag: etag,
+    "Cache-Control": cacheControl(ttl.wallet),
+    "Content-Type": "text/csv; charset=utf-8",
+    "Content-Disposition": `attachment; filename="${fileName}"`,
+  }
+  if (ifNoneMatchMatches(conditional, etag)) {
+    c.set("cacheStatus", "not-modified")
+    return c.body(null, 304, { ETag: etag })
+  }
+  if (conditional !== undefined) await spendExport(c, deps)
+  const body = historyCsvStream({
+    db,
+    network: deps.network,
+    wallet: address,
+    kind,
+    documentRows: stored.data.rows,
+    state,
+    backfill,
+    prices,
+    nowSeconds: nowOf(deps),
+  })
+  c.set("cacheStatus", "full")
+  if (deps.cache === null) return c.body(body, 200, headers)
+  const [served, kept] = body.tee()
+  background(c, deps.cache.put(key, new Response(kept, { headers })))
+  c.header("X-Cache", "miss")
+  return c.body(served, 200, headers)
 }
 
 export default function registerInternalProRoutes(
@@ -1036,7 +1427,7 @@ export default function registerInternalProRoutes(
 
   app.get("/internal/pro/protocol", (c) => {
     c.set("routeTemplate", "/internal/pro/protocol")
-    return cached(c, deps, async () => {
+    return sharedCached(c, deps, async () => {
       // The directory too: this epoch's incentives come from its cards.
       const [stored, directory] = await Promise.all([
         load(deps, "protocol", currentKey),
@@ -1044,7 +1435,10 @@ export default function registerInternalProRoutes(
       ])
       return {
         body: envelope(
-          withDirectoryIncentives(stored.data, directory.data),
+          withDirectoryIncentives(
+            stored.data,
+            proDirectory(directory.data, deps.network),
+          ),
           stored.meta,
         ),
         etag: await shortHash(
@@ -1060,10 +1454,13 @@ export default function registerInternalProRoutes(
     const query = gaugeQuerySchema.safeParse(c.req.query())
     if (!query.success) throw new PlatformError("invalid_request")
     const after = afterParam(c)
-    return cached(c, deps, async () => {
+    return sharedCached(c, deps, async () => {
       const stored = await load(deps, "gauges", currentKey, after)
       return {
-        body: envelope(pageGauges(stored.data, query.data), stored.meta),
+        body: envelope(
+          pageGauges(proDirectory(stored.data, deps.network), query.data),
+          stored.meta,
+        ),
         etag: `${stored.etag}-${stored.meta.updatedAt}-${await shortHash(c.req.url)}`,
         cacheControl: sharedCacheControl(stored.meta, after),
       }
@@ -1074,14 +1471,18 @@ export default function registerInternalProRoutes(
     c.set("routeTemplate", "/internal/pro/gauges/consistency")
     const query = gaugeConsistencyQuerySchema.safeParse(c.req.query())
     if (!query.success) throw new PlatformError("invalid_request")
-    return cached(c, deps, async () => {
+    return sharedCached(c, deps, async () => {
       const [funding, directory] = await Promise.all([
         load(deps, "gauge-funding", currentKey),
         load(deps, "gauges", currentKey),
       ])
       return {
         body: envelope(
-          rankConsistency(funding.data, directory.data, query.data),
+          rankConsistency(
+            funding.data,
+            proDirectory(directory.data, deps.network),
+            query.data,
+          ),
           funding.meta,
         ),
         etag: `${funding.etag}-${directory.etag}-${await shortHash(c.req.url)}`,
@@ -1115,7 +1516,7 @@ export default function registerInternalProRoutes(
 
   app.get("/internal/pro/summary", (c) => {
     c.set("routeTemplate", "/internal/pro/summary")
-    return cached(c, deps, async () => {
+    return sharedCached(c, deps, async () => {
       const [directory, protocol] = await Promise.all([
         load(deps, "gauges", currentKey),
         load(deps, "protocol", currentKey),
@@ -1125,7 +1526,10 @@ export default function registerInternalProRoutes(
           ? directory.meta
           : protocol.meta
       return {
-        body: envelope(summaryOf(directory.data, protocol.data), meta),
+        body: envelope(
+          summaryOf(proDirectory(directory.data, deps.network), protocol.data),
+          meta,
+        ),
         etag: await shortHash(
           `${directory.etag}-${directory.meta.updatedAt}-${protocol.etag}-${protocol.meta.updatedAt}`,
         ),
@@ -1141,7 +1545,7 @@ export default function registerInternalProRoutes(
     c.set("routeTemplate", "/internal/pro/protocol/activity")
     const query = activityQuerySchema.safeParse(c.req.query())
     if (!query.success) throw new PlatformError("invalid_request")
-    return cached(c, deps, async () => {
+    return sharedCached(c, deps, async () => {
       const stored = await load(deps, "protocol-activity", currentKey)
       return {
         body: envelope(pageActivity(stored.data.rows, query.data), stored.meta),
@@ -1153,7 +1557,7 @@ export default function registerInternalProRoutes(
 
   app.get("/internal/pro/protocol/epochs", (c) => {
     c.set("routeTemplate", "/internal/pro/protocol/epochs")
-    return cached(c, deps, async () => {
+    return sharedCached(c, deps, async () => {
       const stored = await load(deps, "protocol-history", currentKey)
       return {
         body: envelope(stored.data, stored.meta),
@@ -1167,7 +1571,7 @@ export default function registerInternalProRoutes(
     c.set("routeTemplate", "/internal/pro/protocol/epochs/{number}")
     const number = epochParamSchema.safeParse(c.req.param("number"))
     if (!number.success) throw new PlatformError("not_found")
-    return cached(c, deps, async () => {
+    return sharedCached(c, deps, async () => {
       const stored = await load(deps, "protocol-epoch", String(number.data))
       return {
         body: envelope(stored.data, stored.meta),
@@ -1181,7 +1585,7 @@ export default function registerInternalProRoutes(
     c.set("routeTemplate", "/internal/pro/gauges/{address}")
     const address = addressParam(c, "address")
     const after = afterParam(c)
-    return cached(c, deps, async () => {
+    return sharedCached(c, deps, async () => {
       const [stored, history] = await Promise.all([
         load(deps, "gauge-profile", address),
         readReadModel(requireDb(deps), deps.network, "gauge-history", address),
@@ -1235,27 +1639,101 @@ export default function registerInternalProRoutes(
       }
       return {
         body: envelope(data, stored.meta),
-        // What was served: the claimable as read, and where from.
-        etag: `${await readModelEtag(data)}-${await shortHash(`${stamp}:${asOf.source}:${asOf.block}`)}`,
+        // What was served: the claimable as read, and where from. The
+        // stored etag covers Earned's claims, which its USD alone does not.
+        etag: `${await readModelEtag(data)}-${await shortHash(`${stamp}:${asOf.source}:${asOf.block}:${stored.etag}`)}`,
         cacheControl: walletCacheControl(wallet, after),
       }
     })
   })
 
+  // The wallet's document first, then its stored history (wallet-history.ts)
+  // for a wallet with more rows than the document holds.
   app.get("/internal/pro/wallets/:address/activity", (c) => {
     c.set("routeTemplate", "/internal/pro/wallets/{address}/activity")
     const address = addressParam(c, "address")
     const query = activityQuerySchema.safeParse(c.req.query())
     if (!query.success) throw new PlatformError("invalid_request")
+    const historyAt =
+      query.data.cursor !== undefined && isHistoryCursor(query.data.cursor)
+        ? parseHistoryCursor(query.data.cursor)
+        : undefined
+    if (historyAt === null) throw new PlatformError("invalid_request")
     return cached(c, deps, async () => {
+      if (historyAt !== undefined) {
+        // A page of the stored history: the document's body is not read,
+        // only its meta, for the envelope.
+        const state = await historyState(deps, address)
+        const backfill = await historyBackfill(deps, state)
+        const page =
+          state === null
+            ? { rows: [], nextCursor: null, pending: false }
+            : await readHistoryPage(requireDb(deps), {
+                network: deps.network,
+                wallet: address,
+                category: query.data.category,
+                cursor: historyAt,
+                limit: query.data.limit,
+                state,
+                backfill,
+              })
+        const meta =
+          (await readReadModelMeta(
+            requireDb(deps),
+            deps.network,
+            "wallet-activity",
+            address,
+          )) ?? (await walletDocument(c, deps, "wallet-activity", address)).meta
+        const settled =
+          state !== null && (page.nextCursor !== null || state.complete)
+        return {
+          body: envelope({ address, ...page }, meta),
+          etag: `${historyEtag(state, backfill)}-${await shortHash(c.req.url)}`,
+          cacheControl: cacheControl(settled ? ttl.history : ttl.wallet),
+        }
+      }
       const stored = await walletDocument(c, deps, "wallet-activity", address)
+      const etag = `${stored.etag}-${await shortHash(c.req.url)}`
       const page = pageActivity(stored.data.rows, query.data)
+      if (page.nextCursor !== null) {
+        return {
+          body: envelope({ address, ...page }, stored.meta),
+          etag,
+          cacheControl: cacheControl(ttl.wallet),
+        }
+      }
+      // The document's last page: older rows may be stored past it.
+      const state = await historyState(deps, address)
+      const backfill = await historyBackfill(deps, state)
+      const after = afterDocument(
+        stored.data.rows.at(-1)?.timestamp ?? null,
+        state,
+        backfill,
+      )
       return {
-        body: envelope({ address, ...page }, stored.meta),
-        etag: `${stored.etag}-${await shortHash(c.req.url)}`,
+        body: envelope(
+          {
+            address,
+            rows: page.rows,
+            ...after,
+          },
+          stored.meta,
+        ),
+        // Where the history ends against the document decides the cursor.
+        etag: `${etag}-${historyEtag(state, backfill)}${state === null ? "" : `.${state.high.ts}`}`,
         cacheControl: cacheControl(ttl.wallet),
       }
     })
+  })
+
+  // The whole stored history as CSV, beside the history routes.
+  app.get("/internal/pro/wallets/:address/activity.csv", (c) => {
+    c.set("routeTemplate", "/internal/pro/wallets/{address}/activity.csv")
+    return exportCsv(c, deps, addressParam(c, "address"), "activity")
+  })
+  app.get("/internal/pro/wallets/:address/rewards.csv", (c) => {
+    c.set("routeTemplate", "/internal/pro/wallets/{address}/rewards.csv")
+    return exportCsv(c, deps, addressParam(c, "address"), "rewards")
   })
 
   app.get("/internal/pro/wallets/:address/balances", (c) => {
@@ -1263,24 +1741,30 @@ export default function registerInternalProRoutes(
     const address = addressParam(c, "address")
     const reader = deps.balances ?? null
     if (reader === null) throw new PlatformError("service_disabled")
-    return cached(c, deps, async () => {
-      const [raw, { prices }] = await Promise.all([
-        reader(address),
-        currentPrices(deps),
-      ])
-      const data = walletBalances(address, raw, prices)
-      const meta: ReadModelMeta = {
-        network: deps.network,
-        source: "live",
-        block: raw.block,
-        updatedAt: nowOf(deps),
-      }
-      return {
-        body: envelope(data, meta),
-        etag: await shortHash(`${raw.block}-${JSON.stringify(data)}`),
-        cacheControl: cacheControl(ttl.balances),
-      }
-    })
+    // The reader's client retries each RPC itself (15 s per endpoint).
+    return cached(
+      c,
+      deps,
+      async () => {
+        const [raw, { prices }] = await Promise.all([
+          reader(address),
+          currentPrices(deps),
+        ])
+        const data = walletBalances(address, raw, prices)
+        const meta: ReadModelMeta = {
+          network: deps.network,
+          source: "live",
+          block: raw.block,
+          updatedAt: nowOf(deps),
+        }
+        return {
+          body: envelope(data, meta),
+          etag: await shortHash(`${raw.block}-${JSON.stringify(data)}`),
+          cacheControl: cacheControl(ttl.balances),
+        }
+      },
+      { retry: false },
+    )
   })
 
   app.get("/internal/pro/wallets/:address/watchlist", async (c) => {

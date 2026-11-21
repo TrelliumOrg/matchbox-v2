@@ -1,10 +1,19 @@
 # Matchbox API (`api.matchbox.markets`)
 
-Hono Worker serving the Gauge Profile API
-([ARCHITECTURE §6](../../docs/developer-platform/ARCHITECTURE.md)). Worker
-`matchbox-developer-api`, custom domain `api.matchbox.markets`. Rollout,
-secrets, smoke tests and emergency controls:
-[docs/developer-platform.md](../../docs/developer-platform.md).
+The Matchbox API: a Hono Worker serving the public `/v1` API (gauges,
+gauge profiles, incentives, epochs and networks, read with an API key from
+Matchbox Developer) and the internal read routes Matchbox Pro, Matchscan and
+Stuart use. Worker `matchbox-developer-api`, custom domain
+`api.matchbox.markets`. The public API's reference and changelog are on the
+docs site ([packages/docs/content/developer](../../packages/docs/content/developer)),
+and the TypeScript client is [`@matchbox-dev/sdk`](../../packages/sdk).
+
+Locally it runs with no credentials on an in-memory store with sample data
+(`pnpm dev:memory`, below). Tests need nothing:
+`pnpm --filter @matchbox/api test`. Real data needs your own Supabase
+project (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`) and, for the
+`/internal/pro` and `/internal/scan` read models, D1 databases the jobs
+Worker ([apps/jobs](../jobs)) has filled.
 
 ## Routes
 
@@ -13,9 +22,15 @@ secrets, smoke tests and emergency controls:
 | `GET /v1/health`                                  | none                                           |
 | `GET /openapi.json`                               | none (from `@matchbox/contracts/openapi.json`) |
 | `GET /v1/networks`                                | API key                                        |
+| `GET /v1/gauges?network=…`                        | API key                                        |
+| `GET /v1/gauges/{network}/{gaugeAddress}`         | API key                                        |
+| `GET /v1/gauges/{network}/{gaugeAddress}/epochs`  | API key                                        |
+| `GET /v1/vebtc/{network}/{tokenId}/gauge`         | API key                                        |
 | `GET /v1/gauge-profiles?network=…`                | API key                                        |
 | `GET /v1/gauge-profiles/{network}/{gaugeAddress}` | API key                                        |
 | `GET /v1/vebtc/{network}/{tokenId}/gauge-profile` | API key                                        |
+| `GET /v1/incentives?network=…`                    | API key                                        |
+| `GET /v1/epochs/current`                          | API key                                        |
 
 ## Local development
 
@@ -29,11 +44,92 @@ pnpm dev            # Supabase-backed; needs .dev.vars secrets
 Memory-mode publishable test keys accept origins `http://localhost:3000` and
 `http://localhost:5173`.
 
+### Local read models (`pnpm db:seed:local`)
+
+The internal read routes (`/internal/pro/*`, `/internal/scan/*`) read the
+`READ_DB` and `SCAN_DB` D1 bindings and the `PRICES` KV namespace. Locally
+those live in `apps/api/.wrangler/state` and start empty, so every read
+fails with `no such table: read_models`. One command fills them, with no
+credentials:
+
+```sh
+pnpm db:seed:local   # from the repo root, or here
+pnpm dev:memory
+```
+
+It applies every migration with `wrangler d1 migrations apply --local`
+(`../jobs/migrations` and `read-db-migrations` on `READ_DB`,
+`../jobs/scan-migrations` on `SCAN_DB`, `migrations` on `MARKET_DB`; a new
+migration in those directories is picked up with no change to the seed),
+then writes the fixture world in `src/local-seed/world.ts`. Read models
+and the stored history go through the same store code the jobs Worker
+writes with, so every document and row is validated against its
+read-model schema. The scan rows are the `/internal/scan` test fixtures,
+which the scan route tests keep in step with the migrations:
+
+- `READ_DB`: the shared Epoch 47 read models
+  (`@matchbox/contracts/read-models/fixtures`, the data Pro, Matchscan and
+  Stuart use in their fixture modes): the gauge directory, one gauge profile,
+  the protocol documents (current, activity, history, epoch 47), the demo
+  wallet's overview, rewards and activity, and its watch list. Stored with
+  `source` `fixture`. The demo wallet's stored history
+  (`wallet_activity_rows`, `wallet_history_state`) holds its mined rows,
+  and its `wallet-activity` document leaves out the two oldest, so its
+  Activity ends with "Show earlier epochs" and pages into the history as a
+  busy wallet's does. Also the trove, Morpho and Stability Pool rows of the
+  `/internal/scan` tests (`src/scan/fixtures.ts`).
+- `SCAN_DB`: the `/internal/scan` test rows (activity, locks, votes,
+  incentives, epochs) with a finished copy run and a healthy status row.
+- `PRICES`: the demo BTC and MEZO prices under `prices:v1`.
+
+It only touches local state, and `src/local-seed/guard.ts` (tested in
+`guard.test.ts`) checks that before anything runs: the script takes no
+arguments, every wrangler command is a `--local` migrate into
+`apps/api/.wrangler/state` and never `--remote`, it refuses when
+`CLOUDFLARE_ENV` is set or `ENVIRONMENT` or `NODE_ENV` names production,
+and wrangler gets no Cloudflare credentials. The bindings come from a
+Miniflare proxy with remote bindings off. Each run clears what it writes first, so running
+it again resets to the same state (rows the jobs Worker wrote to other
+tables stay). It works while `dev:memory` is running.
+`src/local-seed/world.workers.test.ts` runs the same seed on freshly
+migrated databases and fails if a migration or a read-model contract change
+breaks it.
+
+To call `/internal/*` yourself, set `INTERNAL_TOKEN` (32 characters or
+more) in `.dev.vars` and send it as a bearer:
+
+```sh
+curl -H "Authorization: Bearer $INTERNAL_TOKEN" http://127.0.0.1:8787/internal/pro/summary
+curl -H "Authorization: Bearer $INTERNAL_TOKEN" "http://127.0.0.1:8787/internal/pro/gauges?limit=2"
+curl -H "Authorization: Bearer $INTERNAL_TOKEN" http://127.0.0.1:8787/internal/scan/borrow/troves
+```
+
+Wallet routes read the chain as in production: a wallet's locks and
+claimable are read live from public Mezo RPCs and laid over the stored
+documents. The demo wallet is made up, so the chain reports no locks for
+it. A real wallet with no stored document is built live, which needs the
+migrated `READ_DB`. Leave `MEZO_MAINNET_RPC_URL` unset locally: it goes
+first in the RPC list, and with the endpoint in `.dev.vars.example` live
+wallet builds did not finish within their deadline (19 Nov 2026).
+
+The jobs Worker's dev scripts persist to the same directory
+(`--persist-to ../api/.wrangler/state`), so a local jobs run writes into
+the databases this Worker reads. Pro reads this API with `PRO_DATA=api`,
+`API_ORIGIN=http://127.0.0.1:8787` and the same `INTERNAL_TOKEN` in
+`apps/pro/.dev.vars`. Matchscan cannot yet: its config binds `API` to
+`matchbox-api-v2-preview`, and under `vite dev` that binding is used
+instead of `API_ORIGIN`.
+
 Other scripts: `pnpm test` (Node unit tests, then the Workers runtime tests in
 `vitest.workers.config.ts`), `pnpm typecheck`.
 
 `PLATFORM_STORE=memory` is refused when `ENVIRONMENT=production` (the
 checked-in default). Memory mode also logs the dev keys once per isolate.
+
+The sample store backs only `/v1`. The `/internal/pro` and `/internal/scan`
+read models come from the `READ_DB` and `SCAN_DB` D1 bindings, which
+locally live in `apps/api/.wrangler` and start empty until
+`pnpm db:seed:local` fills them (above).
 
 ## Deploy
 
@@ -423,7 +519,7 @@ casts an amount in SQL, and no route adds two series together except
   no offsets. `skipped` counts stored rows of the page that failed their
   schema: they are left out and logged (table and primary key) instead of
   failing the list. A page whose every row is bad ends the list there.
-- **Documents** are `{ data }`; aggregates and series add `meta: { complete, asOf, aggregatesComplete, historyFilled, stale, skipped }`
+- **Documents** are `{ data }`; aggregates and series add `meta: { complete, asOf, aggregatesComplete, historyFilled, stale, refillPending, skipped }`
   (below; `complete` is false while any row was skipped).
 - **Errors** are the platform error body: 400 `invalid_request` (unknown,
   repeated or malformed query parameter, bad cursor, oversized page), 404
@@ -808,10 +904,14 @@ history and series response carries `meta`:
   (`scan_status.aggregates_complete`).
 - `asOf`: `scan_status.last_ok_at`, when a copy run last changed the data.
 - `historyFilled`: the one-time history fill has been applied.
-- `stale`: copy runs are failing (`consecutive_failures` > 0), a re-fill
-  is required, or the copy has halted a table (`halted_tables` not NULL:
-  that table's rows stop moving). No error text or reason reaches the
-  body.
+- `stale`: copy runs are failing (`consecutive_failures` > 0) or the
+  copy has halted a table (`halted_tables` not NULL: that table's rows
+  stop moving). The data lags the chain. No error text or reason reaches
+  the body.
+- `refillPending`: a re-fill is required (`refill_required`): figures may
+  disagree until it is done, but they are not behind. `/status` says the
+  same as `refillRequired`, beside `stale`. Before this field `stale`
+  counted a pending re-fill too.
 
 Items carry their own `complete` (per epoch, from `scan_dirty`). An epoch
 with no row yet answers `{ data: null, meta: { computed: false } }`: not
@@ -826,7 +926,7 @@ those series, and `/series/split` and `/markets`, whole and long-cached.
 
 An epoch is sealed (kept a day) only when it has ended, the history fill
 is applied (`history_filled` 1), its totals row exists, it is not in
-`scan_dirty`, nothing is stale, and a copy run finished an hour after its
+`scan_dirty`, nothing is stale or awaiting a re-fill, and a copy run finished an hour after its
 end. Even then an answer is kept a day only when whole: one that says
 `computed: false` or skipped a bad row is stored under the versioned key,
 as `run`. Without a status row nothing is sealed.
@@ -945,11 +1045,24 @@ budgets, with the caller's identity) and merges our rows:
   any part. `final` (kept a day under a version-free key) once every
   Blockscout part is immutable or final, the activity part read, and the
   copy checkpoint (`scan_cursors` `copy:activity`) is past the
-  transaction's time.
+  transaction's time. Until the copy is, the document also carries
+  `live` (below).
 - **Address**: the proxy's address and counters, its first 25 locks, open
   Borrow positions (Morpho, trove, Enclave), the first page of activity,
   and labels: its own (`label`) and those of the addresses its parts name
-  (`labels`), the address first. Never final.
+  (`labels`), the address first. Never final. Matchscan waits 3 s for
+  it, so every deadline counts from the request's arrival: the copy run's
+  version and the head 0.3 s (for every document), the locks' chain read
+  2.2 s, every part 2.3 s (`composedPartsMs`) and the labels 2.6 s
+  (`composedLabelsMs`). What comes before the render (those two reads, two
+  edge lookups of at most 0.2 s each, `scanLookupMs`, and the rate-limit
+  call, at most 0.25 s, `scanSpendMs`) takes from the parts' time rather
+  than adding to it, and 0.4 s is left for encoding and the hop. A part
+  still running then is `upstream` (the document is not stored) and
+  finishes in the background, ready for the next request, while the other
+  parts are served. A document that took 1.5 s or more from arrival logs
+  `Composed document slow` with each part's time, whether it was cut, and
+  the time before the render.
 - **Block**: the proxy's block and its transactions, with labels for the
   proposer (`miner`) and every address in the transactions. Final as the
   transaction document is.
@@ -971,13 +1084,61 @@ fresh) makes the answer `private, no-store`, stored nowhere. One end
 user's limit never reaches another's answer, and no caller header reaches
 any stored body.
 
+### Live transactions (`live`)
+
+A transaction reaches Scan's store through the indexer's 15-minute tick
+and the copy chained after it, so our decoded rows arrive up to about 16
+minutes after it is mined, and Blockscout has it some seconds after. Until the copy has read past the
+transaction (the explorer's time against `copy:activity`, or no time
+because Blockscout answered 404), the transaction document reads it from
+Mezo RPC (`src/scan/live-tx.ts`) and sends `live`
+(`scanLiveTransactionSchema`):
+
+- `state`: `unknown` (the RPC has never seen the hash), `pending` (in the
+  mempool) or `mined`, with the transaction, the receipt (at most 200 logs)
+  and the block's time.
+- `activity`: the receipt decoded with the indexer's own handlers
+  (`@matchbox/indexer/receipt`) and mapped as the copy maps rows, so a vote,
+  a claim or a lock change reads as it will once indexed
+  (`apps/indexer/test/decode/receipt.test.ts` checks 15 real transactions
+  against the rows the copy wrote). The decoder gets this epoch's gauges
+  from the market snapshot (reward contracts and pools, remembered ten
+  minutes) and the touched locks as the chain had them at the block before
+  (`ownerOf` and `locked` in one Multicall3 request, at most 40 locks),
+  with the escrows' logs of earlier transactions in the same block (one
+  `eth_getLogs`, only when it was not the block's first): a lock one of
+  them names may have changed since. A field that depends on a lock state
+  the read did not get (a lock row's `prev_*`, `post_*` and
+  `merge_dest_prev_*`, a poke's actor) is left out, never taken from the
+  stored row, which lags up to the copy's 15 minutes. A log from a
+  contract neither knows is left undecoded.
+- Cost: one request for an unknown or pending hash, four for a mined
+  one (the transaction, then its receipt, its block and the head
+  together), on Scan's chain client (primary RPC, 1.2 s, no retry) inside
+  the route's 2.2 s chain deadline, started as soon as the explorer has
+  answered. A mined answer at least two blocks behind the head (where the
+  indexer reads) is kept a day in the isolate and at the edge; a newer
+  one, any other answer, or a failure, one block (3 s), so viewers of one
+  hash and a page polling it cost one read per block. Each read is paid
+  from the visitor's live allowance (15 a minute), then a budget of its
+  own (`scanTxBudget`, `scan:chain-reads:tx`, 60 a minute and 20,000 a
+  day across every isolate), apart from the lock and address pages'
+  `scanChainBudget`, so made-up hashes never spend what those pages read
+  with. It is not made when the budget cannot be asked, nor when no
+  rate limiter is bound: random hashes cost one request each, up to the
+  visitor's allowance and the transaction budget.
+- A failed read is `{ status: "unavailable", reason: "upstream" }` and the
+  answer is `private, no-store`. APIs before this field send none; Scan
+  treats that as no live data.
+
 ### Rate limits
 
 The scan class in the `RateLimiter` Durable Object, apart from the `/v1`
 and Blockscout buckets: `scan:caller:<client>:<end user>`, 120 a minute and
 10,000 a day per end user; callers without an end-user key share
 `scan:caller:<client>:anonymous`, 600 a minute. Spent only when a request
-renders (memory and edge hits cost nothing); fails open. Composed
+renders (memory and edge hits cost nothing); fails open, also when the
+limiter takes more than 0.25 s (`scanSpendMs`). Composed
 documents also spend the proxy's own buckets for their Blockscout parts.
 
 ### Creating the database (human steps)
@@ -1355,6 +1516,8 @@ response is `{ data, meta }` where `meta` names the source (`warehouse`,
 | `GET /internal/pro/wallets/{address}/overview`                  | `walletOverview`       | 30 s / 15 s        |
 | `GET /internal/pro/wallets/{address}/rewards`                   | `walletRewards`        | 30 s / 15 s        |
 | `GET /internal/pro/wallets/{address}/activity`                  | `walletActivity`       | 30 s / 15 s        |
+| `GET /internal/pro/wallets/{address}/activity.csv`              | CSV, every row         | 30 s / 15 s        |
+| `GET /internal/pro/wallets/{address}/rewards.csv`               | CSV, every claim       | 30 s / 15 s        |
 | `GET /internal/pro/wallets/{address}/balances`                  | `walletBalances` (RPC) | 4 s / 4 s          |
 | `GET /internal/pro/wallets/{address}/watchlist`                 | `watchList`            | none               |
 | `PUT, DELETE /internal/pro/wallets/{address}/watchlist/{k}/{a}` | `watchList`            | none               |
@@ -1370,9 +1533,54 @@ response is `{ data, meta }` where `meta` names the source (`warehouse`,
 | `GET /internal/pro/head`                                        | `chainHead`            | none               |
 | `GET /internal/heads` (WebSocket)                               | `headMessage` feed     | none               |
 
+**A failed read.** A render that throws anything but a deliberate answer
+(a D1 error, a stored document this API's schema rejects, a builder bug)
+is tried once more, except on `/wallets/{address}/balances`, a live chain
+read whose client retries each RPC itself. The shared routes (summary,
+protocol and its epochs and
+activity, the gauge list, a gauge, consistency) also keep their last good
+answer a day under its own cache key; when the second try fails too, that
+answer is served with `X-Cache: stale-if-error` and `Cache-Control:
+no-store` instead of a 500, `Read model render failed` is logged with
+the route and the error, and the request log counts it (`servedFrom`,
+below). A schema error is logged as its checks and paths only, a JSON one
+as "not JSON": neither quotes what was read. With no earlier answer in that data centre the
+route still answers 500. Wallet routes keep no extra copy.
+
 Activity takes `category` (`votes`, `claims`, `locks`, `incentives`,
 `system`), `limit` (1 to 100) and `cursor` (the previous page's
-`nextCursor`).
+`nextCursor`). The first pages come from the wallet's document (its latest
+rows). For a wallet with more, the document's last page carries a cursor
+`h.<ts>` into its stored history (`wallet_activity_rows`, written by
+matchbox-jobs), paged newest first by time then row id with cursors
+`h.<ts>.<id>`: at least `limit` rows, then the rest of the last row's epoch,
+never more than 100. The last page has `pending: true` only where older
+rows are on their way: the stored history does not reach the document yet
+(the snapshot fills that gap by itself), or older rows are not stored yet
+and the snapshot's last run had the backfill on (`warehouse-history-backfill`
+in `job_cursors`). With the backfill off it ends with what is stored and
+promises nothing. A history page is read without the document's body (its
+meta only) and its ETag comes from the history's state: a page with older
+pages after it, or the last of a complete history, changes only when a row
+is rewritten and is kept 10 minutes in the browser and an hour at the edge;
+the document's pages and a pending last page keep the wallet TTLs. Rows in
+the stored history keep the USD they were priced at when stored. Claim rows
+also carry `atClaim`, their value when claimed (each token at its UTC day's
+00:00 price, `src/read-models/claim-prices.ts`), once their day is priced.
+
+The CSV downloads (`src/read-models/history-export.ts`, format in
+`@matchbox/contracts/read-models/history-csv`) hold the whole stored
+history, or its claims: the document's rows, then the stored rows read 500
+a query inside the one streamed response, at most 20,000 rows (the file
+says where it stops). A stored claim written before its day was priced is
+valued from `token_price_daily` on the way out. A history still being
+added ends with a note. The busiest wallet (about 4,500 rows) reads about
+5,200 rows in 12 queries (`history-export.workers.test.ts`). The ETag
+covers the document, the history state and the priced days, so a repeat of
+an unchanged file is a 304 that reads no page. Each download that misses
+the edge cache costs one from the visitor's bucket (Pro's
+`X-Matchbox-End-User` key: 6 a minute and 200 a day, or 60 and 3,000 for
+everyone without a key), and a refusal is a 429.
 
 The gauge list is paged (`gaugeQuerySchema`): `limit` (1 to 100, default
 50), `cursor` (the previous page's `nextCursor`), `sort` (`votes`, `apy`,
@@ -1383,6 +1591,12 @@ comma-separated, for ballots and watch lists), `funded=true` and `kind`
 tabs with counts); the stored document holds every gauge and is sliced per
 request, so pages are edge-cached by URL. Every order puts veBTC gauges whose
 lock expired or was withdrawn last.
+
+On mainnet the gauge list, `/summary`, `/protocol` and
+`/gauges/consistency` leave out MEZO gauges the Mezo app does not list
+(`MEZO_APP_GAUGES` in `packages/chain`; `read-models/pro-gauges.ts`), so Pro,
+Home and Stuart offer the same MEZO gauges as the app. The stored document,
+gauge profiles, wallets, Scan and the jobs keep every gauge.
 
 - **Gauge kinds.** `kind` comes from the voter: BoostVoter `vebtc`,
   ValidatorsVoter `validator`, PoolsVoter `pool`, ThirdPartyVoter `mezo`
@@ -1436,7 +1650,13 @@ checksummed address}`, cached a day at the edge when found and ten minutes
   both routes for 30 s. History, each lock's creation time and claimable
   stay the stored document's, which is not written; a wallet whose lock set
   differs from it is queued in `wallet_requests`, so the next warehouse run
-  rebuilds it first. A lock the chain does
+  rebuilds it first. So is a wallet whose stored overview names locks and
+  is over an hour old (`wantsRebuild`, at most once per wallet per isolate
+  every 15 minutes); never for its activity, which a rebuild that finds no
+  new events leaves as it was, nor for a wallet without locks, which only
+  its events change (the run after them rebuilds it). The run marks a
+  requested wallet's overview as checked even when it is unchanged, so it
+  is not asked for again. A lock the chain does
   not list is dropped unless the wallet holds more than 50 in that escrow.
   A failed read serves the stored locks; `locksAsOf` (`live` or `stored`,
   with the block) says which, as `claimableAsOf` does for claimable.
@@ -1595,9 +1815,17 @@ checksummed address}`, cached a day at the edge when found and ten minutes
 
 Analytics Engine binding `REQUEST_LOG`, dataset `mbx_api_requests`. Layout:
 `API_REQUEST_LOG_LAYOUT` in `@matchbox/contracts/api-request-log`
-(index1 environment id or `anonymous`; blob1–10 requestId, keyId,
+(index1 environment id or `anonymous`; blob1–11 requestId, keyId,
 routeTemplate, method, status, cacheStatus, colo, country, environmentKind,
-errorCode; double1 latencyMs, double2 statusCode).
+errorCode, servedFrom; double1 latencyMs, double2 statusCode). `servedFrom`
+is `last-good` for a read-model route's earlier answer served because its
+render failed (`X-Cache: stale-if-error`), empty otherwise. How often that
+happens, per route, over a day:
+
+    SELECT blob3 AS route, SUM(_sample_interval) AS served
+    FROM mbx_api_requests
+    WHERE blob11 = 'last-good' AND timestamp > NOW() - INTERVAL '1' DAY
+    GROUP BY route
 
 ## Crons
 

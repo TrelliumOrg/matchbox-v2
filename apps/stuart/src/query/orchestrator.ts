@@ -24,14 +24,24 @@ import { normalizeCopy } from "./copy"
 import { sha256Hex } from "./crypto"
 import type { StuartEffort } from "./env"
 import { displayBlock, listWithAnd } from "./format"
-import { searchMezoKnowledge } from "./knowledge/mezo"
-import { IdScope, type ToolOutcome } from "./outcome"
+import {
+  isSafetyQuestion,
+  requiredSafetyNote,
+  searchMezoKnowledge,
+} from "./knowledge/mezo"
+import { IdScope, type ToolOutcome, verifiedIdsOf } from "./outcome"
+import { redactAndClip, redactingLog } from "./redact"
 import { extractSlots, type RouterDecision, routeQuery } from "./router"
+import { primePhraseChecksums } from "./secretShapes"
 import {
   addAddresses,
+  addEvidence,
   addFacts,
   addModelView,
   addProposalIds,
+  addSymbols,
+  addToday,
+  argumentFigures,
   checkModelAnswer,
   DEFAULT_LIMITS,
   emptySourcedSet,
@@ -40,6 +50,8 @@ import {
   SUPPORT_LIMITS,
   sourcedViolations,
 } from "./sourced"
+import { sentencesOf } from "./sourcedClaims"
+import { isWarningAnswer } from "./sourcedWarnings"
 import type { SpendMeter } from "./spend"
 import { knowledgeOutcome } from "./tools/knowledge"
 import { toolByName } from "./tools/registry"
@@ -483,16 +495,28 @@ export function sourcedSetFor(
    * never sources a number or an address.
    */
   userMessage = "",
+  /** Now: today's date, which the model is given, is sourced. */
+  now: Date | null = null,
 ): SourcedSet {
   const set = emptySourcedSet(userMessage)
+  // Every symbol of the turn first: each is blanked out of every value.
   for (const outcome of outcomes) {
-    addFacts(set, outcome.facts)
-    addModelView(set, outcome.model)
+    addSymbols(set, outcome.facts, outcome.model)
+  }
+  for (const outcome of outcomes) {
+    const echo =
+      outcome.input === undefined ? null : argumentFigures(outcome.input)
+    addFacts(set, outcome.facts, echo)
+    addModelView(set, outcome.model, echo)
+    addEvidence(set, outcome.evidence)
     for (const proposal of outcome.proposals) {
       addProposalIds(set, proposal.proposalId)
     }
+    // An unsigned proposal for the user to sign: Stuart's own flow.
+    if (outcome.proposals.length > 0) set.prepared = true
   }
   addAddresses(set, [wallet])
+  if (now !== null) addToday(set, now)
   return set
 }
 
@@ -525,10 +549,16 @@ function applyModelAnswer(input: {
   scope: IdScope
   wallet: string
   query: string
+  now: Date
   log: (event: Record<string, unknown>) => void
 }): Draft {
   const { draft, respond } = input
-  const sourced = sourcedSetFor(draft.outcomes, input.wallet, input.query)
+  const sourced = sourcedSetFor(
+    draft.outcomes,
+    input.wallet,
+    input.query,
+    input.now,
+  )
   const text = normalizeCopy(respond.answer)
   // The template of the answer being given, reused verbatim, is spared the
   // length limit only: the greeting, claim and unsourced checks still apply.
@@ -536,7 +566,13 @@ function applyModelAnswer(input: {
   const verbatim = template === text
   // Stuart's own template is sourced as a whole, in its exact form: the
   // unsourced check still catches anything added to it.
-  if (verbatim) sourced.names.add(template)
+  // The template reused whole is Stuart's own line, which it would show
+  // anyway: not an instruction. A part of it is checked like any sentence,
+  // since a template may print a name planted on chain.
+  if (verbatim) {
+    sourced.names.add(template)
+    sourced.own.push(template)
+  }
   const check = checkModelAnswer(
     text,
     sourced,
@@ -749,6 +785,80 @@ function knowledgeFallback(query: string, help: boolean): ToolOutcome[] {
   return [knowledgeOutcome({ scope: new IdScope("c1") }, matches)]
 }
 
+/**
+ * For a safety question (a pasted or named secret, someone reaching out, a
+ * scam), the best safety note in place of a draft that is not one: the
+ * user sees the warning, not a claim prompt or another tool's answer.
+ */
+function safetyFallback(
+  query: string,
+  draft: Draft,
+  known: ReadonlySet<string>,
+): Draft | null {
+  if (!isSafetyQuestion(query, known)) return null
+  // A safety note already chosen stays, but never with another tool's
+  // proposal (a claim card) beside it, and only the required note when one
+  // fits the message alone (a secret already given away, a request to
+  // claim elsewhere).
+  const proposal = draft.outcomes.some(
+    (outcome) => outcome.proposals.length > 0,
+  )
+  const required = requiredSafetyNote(query, known)
+  const chosen = required === null ? "safety." : `${required}.`
+  if (
+    draft.answer.templateId.startsWith(`mezo_knowledge.${chosen}`) &&
+    !proposal
+  ) {
+    return null
+  }
+  const matches = searchMezoKnowledge(query)
+  if (matches[0]?.entry.id.startsWith("safety.") !== true) return null
+  return outcomeDraft([knowledgeOutcome({ scope: new IdScope("c1") }, matches)])
+}
+
+/** The advice for a secret given away: it is exposed, use a new wallet. */
+const EXPOSED_ADVICE =
+  /\b(?:exposed|compromised)\b[\s\S]*\b(?:new|fresh|different|separate|clean)\s+wallet\b|\b(?:new|fresh|different|separate|clean)\s+wallet\b[\s\S]*\b(?:exposed|compromised)\b/i
+
+/**
+ * The model's own shown warning to a safety question, with every outcome
+ * that prepared a proposal taken out, or null when it does not stand: not
+ * a warning, a request to claim elsewhere (the redirect note says what
+ * the user needs), or a secret given away or a drained wallet without the
+ * advice to treat it as exposed or compromised and move to a new wallet.
+ */
+function keptWarning(
+  query: string,
+  draft: Draft,
+  known: ReadonlySet<string>,
+): Draft | null {
+  if (!isSafetyQuestion(query, known) || draft.answer.origin !== "model") {
+    return null
+  }
+  if (!isWarningAnswer(sentencesOf(draft.answer.text))) return null
+  const required = requiredSafetyNote(query, known)
+  // The redirect and phrase-holder notes say what the user needs.
+  if (required === "safety.redirect" || required === "safety.phrase_holder") {
+    return null
+  }
+  if (
+    (required === "safety.secrets" || required === "safety.drained") &&
+    !EXPOSED_ADVICE.test(draft.answer.text)
+  ) {
+    return null
+  }
+  return {
+    ...draft,
+    outcomes: draft.outcomes.map((outcome) => ({
+      ...outcome,
+      proposals: [],
+      // A block that carries a proposal (a claim review, a vote composer)
+      // is the card the user would sign from: it goes with the proposal.
+      blocks: outcome.blocks.filter((block) => !("proposalId" in block)),
+    })),
+  }
+}
+
 /** The router's decision for a request, before any tool or model runs. */
 function decide(
   request: ParsedStuartRequest,
@@ -798,8 +908,23 @@ export async function runStuartQuery(
 
 export async function runStuart(
   request: ParsedStuartRequest,
-  runtime: StuartRuntime,
+  given: StuartRuntime,
 ): Promise<StuartRun> {
+  // Every log line of the turn is redacted: a pasted key, or one the model
+  // repeats, never reaches the logs (stuart.model_answer_rejected logs the
+  // model's unsourced items). Only 64-hex ids this turn's tools verified
+  // (`verified`, filled as they return) stay.
+  const verified = new Set<string>()
+  const runtime: StuartRuntime = {
+    ...given,
+    log: redactingLog(given.log, verified),
+  }
+  const addVerified = (outcomes: readonly ToolOutcome[]) => {
+    for (const id of verifiedIdsOf(outcomes)) verified.add(id)
+  }
+  // The router is synchronous: the BIP-39 checksums it may need are read
+  // first.
+  await primePhraseChecksums(request.query)
   const started = Date.now()
   const requestId = crypto.randomUUID()
   const wallet = resolveWallet(request)
@@ -811,6 +936,7 @@ export async function runStuart(
     choice: null,
     now: runtime.now,
     secret: runtime.secret,
+    verified,
   }
   let service: ServiceState = {
     runtime: "deterministic",
@@ -892,6 +1018,7 @@ export async function runStuart(
         runtime.onStatus,
       )
       toolsCalled = outcomes.map((outcome) => outcome.tool)
+      addVerified(outcomes)
       draft =
         outcomeDraft(outcomes) ??
         unsupportedDraft(
@@ -932,6 +1059,7 @@ export async function runStuart(
           : { fallbacks: runtime.claude.fallbacks }),
       })
       toolsCalled = turn.outcomes.map((outcome) => outcome.tool)
+      addVerified(turn.outcomes)
       if (turn.kind === "failed") {
         runtime.log({
           message: "stuart.model_failed",
@@ -945,7 +1073,9 @@ export async function runStuart(
         runtime.log({
           message: "stuart.spend_record_failed",
           error:
-            error instanceof Error ? error.message.slice(0, 200) : "unknown",
+            error instanceof Error
+              ? redactAndClip(error.message, 200)
+              : "unknown",
         })
       })
       if (
@@ -997,6 +1127,7 @@ export async function runStuart(
             scope,
             wallet: wallet.address,
             query: request.query,
+            now: runtime.now(),
             log: runtime.log,
           })
           modelAnswer =
@@ -1054,6 +1185,25 @@ export async function runStuart(
           "unsupported.v1",
         )
     }
+    // A safety question never ends on another tool's template or on a
+    // signing step. The model's own warning is shown without any proposal
+    // the turn prepared (no claim card for a wallet whose key was pasted
+    // or whose seed was typed into a site). Otherwise, when the model's
+    // answer was not shown, a proposal was prepared, or a note fits the
+    // message alone (a secret already given away, a request to claim
+    // elsewhere), the best safety note is, alone.
+    const proposal = draft.outcomes.some(
+      (outcome) => outcome.proposals.length > 0,
+    )
+    const warning = keptWarning(request.query, draft, verified)
+    if (warning !== null) draft = warning
+    else if (
+      draft.answer.origin !== "model" ||
+      proposal ||
+      requiredSafetyNote(request.query, verified) !== null
+    ) {
+      draft = safetyFallback(request.query, draft, verified) ?? draft
+    }
   }
 
   let response = assemble({
@@ -1064,7 +1214,12 @@ export async function runStuart(
     service,
     now: runtime.now(),
   })
-  const turnSet = sourcedSetFor(draft.outcomes, wallet.address, request.query)
+  const turnSet = sourcedSetFor(
+    draft.outcomes,
+    wallet.address,
+    request.query,
+    runtime.now(),
+  )
   if (draft.reusedTemplate) turnSet.names.add(draft.reusedTemplate)
   const violations = sourcedViolations(response, turnSet)
   if (violations.length > 0) {

@@ -112,9 +112,29 @@ export type GaugeSummary = GaugeRef & {
   /** The veBTC lock id behind a boost gauge ("7"). */
   tokenId: string | null
   tagline: string | null
+  /** Null when Pro shows no APY: not funded, or under the APY floors. */
   apyBps: number | null
+  /**
+   * The registry tokens' dollars, to the cent: never the API's total,
+   * which a token outside the registry could inflate.
+   */
   incentivesUsd: string
   incentiveTokens: string[]
+  /**
+   * Funding, decided on the server by `@matchbox/domain/funding` so the
+   * browser does no funding maths. `funded`: counts as funded (a cent of
+   * priced incentives, or a registry token without a USD value).
+   * `priced`: the priced part is a cent and more, so its dollars show.
+   * `unpriced`: tokens held without a USD value counted.
+   */
+  funded: boolean
+  priced: boolean
+  unpriced: number
+  /**
+   * The votes (wei) before an APY shows, null when none can (`apyMinVotes`
+   * of `@matchbox/domain/funding`): what a signed vote is checked against.
+   */
+  apyMinVotes: string | null
   /** Boosted veBTC weight behind the gauge, whole units. */
   veBtcWeight: string
   /** Votes on the gauge this epoch in `votesUnit`, wei. */
@@ -132,6 +152,10 @@ export type GaugeList = {
   epoch: number
   total: number
   funded: number
+  /** The types with funded gauges, most priced incentives first. */
+  fundedKinds: GaugeKind[]
+  /** Count and this epoch's incentives per type, for the type cards. */
+  kindTotals: GaugeKindTotals
   gauges: GaugeSummary[]
 }
 
@@ -205,6 +229,33 @@ export type Lock = {
 
 export type LockRef = { kind: LockKind; tokenId: string }
 
+/**
+ * A claim's value when it was claimed: each token at the price of the
+ * claim's UTC day, 00:00 UTC. A token with no price that day has `usd`
+ * null ("No price"), never $0.
+ */
+export type WhenClaimed = {
+  /** Sum of the priced tokens. */
+  usd: string
+  /** Every token had a price. */
+  complete: boolean
+  /** The day whose 00:00 UTC prices were used, unix seconds. */
+  pricedAt: number
+  /** One a claimed token, in the same order, by lower-case address. */
+  tokens: { token: string; symbol: string; usd: string | null }[]
+}
+
+/**
+ * A claim's provisional value while its day's price settles (3 days).
+ * Earned leaves it out until then.
+ */
+export type ClaimEstimateView = {
+  usd: string
+  /** The day its value when claimed is due to be final, unix seconds. */
+  finalOn: number
+  tokens: { token: string; usd: string | null }[]
+}
+
 export type ActivityDetail =
   | {
       kind: "vote"
@@ -214,8 +265,13 @@ export type ActivityDetail =
     }
   | {
       kind: "claim"
+      /** At the price when the row was written, not when claimed. */
       usd: string
       tokens: TokenAmount[]
+      /** Absent until the claim's day has a settled price. */
+      whenClaimed?: WhenClaimed
+      /** Without `whenClaimed`, while its day settles. */
+      estimate?: ClaimEstimateView
       locks: LockRef[]
       gauges: string[]
     }
@@ -250,6 +306,12 @@ export type ActivityPage = {
   counts: Record<ActivityFilter, number>
   events: ActivityEvent[]
   nextCursor: string | null
+  /**
+   * The last page, and older events exist that are not stored yet: the
+   * wallet's history is still being filled in. Set by the server function,
+   * not the adapter, which every route loads.
+   */
+  pending?: boolean
 }
 
 export type Wallet = { btc: TokenAmount; mezo: TokenAmount; usd: string }
@@ -280,6 +342,11 @@ export type Home = {
   epoch: number
   incentivesUsd: string
   gaugesFunded: number
+  /**
+   * More gauges may be funded than `gaugesFunded` ("100+"): the page of
+   * funded gauges it was counted from was not the whole list.
+   */
+  gaugesFundedMore: boolean
   gaugesTotal: number
   veMezoVoted: string
   veMezoLocked: string
@@ -308,7 +375,22 @@ export type Rewards = {
   claimableAsOf?: ClaimableAsOf
   /** Next payout, from this epoch's votes; null with no votes. */
   projected: { epoch: number; usd: string; paysAt: number } | null
-  earned: { usd: string; fromEpoch: number | null; toEpoch: number | null }
+  earned: {
+    usd: string
+    fromEpoch: number | null
+    toEpoch: number | null
+    /**
+     * Set when `usd` is the claims' value when claimed: the claims it
+     * leaves out for want of a price (`unpriced`, counted with their priced
+     * tokens) or of a settled one (`pending`).
+     */
+    whenClaimed?: {
+      unpriced: number
+      pending: number
+      /** Of `pending`, the recent ones. Absent in older documents. */
+      settling?: number | undefined
+    }
+  }
   locks: {
     lock: LockRef
     usd: string
@@ -374,6 +456,10 @@ export type Protocol = {
     gauge: string | null
     usd: string
     tokens: string[]
+    /** As `GaugeSummary`'s: the priced part is a cent and more. */
+    priced: boolean
+    /** As `GaugeSummary`'s: tokens without a USD value counted. */
+    unpriced: number
     /** Null when the count is not known. */
     deposits: number | null
   }[]

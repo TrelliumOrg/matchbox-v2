@@ -247,11 +247,13 @@ describe("validators", () => {
         ...body.data,
         shares_complete: false,
         missing_counts: [matchedProposer],
-        validators: body.data.validators.map((row) => ({
-          ...row,
-          share_bps: null,
-          blocks: row.address === matchedProposer ? null : row.blocks,
-        })),
+        // As the API sends it: counted validators keep their share of the
+        // day's blocks; the page hides every share until all are counted.
+        validators: body.data.validators.map((row) =>
+          row.address === matchedProposer
+            ? { ...row, share_bps: null, blocks: null }
+            : row,
+        ),
       },
     }
     const table = validatorTable(incomplete, null, "ok", "share")
@@ -263,6 +265,8 @@ describe("validators", () => {
     const harbor = table.rows.find((row) => row.operator === matchedProposer)
     expect(harbor).toMatchObject({ blocks: null, share: null })
     expect(table.rows[0]).toMatchObject({ blocks: "11,512", share: null })
+    expect(table.rows.every((row) => row.share === null)).toBe(true)
+    expect(table.outside.every((row) => row.share === null)).toBe(true)
   })
 
   it("shows the current epoch for one past it", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { canonicalUrl, scanOrigin, shareTags } from "./site"
+import { canonicalUrl, privacyLink, scanOrigin, shareTags } from "./site"
 
 describe("site origin", () => {
   it("names scan.matchbox.markets, never a workers.dev host", () => {
@@ -16,5 +16,16 @@ describe("site origin", () => {
     expect(tags.links).toEqual([
       { rel: "canonical", href: "https://scan.matchbox.markets/epochs/47" },
     ])
+  })
+})
+
+describe("the privacy link", () => {
+  it("is the reviewed policy address the other sites link", async () => {
+    const { reviewedLinks } = await import("../../home/src/page/reviewed-links")
+    expect(privacyLink).toEqual({
+      label: "Privacy",
+      href: "https://matchbox.markets/privacy",
+    })
+    expect(reviewedLinks[privacyLink.href]).toBeDefined()
   })
 })

@@ -46,6 +46,10 @@ function gauge(fields: Partial<GaugeSummary> & { name: string }): GaugeSummary {
     apyBps: 250,
     incentivesUsd: "120.00",
     incentiveTokens: ["MEZO"],
+    funded: true,
+    priced: true,
+    unpriced: 0,
+    apyMinVotes: "0",
     veBtcWeight: "1.5",
     votes: wei(1_000n),
     optimalVotes: wei(4_000n),
@@ -174,6 +178,110 @@ describe("pool gauges that share a pair", () => {
     expect(compactVotes(5_880_000n, 0n, "veMEZO")).toBe("5.88M veMEZO")
   })
 
+  it("show the dollars and no APY when there is too little for one (P6)", () => {
+    const view = render(
+      <GaugeTile
+        gauge={{ ...pool("CL200"), apyBps: null, incentivesUsd: "0.28" }}
+        picked={false}
+        disabled={false}
+        votes={0n}
+        votesWei={4_000_000_000_000n}
+        onPickedChange={() => {}}
+      />,
+    )
+    expect(view.getByText("n/a")).toBeTruthy()
+    expect(view.getByText("$0.28")).toBeTruthy()
+    expect(view.queryByText("No incentives")).toBeNull()
+    view.unmount()
+    render(
+      <GaugeTile
+        gauge={{
+          ...pool("Stable"),
+          apyBps: null,
+          incentivesUsd: "0.004",
+          funded: false,
+          priced: false,
+        }}
+        picked={false}
+        disabled={false}
+        votes={0n}
+        votesWei={5n * 10n ** 17n}
+        onPickedChange={() => {}}
+      />,
+    )
+    expect(screen.getByText("No incentives")).toBeTruthy()
+  })
+
+  it("show unpriced incentives as held, never as none", () => {
+    const tile = (fields: Partial<GaugeSummary>) =>
+      render(
+        <GaugeTile
+          gauge={{ ...pool("CL50"), apyBps: null, ...fields }}
+          picked={false}
+          disabled={false}
+          votes={1n}
+          votesWei={10n ** 18n}
+          onPickedChange={() => {}}
+        />,
+      )
+    // Only a registry token without a USD value: funded, of unknown size.
+    const unpriced = tile({
+      incentivesUsd: "0.00",
+      incentiveTokens: ["USDC"],
+      priced: false,
+      unpriced: 1,
+    })
+    expect(unpriced.getByText("Unpriced")).toBeTruthy()
+    expect(unpriced.getByText("n/a")).toBeTruthy()
+    expect(
+      unpriced.getAllByRole("img", { name: "USDC" }).length,
+    ).toBeGreaterThan(0)
+    expect(unpriced.queryByText("No incentives")).toBeNull()
+    unpriced.unmount()
+    // Priced and unpriced together.
+    const mixed = tile({
+      incentivesUsd: "1.15",
+      incentiveTokens: ["MUSD", "USDC"],
+      unpriced: 1,
+    })
+    // The unpriced part is secondary text after the dollars.
+    expect(mixed.getByText("+ 1 unpriced")).toBeTruthy()
+    expect(mixed.container.textContent).toContain("$1.15 + 1 unpriced")
+    mixed.unmount()
+    // An unregistered token is held, but never funds the gauge.
+    const unregistered = tile({
+      incentivesUsd: "0.00",
+      incentiveTokens: ["FAKEBTC"],
+      funded: false,
+      priced: false,
+      unpriced: 1,
+    })
+    expect(unregistered.getByText("Unpriced")).toBeTruthy()
+    expect(unregistered.queryByText("No incentives")).toBeNull()
+  })
+
+  it("show no falling arrow beside an APY they do not show", () => {
+    // The down arrow after the APY, in the accent ink.
+    const arrow = "[data-mbx-motion].text-acc-ink"
+    const tile = (apyBps: number | null) =>
+      render(
+        <GaugeTile
+          gauge={{ ...pool("CL200"), apyBps, incentivesUsd: "0.28" }}
+          picked
+          disabled={false}
+          votes={10n}
+          votesWei={10n * 10n ** 18n}
+          onPickedChange={() => {}}
+        />,
+      )
+    const hidden = tile(null)
+    expect(hidden.getByText("n/a")).toBeTruthy()
+    expect(hidden.container.querySelector(arrow)).toBeNull()
+    hidden.unmount()
+    const shown = tile(250)
+    expect(shown.container.querySelector(arrow)).not.toBeNull()
+  })
+
   it("make the card's one link the gauge's name", () => {
     const view = render(
       <GaugeTile
@@ -188,5 +296,39 @@ describe("pool gauges that share a pair", () => {
     const links = view.container.querySelectorAll("a")
     expect(links).toHaveLength(1)
     expect(links[0]?.hasAttribute("data-card-link")).toBe(true)
+  })
+})
+
+describe("the draft APY", () => {
+  it("shows n/a when the ballot takes a gauge under the votes an APY needs", () => {
+    // 12,000 veMEZO, 11,000 of them this wallet's, and an APY at 10,000.
+    const forge = gauge({
+      name: "Forge Partners",
+      apyBps: 250,
+      votes: wei(12_000n),
+      apyMinVotes: wei(10_000n),
+    })
+    const tile = (fields: Partial<GaugeSummary>, votes: bigint) =>
+      render(
+        <GaugeTile
+          gauge={{ ...forge, ...fields }}
+          picked={false}
+          disabled={false}
+          votes={votes}
+          votesWei={votes * 10n ** 18n}
+          onPickedChange={() => {}}
+        />,
+      )
+    const kept = tile({}, 12_000n)
+    expect(kept.queryByText("n/a")).toBeNull()
+    kept.unmount()
+    // A draft that drops the wallet's votes leaves 1,000: twelve times
+    // the APY, which signing would turn to n/a.
+    const dropped = tile({}, 1_000n)
+    expect(dropped.getByText("n/a")).toBeTruthy()
+    dropped.unmount()
+    // No number from the server: no APY, however it is voted.
+    const missing = tile({ apyMinVotes: null }, 12_000n)
+    expect(missing.getByText("n/a")).toBeTruthy()
   })
 })

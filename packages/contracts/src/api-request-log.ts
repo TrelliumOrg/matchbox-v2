@@ -21,6 +21,7 @@ import { environmentKindSchema } from "./network"
  * | `blob8`   | `country`         | ISO country (`request.cf.country`), `""` if absent |
  * | `blob9`   | `environmentKind` | `test` / `live`, `""` when unknown              |
  * | `blob10`  | `errorCode`       | platform error code (`rate_limited`, …), `""` on success |
+ * | `blob11`  | `servedFrom`      | `last-good`: a shared read model's earlier answer, served because its render failed twice; `""` otherwise |
  * | `double1` | `latencyMs`       | Worker wall time for the request               |
  * | `double2` | `statusCode`      | HTTP status as a number                        |
  *
@@ -60,6 +61,12 @@ export const apiRequestLogSchema = z.object({
   latencyMs: z.number().nonnegative(),
   /** `error.code` of the response body; null for successes. */
   errorCode: z.string().nullable(),
+  /**
+   * `last-good`: a 200 that is an earlier answer, served because the render
+   * failed (the internal read-model routes' `stale-if-error`). Null for
+   * every other response.
+   */
+  servedFrom: z.enum(["last-good"]).nullable(),
 })
 
 export type ApiRequestLog = z.infer<typeof apiRequestLogSchema>
@@ -77,6 +84,7 @@ export const API_REQUEST_LOG_LAYOUT = {
   country: "blob8",
   environmentKind: "blob9",
   errorCode: "blob10",
+  servedFrom: "blob11",
   latencyMs: "double1",
   statusCode: "double2",
 } as const
@@ -87,6 +95,7 @@ export type ApiRequestLogColumn =
 export type ApiRequestLogDataPoint = {
   indexes: [string]
   blobs: [
+    string,
     string,
     string,
     string,
@@ -118,6 +127,7 @@ export function apiRequestLogDataPoint(
       record.country ?? "",
       record.environmentKind ?? "",
       record.errorCode ?? "",
+      record.servedFrom ?? "",
     ],
     doubles: [record.latencyMs, record.statusCode],
   }

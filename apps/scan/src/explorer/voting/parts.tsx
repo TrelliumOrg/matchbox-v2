@@ -140,9 +140,11 @@ export function GaugeName({
   }
   // The pair gives way first: the type is what tells the pools apart.
   return (
-    <span className="inline-flex max-w-full min-w-0 items-baseline gap-[0.3em] align-bottom">
-      <span className="min-w-0 truncate">{name}</span>{" "}
-      <span className="flex-none font-medium text-sec">{gauge.poolLabel}</span>
+    <span className="inline-flex max-w-full min-w-0 items-baseline gap-[0.3em] align-bottom max-lg:inline">
+      <span className="min-w-0 lg:truncate">{name}</span>{" "}
+      <span className="flex-none font-medium whitespace-nowrap text-sec">
+        {gauge.poolLabel}
+      </span>
     </span>
   )
 }
@@ -177,16 +179,18 @@ export function GaugeTitle({
           <Link
             to="/gauges/$gauge"
             params={{ gauge: gauge.address }}
-            className={`truncate font-semibold ${nameLink}`}
+            className={`min-w-0 font-semibold [overflow-wrap:anywhere] lg:truncate ${nameLink}`}
           >
             <GaugeName gauge={gauge} />
           </Link>
           {gauge.tokenId === null ? null : (
-            <span className="text-sec">#{gauge.tokenId}</span>
+            <span className="flex-none text-sec">#{gauge.tokenId}</span>
           )}
         </span>
         {subline === undefined || subline === null ? null : (
-          <span className="truncate text-[14.5px] text-sec">{subline}</span>
+          <span className="line-clamp-2 text-[14.5px] [overflow-wrap:anywhere] text-sec lg:line-clamp-none lg:truncate">
+            {subline}
+          </span>
         )}
       </span>
     </span>
@@ -395,7 +399,9 @@ export function Stats({ stats }: { stats: readonly StatView[] }): ReactNode {
     <dl className="mt-4 grid grid-cols-4 gap-x-4 gap-y-3 max-md:grid-cols-2">
       {stats.slice(0, 4).map((stat) => (
         <div key={stat.label} className="min-w-0">
-          <dt className="truncate text-[14px] text-sec">{stat.label}</dt>
+          <dt className="text-[14px] text-sec [overflow-wrap:anywhere]">
+            {stat.label}
+          </dt>
           <dd
             className={`mt-0.5 text-[15px] font-semibold tabular-nums [overflow-wrap:anywhere] ${stat.tone === undefined ? "" : toneClass[stat.tone]}`}
           >
@@ -434,7 +440,10 @@ export function RangeToggle({
   children?: ReactNode
 }): ReactNode {
   return (
-    <nav aria-label={label} className="flex items-center gap-3 text-[14px]">
+    <nav
+      aria-label={label}
+      className="flex items-center gap-3 text-[14px] pointer-coarse:gap-7"
+    >
       {ranges.map((range) => (
         <Link
           key={range}
@@ -445,6 +454,7 @@ export function RangeToggle({
           aria-current={range === period.range ? "true" : undefined}
           activeOptions={{ exact: true, includeSearch: true }}
           activeProps={{}}
+          data-tap=""
           className="rounded-sm text-sec outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink [&[aria-current]]:font-semibold [&[aria-current]]:text-ink"
         >
           {range}

@@ -131,7 +131,9 @@ export const searchTransactionsTool = defineTool({
         model: {
           rows: result.records.slice(0, 10).map((record) => ({
             direction: record.direction,
-            route: `${record.sourceChain} → ${record.destinationChain}`,
+            // Wormholescan's text: names, never a source of figures.
+            fromChainName: record.sourceChain,
+            toChainName: record.destinationChain,
             symbol: record.sourceAsset,
             amount: record.sourceAmount,
             usd:

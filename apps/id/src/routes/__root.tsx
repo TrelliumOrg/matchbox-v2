@@ -13,51 +13,57 @@ import type { ReactNode } from "react"
 import { Shell } from "../app/components/shell"
 import { ErrorView, NotFoundView } from "../app/components/states"
 import { getViewer } from "../app/data/id-api"
+import { pageUrl, shareTags } from "../app/lib/share"
 import appCss from "../styles.css?url"
+
+const description = "Sign in with your wallet to apps built on Mezo."
 
 export const Route = createRootRoute({
   loader: () => getViewer(),
   // Sign-in and sign-out invalidate the router; otherwise the session is
   // the one the page loaded with.
   staleTime: 30_000,
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      {
-        name: "viewport",
-        content: "width=device-width, initial-scale=1, viewport-fit=cover",
-      },
-      { title: "Matchbox ID" },
-      {
-        name: "description",
-        content: "Sign in with your wallet to apps built on Mezo.",
-      },
-      // No referrer meta: it would override /authorize's no-referrer
-      // header. The Worker sets Referrer-Policy on every page.
-    ],
-    links: [
-      {
-        rel: "preload",
-        href: figtreeLatin,
-        as: "font",
-        type: "font/woff2",
-        crossOrigin: "anonymous",
-      },
-      { rel: "stylesheet", href: appCss },
-      {
-        rel: "icon",
-        type: "image/png",
-        href: "/favicon-light.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        rel: "icon",
-        type: "image/png",
-        href: "/favicon-dark.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-    ],
-  }),
+  head: ({ matches }) => {
+    const pathname = matches.at(-1)?.pathname ?? "/"
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        {
+          name: "viewport",
+          content: "width=device-width, initial-scale=1, viewport-fit=cover",
+        },
+        { title: "Matchbox ID" },
+        { name: "description", content: description },
+        ...shareTags(pathname, description),
+        // No referrer meta: it would override /authorize's no-referrer
+        // header. The Worker sets Referrer-Policy on every page.
+      ],
+      links: [
+        // One address for every copy (workers.dev, a query): the production page.
+        { rel: "canonical", href: pageUrl(pathname) },
+        {
+          rel: "preload",
+          href: figtreeLatin,
+          as: "font",
+          type: "font/woff2",
+          crossOrigin: "anonymous",
+        },
+        { rel: "stylesheet", href: appCss },
+        {
+          rel: "icon",
+          type: "image/png",
+          href: "/favicon-light.png",
+          media: "(prefers-color-scheme: light)",
+        },
+        {
+          rel: "icon",
+          type: "image/png",
+          href: "/favicon-dark.png",
+          media: "(prefers-color-scheme: dark)",
+        },
+      ],
+    }
+  },
   shellComponent: RootDocument,
   component: RootComponent,
   notFoundComponent: NotFoundView,

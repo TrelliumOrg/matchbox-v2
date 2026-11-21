@@ -29,6 +29,23 @@
   }
 }
 
+/*
+ * The loading skeleton's dark shimmer (`skeletonTheme.dark` in
+ * @matchbox/motion). Its provider always writes the light colours on
+ * :root, the same on the server and in the hydrating page, and the dark
+ * presets win here by specificity: no render switches theme. Keep the list
+ * to `darkPresets` in @matchbox/tokens (a unit test checks).
+ */
+:root:is(
+  [data-theme="graphite"],
+  [data-theme="walnut"],
+  [data-theme="slate"],
+  [data-theme="onyx"]
+) {
+  --skullet-base: rgb(244 244 242 / 0.08);
+  --skullet-highlight: rgb(244 244 242 / 0.1);
+}
+
 /* Below 1600px Vote's ballot is a bar; toasts clear it. */
 @media (width < 100rem) {
   body:has([data-ballot-bar]) {

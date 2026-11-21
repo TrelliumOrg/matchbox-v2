@@ -9,6 +9,8 @@
 //    inline: no 'unsafe-inline', no 'unsafe-eval'. public/_headers adds the
 //    directives a meta tag cannot carry (frame-ancestors). connect-src adds
 //    Stuart's origin when the build has one, for "Ask about this page".
+//    script-src also names Cloudflare's Web Analytics beacon, which the
+//    zone injects into every page as it is served (see cloudflareBeacon).
 // 3. The link checker: every same-site link and fragment in the built HTML
 //    must land on a file, a page or a redirect rule, and the fragment must
 //    be an id on the target page. A miss fails the build.
@@ -78,12 +80,22 @@ function hash(text) {
   return `'sha256-${createHash("sha256").update(text, "utf8").digest("base64")}'`
 }
 
+/**
+ * Cloudflare Web Analytics: the zone adds
+ * `<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/…">`
+ * before </body> of every page it serves, with no nonce (this policy has
+ * none to copy). The beacon reports to the page's own origin
+ * (`/cdn-cgi/rum`), which connect-src 'self' already covers, so only its
+ * script host is named.
+ */
+const cloudflareBeacon = "https://static.cloudflareinsights.com"
+
 function contentSecurityPolicy(hashes) {
   return [
     "default-src 'self'",
     // Turnstile's script, for the feedback panel's check (no
-    // 'strict-dynamic' here, so its host is named).
-    `script-src 'self'${feedback === null ? "" : ` ${turnstileOrigin}`} ${hashes.join(" ")}`.trim(),
+    // 'strict-dynamic' here, so its host is named), and the beacon's.
+    `script-src 'self' ${cloudflareBeacon}${feedback === null ? "" : ` ${turnstileOrigin}`} ${hashes.join(" ")}`.trim(),
     // Inline style attributes (React style props): styles cannot run code.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",

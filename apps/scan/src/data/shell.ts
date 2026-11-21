@@ -35,16 +35,91 @@ export type ShellSeed = {
   /** The RPC the wallet reads through. */
   rpc: string
   /**
-   * Scan's copy step has halted tables (`/status` `halted`): some lists
-   * and figures lag the chain. False when unknown.
+   * Scan's copy step is failing or has halted tables: some lists and
+   * figures lag the chain. False when unknown.
    */
   delayed: boolean
+  /** What lags, in words ("activity", "incentives"); [] when unknown. */
+  behind: string[]
+  /**
+   * A re-fill of Scan's copy is due: figures may disagree until it is
+   * done, though they are not behind. False when unknown.
+   */
+  refillPending: boolean
   /**
    * The live Borrow snapshot is behind the head by more than two runs
    * (`/status` `liveSnapshot.stale`). False when unknown.
    */
   borrowDelayed: boolean
 }
+
+/** Scan's copy tables (`/status` `haltedTables`), in the site's words. */
+const tableWords: Record<string, string> = {
+  activity: "activity",
+  locks: "locks",
+  lock_votes: "votes",
+  deposits: "incentives",
+  troves: "loans",
+  morpho: "Morpho positions",
+  enclave: "Enclave positions",
+  contracts: "pools",
+}
+
+/** The parts of `/status` that say whether Scan's copy lags. */
+export type ScanStatusDelay = {
+  stale: boolean
+  consecutiveFailures: number | null
+  halted?: boolean | null | undefined
+  haltedTables?: string[] | null | undefined
+  refillRequired: boolean | null
+}
+
+/**
+ * Whether Scan's copy lags the chain (copy runs failing, or tables
+ * halted), what lags, and whether a re-fill is due, kept apart: a due
+ * re-fill means figures may disagree, not that they are behind. APIs
+ * before the split counted a re-fill in `stale`, so `stale` alone counts
+ * only when no re-fill is due.
+ */
+export function scanDelayOf(
+  status: ScanStatusDelay,
+): Pick<ShellSeed, "delayed" | "behind" | "refillPending"> {
+  const refillPending = status.refillRequired === true
+  const delayed =
+    (status.consecutiveFailures ?? 0) > 0 ||
+    status.halted === true ||
+    (status.stale && !refillPending)
+  const behind = delayed
+    ? [
+        ...new Set(
+          (status.haltedTables ?? []).flatMap((table) => {
+            const words = tableWords[table]
+            return words === undefined ? [] : [words]
+          }),
+        ),
+      ]
+    : []
+  return { delayed, behind, refillPending }
+}
+
+/** "activity", "activity and incentives", "activity, votes and loans". */
+function listOf(parts: readonly string[]): string {
+  if (parts.length <= 1) return parts.join("")
+  return `${parts.slice(0, -1).join(", ")} and ${parts.at(-1)}`
+}
+
+/** The note under the top bar while Scan's copy lags. */
+export function delayedNote(behind: readonly string[]): string {
+  if (behind.length === 0) {
+    return "Some data is delayed: a few lists and figures are behind the chain while Matchscan's updates catch up."
+  }
+  const one = behind.length === 1 && behind[0] === "activity"
+  return `Some data is delayed: ${listOf(behind)} ${one ? "is" : "are"} behind the chain while Matchscan's updates catch up.`
+}
+
+/** The quieter note while a re-fill of Scan's copy is due. */
+export const refillNote =
+  "Some figures may disagree with each other until Matchscan rebuilds its copy of the data."
 
 /**
  * Whether a page says its Borrow data is delayed under the top bar. Only
@@ -125,6 +200,8 @@ export function toShell(
     live,
     rpc,
     delayed: false,
+    behind: [],
+    refillPending: false,
     borrowDelayed: false,
   }
 }

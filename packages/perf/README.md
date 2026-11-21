@@ -32,3 +32,14 @@ LCP tie allowance used in 1 of 60 runs
 The saved report keeps what Lighthouse measured: a covered run's result carries `matchboxLcpTie` with the simulated LCP, and its LCP display says it was judged under the allowance.
 
 The tests in `src/lcp-tie.test.ts` use recorded results in `src/fixtures/lcp-tie/`. Three are Scan's Home from CI with the 1 µs gap; they fail `lhci assert` without the rule and pass with it. Three are a genuinely slow page, Scan's MEZO token page before its coin was drawn inline: an image LCP at 1.52 to 1.65 s with its timestamps tied exactly. They still fail.
+
+## Tests
+
+```sh
+pnpm --filter @matchbox/perf test
+pnpm --filter @matchbox/perf typecheck
+```
+
+The tests need no network, keys or browser. Running an app's `measure`
+needs that app's preview running, and `lhci` needs Chrome installed, or
+`CHROME_PATH` pointing at a Chromium.

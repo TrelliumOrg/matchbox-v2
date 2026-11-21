@@ -5,5 +5,6 @@ export default defineConfig({
   test: {
     include: ["bench/**/*.test.ts"],
     testTimeout: 600_000,
+    hookTimeout: 60_000,
   },
 })

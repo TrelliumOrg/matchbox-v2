@@ -1,10 +1,10 @@
 import { dataUriBytes } from "./assets"
 
 /**
- * The Worker side of link previews that every app shares: images cached in
- * the Cache API with a bundled fallback, and a per-isolate memo for the
- * cards behind meta tags. Each app keeps its own targets, cards and meta
- * rules. Dependencies are passed in, so tests run without a Worker.
+ * The Worker side of link previews: images cached in the Cache API with a
+ * bundled fallback, and a per-isolate memo for the cards behind meta tags.
+ * The caller keeps its own targets, cards and meta rules. Dependencies are
+ * passed in, so tests run without a Worker.
  */
 
 /** Max age for a card with live figures, and for a fallback. */

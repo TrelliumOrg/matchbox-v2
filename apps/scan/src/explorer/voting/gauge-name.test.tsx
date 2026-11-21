@@ -35,3 +35,14 @@ describe("pool gauges that share a pair", () => {
     expect(view.container.textContent).toBe("BTC/MUSD CL200")
   })
 })
+
+describe("a gauge's name on a phone", () => {
+  it("wraps there, and is cut to one line only from lg up", () => {
+    const view = render(<GaugeName gauge={gaugeIdentity(demoGauges.btcMusd)} />)
+    const name = view.container.firstElementChild?.firstElementChild
+    expect(name?.textContent).toBe("BTC/MUSD")
+    const classes = name?.className.split(" ") ?? []
+    expect(classes).not.toContain("truncate")
+    expect(classes).toContain("lg:truncate")
+  })
+})

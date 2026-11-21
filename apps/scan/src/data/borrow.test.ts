@@ -58,6 +58,7 @@ describe("borrow reads", () => {
     expect(overview.markets.data[0]?.price).toBe("74,000 mUSDC")
     expect(overview.counts).toEqual({
       morpho: 4,
+      morphoMusd: 2,
       troves: 3,
       enclaves: 1,
       complete: true,

@@ -14,8 +14,8 @@ import {
 } from "@matchbox/contracts/read-models/fixtures"
 import { decimalToScaledBigInt } from "@matchbox/domain"
 import type { PublicClient } from "viem"
-import { describe, expect, it } from "vitest"
-import { rejectedWithin } from "../test-timing"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { settlement } from "../test-timing"
 import { type ChainRequestOptions, ClaimableUnread } from "./live-claimable"
 import {
   createLatestLockIdsReader,
@@ -399,7 +399,15 @@ describe("a chain that never answers", () => {
     multicall: () => new Promise(() => undefined),
   } as unknown as PublicClient
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("gives every read up at its deadline, not the client's", async () => {
+    // Fake timers: the deadline (from Date.now()) and the timer that ends
+    // the wait run on one clock, so this is the exact millisecond however
+    // busy the machine. A real 1 s budget failed once on a loaded runner.
+    vi.useFakeTimers()
     const readers = [
       () => createLiveLockReader(hung)("vebtc", "6179", Date.now() + 100),
       () =>
@@ -415,10 +423,12 @@ describe("a chain that never answers", () => {
       () => createLatestLockIdsReader(hung)(Date.now() + 100),
     ]
     for (const read of readers) {
-      // The 100 ms deadline, well before a timer at 1 s.
-      expect(await rejectedWithin(read(), 1_000)).toBeInstanceOf(
-        ClaimableUnread,
-      )
+      const outcome = settlement(read())
+      await vi.advanceTimersByTimeAsync(99)
+      expect(outcome.settled).toBe(false)
+      await vi.advanceTimersByTimeAsync(1)
+      expect(outcome.settled).toBe(true)
+      expect(outcome.error).toBeInstanceOf(ClaimableUnread)
     }
   })
 

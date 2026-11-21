@@ -19,7 +19,7 @@ import { nowSeconds } from "./clock.server"
 import { fixtureResponse } from "./fixtures"
 import { fixtureScenario, scanFixture } from "./scan/fixtures"
 import { scanSchemas } from "./scan/schemas"
-import { readShell, type ShellSeed } from "./shell"
+import { readShell, type ShellSeed, scanDelayOf } from "./shell"
 
 /**
  * The shell's data. Until the Scan API exists (`/internal/scan/*`, built by
@@ -41,18 +41,26 @@ const client = createReadModelClient({
 
 const headResponse = z.object({ data: chainHeadSchema })
 
-type Delays = Pick<ShellSeed, "delayed" | "borrowDelayed">
+type Delays = Pick<
+  ShellSeed,
+  "delayed" | "behind" | "refillPending" | "borrowDelayed"
+>
 
 /** What the status read found; `known: false` when it could not tell. */
 type DelayRead = Delays & { known: boolean }
 
-const noDelays: Delays = { delayed: false, borrowDelayed: false }
+const noDelays: Delays = {
+  delayed: false,
+  behind: [],
+  refillPending: false,
+  borrowDelayed: false,
+}
 
 /**
  * Whether Scan's data lags (`/internal/scan/status`): the copy step has
- * halted tables or is failing (`halted` or `stale`), or the live Borrow
- * snapshot is behind (`liveSnapshot.stale`). Read beside the head and
- * prices.
+ * halted tables or is failing (scanDelayOf), or the live Borrow snapshot
+ * is behind (`liveSnapshot.stale`); and, apart from lag, whether a re-fill
+ * is due. Read beside the head and prices.
  *
  * A 503 is the API without Scan's database: nothing is copied, so nothing
  * lags behind a copy, and the page may be stored. Any other failure (a
@@ -83,7 +91,7 @@ async function scanDelays(fixtures: boolean): Promise<DelayRead> {
     if (status !== 200 || !parsed.success) return unknown
     const data = parsed.data.data
     return {
-      delayed: data.halted === true || data.stale,
+      ...scanDelayOf(data),
       borrowDelayed: data.liveSnapshot?.stale === true,
       known: true,
     }

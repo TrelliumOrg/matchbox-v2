@@ -1,8 +1,9 @@
 import { LeavingProvider, useLeaving } from "@matchbox/motion"
 import type { Config } from "@wagmi/core"
-import { type ReactNode, useEffect, useMemo, useState } from "react"
+import { type ReactNode, useEffect, useMemo } from "react"
 import { getAddress } from "viem"
-import { requireConfig } from "../wallet/wallet-runtime"
+import { reconnectLimitMs } from "../wallet/reconnect-limit"
+import { loadedConfig } from "../wallet/wallet-runtime"
 import {
   getWallet,
   openWallet,
@@ -28,25 +29,60 @@ export { claimRequest } from "./claim-request"
 
 /**
  * Opens a sheet once a remembered wallet has reconnected, if it is the
- * wallet the screens show; otherwise the drawer opens.
+ * wallet the screens show; otherwise the drawer opens, keeping the request.
+ * A reconnect that never settles (a wallet that does not answer, wallet
+ * code that did not load) opens the drawer after `reconnectLimitMs`: the
+ * click is never dropped.
  */
 export function openAfterReconnect(owner: string, request: TxRequest): void {
-  const settle = (): boolean => {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let done = false
+  const settle = (waited: boolean): void => {
+    if (done) return
     const wallet = getWallet()
-    if (wallet.phase !== "ready") return false
+    if (wallet.phase !== "ready" && !waited) return
+    done = true
     stop()
-    if (
-      wallet.account?.address.toLowerCase() === owner.toLowerCase() ||
-      viewingOwnSafe(owner)
-    ) {
-      setWallet({ tx: { request, owner } })
-    } else {
-      openWallet()
-    }
-    return true
+    clearTimeout(timer)
+    if (signsFor(owner)) setWallet({ tx: { request, owner } })
+    else openAfterConnect(owner, request)
   }
-  const stop = subscribeWallet(() => void settle())
+  const stop = subscribeWallet(() => settle(false))
+  timer = setTimeout(() => settle(true), reconnectLimitMs)
+  settle(false)
+}
+
+/**
+ * Opens the drawer and, once a wallet connects from it, the sheet the
+ * click asked for: the owner's own wallet, or an owner of the Safe saved
+ * in Signing, whose sheet signs as the Safe. Another wallet, or closing
+ * the drawer without connecting, drops it.
+ */
+export function openAfterConnect(owner: string, request: TxRequest): void {
+  openWallet()
+  const start = getWallet().account?.address ?? null
+  let done = false
+  const settle = (): void => {
+    if (done) return
+    const wallet = getWallet()
+    const address = wallet.account?.address ?? null
+    const connected = address !== null && address !== start
+    if (!connected && wallet.drawerOpen) return
+    done = true
+    stop()
+    if (connected && signsFor(owner)) setWallet({ tx: { request, owner } })
+  }
+  const stop = subscribeWallet(settle)
   settle()
+}
+
+/** The connected wallet signs for `owner`: it is the owner, or its Safe. */
+function signsFor(owner: string): boolean {
+  const account = getWallet().account
+  return (
+    account?.address.toLowerCase() === owner.toLowerCase() ||
+    viewingOwnSafe(owner)
+  )
 }
 
 import { closeTx, type TxRequest, useTx } from "./tx-store"
@@ -94,12 +130,9 @@ export default function TxHost(): ReactNode {
   const request = tx?.request ?? null
   const owner = tx?.owner ?? null
   const wallet = useWallet()
-  const [config, setConfig] = useState<Config | null>(null)
+  // Null until wagmi is ready, and after its code failed to load.
+  const config = wallet.phase === "ready" ? loadedConfig() : null
   const address = wallet.account?.address ?? null
-
-  useEffect(() => {
-    if (wallet.phase === "ready") setConfig(requireConfig())
-  }, [wallet.phase])
 
   // In Multisig mode an owner viewing the saved Safe signs as the Safe.
   const asSafe = owner !== null && address !== null && viewingOwnSafe(owner)

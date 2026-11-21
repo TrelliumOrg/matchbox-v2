@@ -1,6 +1,9 @@
 import { applyD1Migrations } from "cloudflare:test"
 import { env } from "cloudflare:workers"
-import { demoWalletOverview } from "@matchbox/contracts/read-models/fixtures"
+import {
+  demoWalletOverview,
+  demoWalletRewards,
+} from "@matchbox/contracts/read-models/fixtures"
 import { beforeEach, describe, expect, it } from "vitest"
 import {
   type ReadDatabase,
@@ -121,6 +124,38 @@ describe("writing only what changed", () => {
     })
     // The wallet document goes to D1, which finds it unchanged.
     expect(run.sent()).toBe(1)
+  })
+
+  it("writes a USD change when its etag basis changes, and only then", async () => {
+    const rewards = (
+      usd: string,
+      etagBasis: string,
+    ): ReadModelWrite<"wallet-rewards"> => ({
+      ...base,
+      kind: "wallet-rewards",
+      key: demoWalletRewards.address,
+      data: {
+        ...demoWalletRewards,
+        earned: { ...demoWalletRewards.earned, usd },
+      },
+      etagBasis,
+    })
+    await writeReadModels(env.READ_DB, [rewards("10.00", "3:mezo=3")])
+    // A price tick: the same claims, so nothing is written.
+    expect(
+      await writeReadModels(env.READ_DB, [rewards("12.00", "3:mezo=3")]),
+    ).toBe(0)
+    // One more claim counted, in an epoch Earned covered already.
+    expect(
+      await writeReadModels(env.READ_DB, [rewards("14.00", "4:mezo=4")]),
+    ).toBe(1)
+    const stored = await readReadModel(
+      env.READ_DB,
+      "mezo",
+      "wallet-rewards",
+      demoWalletRewards.address,
+    )
+    expect(stored?.data.earned.usd).toBe("14.00")
   })
 
   it("writes everything, as before, when asked to skip nothing", async () => {

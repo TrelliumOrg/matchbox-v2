@@ -15,6 +15,12 @@ pnpm --filter @matchbox/pro measure                 # 125 kB script budget
 pnpm --filter @matchbox/pro e2e:fork                # transactions on an Anvil fork
 ```
 
+None of these need credentials. `e2e` needs Playwright's Chromium
+(`pnpm --filter @matchbox/pro exec playwright install chromium`) and
+`e2e:fork` needs Foundry's `anvil`, which forks the public Mezo RPC. Live
+data (`PRO_DATA=api`) needs the API Worker ([apps/api](../api)) with its
+read models filled by the jobs Worker ([apps/jobs](../jobs)), bound as `API`.
+
 ## Security headers
 
 Every Worker response but the `/live/heads` socket carries HSTS, nosniff,

@@ -5,7 +5,10 @@
 //    URL it was not rendered for.
 // 2. Every HTML file gets a <meta> Content-Security-Policy whose script-src
 //    lists the SHA-256 of each inline script on that page and nothing else
-//    inline. connect-src is 'self' only: the site calls no API.
+//    inline, plus Cloudflare's Web Analytics beacon, which the zone injects
+//    into every page as it is served (see cloudflareBeacon). connect-src is
+//    'self' only: the site calls no API, and the beacon reports to the
+//    page's own origin.
 //    public/_headers adds what a meta tag cannot carry (frame-ancestors).
 // 3. The link checker: every same-site link and fragment in the built HTML
 //    must land on a file or a page, and the fragment must be an id there.
@@ -66,10 +69,18 @@ function hash(text) {
   return `'sha256-${createHash("sha256").update(text, "utf8").digest("base64")}'`
 }
 
+/**
+ * Cloudflare Web Analytics: the zone adds
+ * `<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/…">`
+ * before </body> of every page it serves, with no nonce (this policy has
+ * none to copy). It reports to `/cdn-cgi/rum` on the page's own origin.
+ */
+const cloudflareBeacon = "https://static.cloudflareinsights.com"
+
 function contentSecurityPolicy(hashes) {
   return [
     "default-src 'self'",
-    `script-src 'self' ${hashes.join(" ")}`.trim(),
+    `script-src 'self' ${cloudflareBeacon} ${hashes.join(" ")}`.trim(),
     // Inline style attributes (React style props): styles cannot run code.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",

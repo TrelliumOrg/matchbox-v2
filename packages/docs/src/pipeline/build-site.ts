@@ -34,6 +34,12 @@ export type GeneratedPage = {
   title: string
   nav: string
   description: string
+  /**
+   * The page's meta description and link preview text, from its own first
+   * paragraph (`previewText`). `description` stays the short line search,
+   * llms.txt and the topics index show.
+   */
+  lead: string
   section: SectionId
   eyebrow: string
   tree: string
@@ -96,6 +102,39 @@ function readingMinutes(words: number): number {
 export function topicOfPath(path: string): string {
   if (path === "/") return "home"
   return path.slice(1).replaceAll("/", ".")
+}
+
+/**
+ * Sentences in generated text: a full stop, question or exclamation mark
+ * and a space end one, except after "e.g." and "i.e.", so
+ * "(e.g. '30% to Boar')" stays inside its sentence.
+ */
+export function sentencesOf(text: string): string[] {
+  return text
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/(?<!\b(?:e\.g|i\.e)\.)(?<=[.!?])\s+/)
+    .filter((sentence) => sentence !== "")
+}
+
+/**
+ * A meta description and link preview from a page's first paragraph: whole
+ * sentences up to 160 characters, without code ticks. When the first
+ * sentence alone is too long or the sentences that fit are too short to
+ * say much, it is cut at a word and ends in an ellipsis.
+ */
+export function previewText(text: string): string {
+  const max = 160
+  const clean = text.replaceAll("`", "").replace(/\s+/g, " ").trim()
+  if (clean.length <= max) return clean
+  let kept = ""
+  for (const sentence of sentencesOf(clean)) {
+    const next = kept === "" ? sentence : `${kept} ${sentence}`
+    if (next.length > max) break
+    kept = next
+  }
+  if (kept.length >= 60) return kept
+  return `${clean.slice(0, max - 1).replace(/[\s,(]+\S*$/, "")}…`
 }
 
 function excerpt(text: string): string {
@@ -226,7 +265,7 @@ export async function buildSite(input: BuildInput): Promise<BuildOutput> {
         ...page.body,
         path: page.path,
         title: page.title,
-        description: page.description,
+        description: page.lead,
         toc: page.toc,
       },
       ids: page.ids,

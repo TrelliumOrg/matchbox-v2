@@ -187,6 +187,80 @@ describe("a signed vote over the gauge directory", () => {
     expect(apyOf(shown, sats)).toBe(260)
   })
 
+  it("gives no APY on less than a dollar of incentives, votes or not", () => {
+    const small: GaugeList = {
+      ...directory(signed.block - 12),
+      gauges: gaugesSample.gauges.map((gauge) =>
+        id(gauge) === id(sats)
+          ? {
+              ...gauge,
+              votes: "0",
+              apyBps: null,
+              incentivesUsd: "0.28",
+              // As the server sends it for less than a dollar.
+              apyMinVotes: null,
+            }
+          : gauge,
+      ),
+    }
+    const shown = withSignedVotes(
+      small,
+      [signed],
+      prices,
+      viewing(signed.block),
+    )
+    expect(votesOf(shown, sats)).toBe(1_000_000n * wad)
+    expect(apyOf(shown, sats)).toBeNull()
+  })
+
+  it("gives no APY to a gauge the server does not count as funded", () => {
+    const unfunded: GaugeList = {
+      ...directory(signed.block - 12),
+      gauges: gaugesSample.gauges.map((gauge) =>
+        id(gauge) === id(sats)
+          ? {
+              ...gauge,
+              votes: "0",
+              apyBps: null,
+              incentivesUsd: "100.00",
+              funded: false,
+              apyMinVotes: null,
+            }
+          : gauge,
+      ),
+    }
+    const shown = withSignedVotes(
+      unfunded,
+      [signed],
+      prices,
+      viewing(signed.block),
+    )
+    expect(votesOf(shown, sats)).toBe(1_000_000n * wad)
+    expect(apyOf(shown, sats)).toBeNull()
+  })
+
+  it("gives no APY, and does not throw, when the server sent no floor", () => {
+    // A directory from a server or cache from before `apyMinVotes`.
+    const older: GaugeList = {
+      ...directory(signed.block - 12),
+      gauges: gaugesSample.gauges.map((gauge) => {
+        const copy = { ...gauge }
+        Reflect.deleteProperty(copy, "apyMinVotes")
+        return copy
+      }),
+    }
+    const shown = withSignedVotes(
+      older,
+      [signed],
+      prices,
+      viewing(signed.block),
+    )
+    // The votes still move; only the APY waits for a number to check.
+    expect(votesOf(shown, sats)).toBe(BigInt(sats.votes) + 1_000_000n * wad)
+    expect(apyOf(shown, sats)).toBeNull()
+    expect(apyOf(shown, kiln)).toBeNull()
+  })
+
   it("never shows votes below zero or an APY on none", () => {
     const drained: SignedVote = {
       ...signed,

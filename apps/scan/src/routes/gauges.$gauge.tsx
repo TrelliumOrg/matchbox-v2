@@ -43,9 +43,10 @@ export const Route = createFileRoute("/gauges/$gauge")({
           loaderData?.header.status === "ok" &&
           loaderData.header.data.gauge.name !== null
             ? `${nameWithPoolType(
-                loaderData.header.data.gauge.name,
+                // A profile name can end in a space ("SNF , Matchscan").
+                loaderData.header.data.gauge.name.trim(),
                 loaderData.header.data.gauge.poolLabel,
-              )}, Matchscan`
+              )}${loaderData.header.data.gauge.tokenId === null ? "" : ` #${loaderData.header.data.gauge.tokenId}`}, Matchscan`
             : "Gauge, Matchscan",
       },
     ],

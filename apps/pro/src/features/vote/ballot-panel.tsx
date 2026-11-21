@@ -69,8 +69,13 @@ export type BallotPanelProps = {
   /** Puts back the ballot Optimize replaced. */
   onUndo: () => void
   onSplitEvenly: () => void
-  /** "Review and sign", or "Save for Epoch 48" when every lock voted. */
+  /**
+   * "Review and sign", "Save for Epoch 48" when every lock voted, or
+   * "Viewing only" on someone else's wallet.
+   */
   primary: string
+  /** Someone else's wallet: the primary button stays disabled. */
+  readOnly: boolean
   /** A saved split's state: "Changes saved for Epoch 48", "Saved split". */
   note: string | null
   /** Opens Review vote (or Review changes). */
@@ -174,7 +179,7 @@ export function BallotBar(props: BallotPanelProps): ReactNode {
         <PillButton.Root
           {...props.reviewIntent}
           className="max-sm:px-4"
-          disabled={!signable(ballot)}
+          disabled={props.readOnly || !signable(ballot)}
           onClick={props.onReview}
         >
           {/* A phone has no room for ", 14 signatures": the sheet says it. */}

@@ -3,6 +3,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { DatabaseSync } from "node:sqlite"
 import type { PGlite } from "@electric-sql/pglite"
+import { createLogger } from "@matchbox/logger"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
 import {
@@ -12,12 +13,17 @@ import {
   fillMarker,
   fillStep,
   initialFillState,
+  replaceStatements,
 } from "../../scripts/scan-backfill/first-fill"
 import { writeSqlFiles } from "../../scripts/scan-backfill/lib"
+import { runScanCopy } from "./copy"
 import { labelSeed } from "./labels"
-import { inlineStatement } from "./statements"
+import { createScanWarehouseReader } from "./neon"
+import { cursorStatement, inlineStatement } from "./statements"
+import type { TickSummary } from "./summary"
 import { activityFixture, epochE, epochE1, gaugeG2 } from "./testing/fixture"
 import { fixtureWarehouse, pgliteRunner } from "./testing/pglite"
+import sqliteD1 from "./testing/sqlite-d1"
 
 // The first-fill script end to end: PGlite stands in for Neon, the SQL
 // files it writes are applied to SQLite (node:sqlite, the engine D1 runs)
@@ -230,5 +236,131 @@ describe("first fill: quarantine and halt per chunk", () => {
     expect(step.quarantined).toEqual({ locks: 1 })
     expect(step.halted).toEqual({})
     expect(step.rowsRead).toBeGreaterThan(1)
+  })
+})
+
+describe("first fill: decoder versions", () => {
+  let rebuilt: PGlite
+
+  beforeAll(async () => {
+    // A warehouse replayed under projection decoder v3 (borrow still v1).
+    rebuilt = await fixtureWarehouse()
+    await rebuilt.exec(`
+      INSERT INTO matchbox.projection_state (network, decoder_version)
+      VALUES ('mezo', 3);
+      INSERT INTO matchbox.borrow_state (network, decoder_version)
+      VALUES ('mezo', 1);
+    `)
+  }, 60_000)
+
+  afterAll(async () => {
+    await rebuilt.close()
+  })
+
+  const summary = (projection: number): TickSummary => ({
+    kind: "matchbox-indexer-tick",
+    version: 1,
+    network: "mezo",
+    projection: { status: "advanced", decoderVersion: projection },
+    borrow: { status: "advanced", decoderVersion: 1 },
+  })
+
+  /** SCAN_DB that a copy filled under v2, flagged for the v3 replay. */
+  function filledUnderV2(): DatabaseSync {
+    const db = migrated()
+    db.exec(`INSERT INTO scan_cursors (name, value, updated_at) VALUES
+      ('decoder:projection', '2', 1), ('decoder:borrow', '1', 1),
+      ('refill:required', 'projection decoder 2 -> 3 at 1', 1)`)
+    return db
+  }
+
+  async function refill(db: DatabaseSync) {
+    const run = pgliteRunner(rebuilt)
+    for (const statement of replaceStatements()) {
+      db.exec(inlineStatement(statement))
+    }
+    const { files } = await fill(run, 10, initialFillState())
+    for (const file of files) db.exec(readFileSync(file, "utf8"))
+  }
+
+  function cursor(db: DatabaseSync, name: string): unknown {
+    return db.prepare("SELECT value FROM scan_cursors WHERE name = ?").get(name)
+      ?.value
+  }
+
+  it("records the warehouse's versions, so the next copy does not flag a re-fill", async () => {
+    const db = filledUnderV2()
+    await refill(db)
+    expect(cursor(db, "decoder:projection")).toBe("3")
+    expect(cursor(db, "decoder:borrow")).toBe("1")
+    expect(cursor(db, "refill:required")).toBeUndefined()
+
+    await runScanCopy({
+      db: sqliteD1(db),
+      warehouse: createScanWarehouseReader(pgliteRunner(rebuilt)),
+      trigger: "chained",
+      summary: summary(3),
+      nowSeconds: now + 900,
+      logger: createLogger({ level: "error" }),
+    })
+    expect(cursor(db, "refill:required")).toBeUndefined()
+    expect(
+      db
+        .prepare(
+          "SELECT refill_required, refill_reason FROM scan_status WHERE id = 1",
+        )
+        .get(),
+    ).toEqual({ refill_required: 0, refill_reason: null })
+  })
+
+  it("still flags a replay that happens after the fill", async () => {
+    const db = filledUnderV2()
+    await refill(db)
+    await runScanCopy({
+      db: sqliteD1(db),
+      warehouse: createScanWarehouseReader(pgliteRunner(rebuilt)),
+      trigger: "chained",
+      summary: summary(4),
+      nowSeconds: now + 900,
+      logger: createLogger({ level: "error" }),
+    })
+    expect(cursor(db, "refill:required")).toContain("projection decoder 3 -> 4")
+  })
+
+  it("flags a replay after only the first file of a --replace fill was applied", async () => {
+    const db = filledUnderV2()
+    // Chunk 0 as the script writes it with --replace (the replace first),
+    // in small files, so the decoder versions at its end are not in the
+    // first one. Only that first file is applied.
+    const step = await fillStep(pgliteRunner(rebuilt), initialFillState(), now)
+    fills += 1
+    const files = writeSqlFiles(
+      path.join(out, `fill-${fills}`),
+      "neon-0",
+      [...replaceStatements(), ...step.statements],
+      2_000,
+    )
+    const upsert = inlineStatement(
+      cursorStatement("decoder:projection", "3", now),
+    )
+    const [first, ...rest] = files.map((file) => readFileSync(file, "utf8"))
+    if (first === undefined) throw new Error("no file")
+    expect(first).not.toContain(upsert)
+    expect(rest.some((sql) => sql.includes(upsert))).toBe(true)
+    db.exec(first)
+
+    // The warehouse is replayed again before the rest is applied.
+    await runScanCopy({
+      db: sqliteD1(db),
+      warehouse: createScanWarehouseReader(pgliteRunner(rebuilt)),
+      trigger: "chained",
+      summary: summary(4),
+      nowSeconds: now + 900,
+      logger: createLogger({ level: "error" }),
+    })
+    expect(cursor(db, "refill:required")).toContain("projection decoder")
+    expect(
+      db.prepare("SELECT refill_required FROM scan_status WHERE id = 1").get(),
+    ).toEqual({ refill_required: 1 })
   })
 })

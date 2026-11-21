@@ -11,12 +11,21 @@ import {
 import { afterEach, describe, expect, it } from "vitest"
 import { z } from "zod"
 import { firstReadWaitMs, sendableCloseCode } from "./block-hub"
+import type { Fetcher } from "./poller"
 
 // The fake Mezo RPC lives in vitest.workers.config.ts (outboundService).
-// HEADS_POLL_MS is 250 and HEADS_STALE_MS 300 there.
+//
+// Real time never decides when a hub polls here. HEADS_POLL_MS is a minute
+// in that config, longer than any test, so no alarm fires and no interval
+// lapses on its own however slow the machine is: a test runs the alarm
+// with `runAlarm` and makes an interval pass with `expireInterval`. With a
+// 250 ms interval, alarms fired in the background on loaded CI runners and
+// polled between a test's steps. Staleness is still real time
+// (HEADS_STALE_MS, 300 ms): a test waits at least that long, and a longer
+// wait only makes the feed more stale.
 
-const pollMs = 250
-const staleMs = 300
+const pollMs = Number(env.HEADS_POLL_MS)
+const staleMs = Number(env.HEADS_STALE_MS)
 
 function advanceChain(): Promise<Response> {
   return fetch("https://rpc.fake/__fake-rpc/advance")
@@ -38,9 +47,35 @@ function setTransactions(count: number): Promise<Response> {
   return fetch(`https://rpc.fake/__fake-rpc/transactions?value=${count}`)
 }
 
-async function rpcCalls(): Promise<number> {
-  const response = await fetch("https://rpc.fake/__fake-rpc/state")
-  return z.object({ calls: z.number() }).parse(await response.json()).calls
+/**
+ * Counts the RPC requests one hub sends from now on. The fake RPC is shared
+ * by every test file running at once, so its own count would include other
+ * files' hubs.
+ */
+async function countRequests(name: string): Promise<() => number> {
+  let count = 0
+  await runInDurableObject(hub(name), (instance) => {
+    const { options } = (
+      instance as unknown as { poller: { options: { fetch: Fetcher } } }
+    ).poller
+    const send = options.fetch
+    options.fetch = (input, init) => {
+      count += 1
+      return send(input, init)
+    }
+  })
+  return () => count
+}
+
+/**
+ * Makes the hub's last poll an interval old, as if HEADS_POLL_MS had
+ * passed: its next plain GET or greeting polls again.
+ */
+function expireInterval(name: string): Promise<void> {
+  return runInDurableObject(hub(name), (instance) => {
+    ;(instance as unknown as { lastPollAt: number }).lastPollAt =
+      Date.now() - pollMs
+  })
 }
 
 const headWithActivity = z.object({
@@ -66,13 +101,27 @@ function alarmOf(name: string): Promise<number | null> {
   )
 }
 
-/** Waits until `check` holds, polling every 10 ms for up to a second. */
+/**
+ * Waits until `check` holds, polling every 10 ms. Generous (500 tries, five
+ * seconds or more), as a slow machine handles a socket close late; a check
+ * that holds costs nothing extra.
+ */
 async function eventually(check: () => Promise<boolean>): Promise<void> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  for (let attempt = 0; attempt < 500; attempt += 1) {
     if (await check()) return
     await wait(10)
   }
   throw new Error("Condition never held")
+}
+
+/**
+ * Runs the hub's alarm once, failing the test if none ran. A greeting
+ * schedules the alarm after its first message is sent, so this waits for
+ * the alarm to be set first.
+ */
+async function runAlarm(name: string): Promise<void> {
+  await eventually(async () => (await alarmOf(name)) !== null)
+  expect(await runDurableObjectAlarm(hub(name))).toBe(true)
 }
 
 /** Opens a client socket and collects the messages it receives. */
@@ -125,16 +174,17 @@ describe("BlockHub", () => {
     const before = await headBlock("http-fresh")
     await advanceChain()
     // Within one interval the cached head answers without a poll. The last
-    // poll is stamped "now" inside the hub, so a slow machine cannot let
-    // the interval lapse between the two reads.
+    // poll is stamped "now" inside the hub, so the read cannot fall outside
+    // the interval.
     await runInDurableObject(hub("http-fresh"), (instance) => {
       ;(instance as unknown as { lastPollAt: number }).lastPollAt = Date.now()
     })
-    const calls = await rpcCalls()
+    const requests = await countRequests("http-fresh")
     expect(await headBlock("http-fresh")).toBe(before)
-    expect(await rpcCalls()).toBe(calls)
-    await wait(pollMs + 20)
+    expect(requests()).toBe(0)
+    await expireInterval("http-fresh")
     expect(await headBlock("http-fresh")).toBe(before + 1)
+    expect(requests()).toBe(1)
   })
 
   it("fans new heads out to every connected client", async () => {
@@ -145,7 +195,7 @@ describe("BlockHub", () => {
     expect(initial?.type).toBe("head")
 
     await advanceChain()
-    await runDurableObjectAlarm(hub("fanout"))
+    await runAlarm("fanout")
     const [, firstHead] = await first.next(2)
     const secondMessages = await second.next(2)
     const latest = secondMessages.at(-1)
@@ -187,7 +237,10 @@ describe("BlockHub", () => {
   it("does not repeat a head and stops polling with no clients", async () => {
     const client = await connect("idle")
     await client.next(1)
-    await runDurableObjectAlarm(hub("idle"))
+    await runAlarm("idle")
+    // The same head again: the loop retries after a second, so on a slow
+    // machine that alarm may already have run by itself. Either way the hub
+    // polled twice and sent nothing new.
     await runDurableObjectAlarm(hub("idle"))
     expect(client.messages).toHaveLength(1)
     client.socket.close(1000, "done")
@@ -221,7 +274,7 @@ describe("BlockHub", () => {
     // The chain moves on while nobody is watching.
     await advanceChain()
     await advanceChain()
-    await wait(pollMs + 20)
+    await expireInterval("wake")
 
     const second = await connect("wake")
     const [greeting] = await second.next(1)
@@ -238,7 +291,7 @@ describe("BlockHub", () => {
     const client = await connect("down")
     await client.next(1)
     await setRpcDown(true)
-    await runDurableObjectAlarm(hub("down"))
+    await runAlarm("down")
     expect(client.messages).toHaveLength(1)
     const response = await hub("down").fetch("https://block-hub/head")
     expect(response.status).toBe(200)
@@ -249,28 +302,28 @@ describe("BlockHub", () => {
     const client = await connect("stale")
     await client.next(1)
     await setRpcDown(true)
-    await runDurableObjectAlarm(hub("stale"))
+    await runAlarm("stale")
     expect(client.messages).toHaveLength(1)
     await wait(staleMs + 20)
-    await runDurableObjectAlarm(hub("stale"))
+    await runAlarm("stale")
     const [, stale] = await client.next(2)
     expect(stale).toMatchObject({ type: "stale", since: expect.any(Number) })
     // Pro's client recognises it by this substring.
     expect(client.raw[1]).toContain('"type":"stale"')
 
     // Announced once per outage.
-    await runDurableObjectAlarm(hub("stale"))
+    await runAlarm("stale")
     expect(client.messages).toHaveLength(2)
 
     // A socket that joins during the outage is told at once.
-    await wait(pollMs + 20)
+    await expireInterval("stale")
     const late = await connect("stale")
     const [lateGreeting] = await late.next(1)
     expect(lateGreeting).toMatchObject({ type: "stale" })
 
     await setRpcDown(false)
     await advanceChain()
-    await runDurableObjectAlarm(hub("stale"))
+    await runAlarm("stale")
     const [, , recovered] = await client.next(3)
     expect(recovered).toMatchObject({ type: "head" })
     client.socket.close(1000, "done")
@@ -279,9 +332,8 @@ describe("BlockHub", () => {
 
   it("throttles plain GETs while the RPC has never answered", async () => {
     await setRpcDown(true)
-    const before = await rpcCalls()
-    // Three GETs at once, so they land inside one interval however loaded
-    // the test machine is: one poll between them.
+    const requests = await countRequests("never")
+    // Three GETs inside one interval: one poll between them.
     const statuses = await Promise.all(
       [1, 2, 3].map(async () => {
         const response = await hub("never").fetch("https://block-hub/head")
@@ -289,10 +341,10 @@ describe("BlockHub", () => {
       }),
     )
     expect(statuses).toEqual([503, 503, 503])
-    expect((await rpcCalls()) - before).toBe(1)
-    await wait(pollMs + 20)
+    expect(requests()).toBe(1)
+    await expireInterval("never")
     await hub("never").fetch("https://block-hub/head")
-    expect((await rpcCalls()) - before).toBe(2)
+    expect(requests()).toBe(2)
   })
 
   it("reports the last block that may have had transactions", async () => {
@@ -301,18 +353,18 @@ describe("BlockHub", () => {
     expect(first.lastActiveBlock).toBe(first.block)
     await setTransactions(0)
     await advanceChain()
-    await wait(pollMs + 20)
+    await expireInterval("activity")
     const idle = await headState("activity")
     expect(idle.block).toBe(first.block + 1)
     expect(idle.lastActiveBlock).toBe(first.block)
     // A skipped block cannot be vouched for.
     await skipBlock()
-    await wait(pollMs + 20)
+    await expireInterval("activity")
     const skipped = await headState("activity")
     expect(skipped.lastActiveBlock).toBe(skipped.block)
     await setTransactions(2)
     await advanceChain()
-    await wait(pollMs + 20)
+    await expireInterval("activity")
     const busy = await headState("activity")
     expect(busy.lastActiveBlock).toBe(busy.block)
   })

@@ -63,7 +63,7 @@ export const models = modelsOf(results.entries)
 export const efforts = effortsOf(results.entries)
 
 const pill =
-  "flex h-9 cursor-pointer items-center gap-2 rounded-[18px] px-3.5 text-[14.5px] font-medium whitespace-nowrap outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+  "flex h-9 cursor-pointer items-center gap-2 rounded-[18px] px-3.5 max-md:h-10 text-[14.5px] font-medium whitespace-nowrap outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
 
 /** Show or hide each model, everywhere on the page. */
 export function ModelFilter(): ReactNode {
@@ -128,6 +128,7 @@ export function RankPicker(): ReactNode {
       <SegmentedControl.Root
         aria-label="Rank by"
         size="md"
+        className="max-md:h-12"
         value={selection.rankBy}
         onValueChange={(value) => {
           const rankBy = rankOrder.find((item) => item === value)
@@ -161,6 +162,7 @@ export function EffortPicker(): ReactNode {
   return (
     <FilterTabs.Root
       label="Entries shown in the grid and cards"
+      className="max-md:[&_button]:h-10"
       value={viewKey(selection.effortView)}
       onValueChange={(key) => {
         const item = views.find((each) => viewKey(each.view) === key)

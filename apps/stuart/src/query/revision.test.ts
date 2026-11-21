@@ -340,6 +340,10 @@ describe("consistency ranking", () => {
     expect(outcome?.answer.text).toMatch(
       /was funded in 8 of the last 8 completed epochs, 8 in a row/,
     )
+    // The API's counts include unpriced tokens; the answer says so.
+    expect(outcome?.why?.items.map((item) => item.text)).toEqual([
+      "Funded epochs here count any incentive token, including unpriced ones: this gauge history does not say which tokens were priced.",
+    ])
     const block = outcome?.blocks[0]
     expect(block?.type === "gauge_ranking" && block.rows[0]?.kind).toBeTruthy()
   })
@@ -378,7 +382,7 @@ describe("answer shape", () => {
   })
 
   it("lets support answers use three sentences", () => {
-    const text = "One. Two. Three."
+    const text = "Alpha. Beta. Gamma."
     expect(checkModelAnswer(text, emptySourcedSet()).ok).toBe(false)
     expect(checkModelAnswer(text, emptySourcedSet(), SUPPORT_LIMITS).ok).toBe(
       true,

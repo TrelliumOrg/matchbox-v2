@@ -1,3 +1,14 @@
+import {
+  type ClaimPrices,
+  estimateClaim,
+  type HistoryToken,
+  historyTokens,
+  latestSettledDay,
+  utcDay,
+  valueClaim,
+  waitingOn,
+  withClaimValue,
+} from "@matchbox/api/read-models/claim-prices"
 import { gaugeColor } from "@matchbox/api/read-models/colors"
 import { epochRef } from "@matchbox/api/read-models/gauges"
 import {
@@ -105,6 +116,11 @@ export type BuildContext = {
   cards: GaugeCards
   /** Historic prices for recent timestamps; null when no sample is near. */
   historicPrice: (token: "btc" | "mezo", timestamp: number) => string | null
+  /**
+   * Daily prices for claims' values when claimed (claim-prices.ts); null
+   * when they could not be read this run, so those values are unknown.
+   */
+  claimPrices: ClaimPrices | null
   /**
    * veBTC and veMEZO `supply()` from the live snapshot (escrow_supply). The
    * protocol's locked totals use these: the warehouse's lock positions miss
@@ -441,7 +457,7 @@ export function activityRows(
           locks.set(`${lock.escrow}:${lock.tokenId}`, lock)
         }
       }
-      rows.push({
+      const claim: ActivityRow = {
         type: "claim",
         ...base,
         // Claims pay out the last finished epoch.
@@ -449,7 +465,15 @@ export function activityRows(
         rewards: breakdownOf(tokens),
         locks: [...locks.values()],
         gauges: [...gauges.values()],
-      })
+      }
+      rows.push(
+        withEstimate(
+          context,
+          context.claimPrices === null
+            ? claim
+            : withClaimValue(claim, context.claimPrices),
+        ),
+      )
     }
     if (pokes.length > 0) {
       rows.push({
@@ -473,6 +497,13 @@ export type WalletInputs = {
   rewardSources: RewardSourceRow[]
   votingPower: Map<string, bigint>
   earned: Map<string, bigint>
+  /**
+   * The wallet's claims from its stored history (history.ts), older ones
+   * included, so Earned covers every claim and not only those among the
+   * events read for the document. Absent: the document's own claims. Their
+   * stored USD is not used: Earned is every claim's value when claimed.
+   */
+  storedClaims?: readonly ActivityRow[]
 }
 
 type LockDetail = {
@@ -595,10 +626,104 @@ function buildLock(
   }
 }
 
+type ClaimRow = Extract<ActivityRow, { type: "claim" }>
+
+/**
+ * A claim not valued yet, inside the settling days, with its estimate:
+ * the price sample nearest before it, else the latest price. Earned
+ * leaves it out until the day is priced.
+ */
+function withEstimate(context: BuildContext, row: ActivityRow): ActivityRow {
+  if (row.type !== "claim" || row.atClaim !== undefined) return row
+  const estimate = estimateClaim(
+    row,
+    (token, timestamp) =>
+      context.historicPrice(token, timestamp) ??
+      context.prices[token]?.usd ??
+      null,
+    context.nowSeconds,
+  )
+  return estimate === undefined ? row : { ...row, estimate }
+}
+
+export type EarnedWhenClaimed = {
+  /** Sum of every valued claim's value when claimed. */
+  usd: string
+  /** Valued claims with a token that had no price that day. */
+  unpriced: number
+  /** Claims whose day has no settled price yet: not in `usd`. */
+  pending: number
+  /** Of `pending`, the claims whose day is still settling. */
+  settling: number
+  /** The daily histories those pending claims wait on. */
+  waitingOn: HistoryToken[]
+}
+
+/**
+ * Earned at the claims' values when claimed: each claim's exact token
+ * amounts by registry address at its UTC day's price (claim-prices.ts).
+ * An unregistered or unpriced token counts no dollars. Null when the
+ * prices could not be read this run.
+ */
+export function earnedWhenClaimed(
+  context: BuildContext,
+  claims: readonly ClaimRow[],
+): EarnedWhenClaimed | null {
+  const prices = context.claimPrices
+  if (prices === null) return null
+  const usd: string[] = []
+  let unpriced = 0
+  let pending = 0
+  const waiting = new Set<HistoryToken>()
+  for (const claim of claims) {
+    const value = valueClaim(claim, prices)
+    if (value === null) {
+      pending += 1
+      for (const token of waitingOn(claim, prices)) waiting.add(token)
+      continue
+    }
+    usd.push(value.usd)
+    if (value.tokens.some((token) => token.price === null)) unpriced += 1
+  }
+  return {
+    usd: sumUsd(usd),
+    unpriced,
+    pending,
+    settling: settlingClaims(context, claims, prices),
+    waitingOn: historyTokens.filter((token) => waiting.has(token)),
+  }
+}
+
+/** Claims with no value yet whose day is still settling. */
+function settlingClaims(
+  context: BuildContext,
+  claims: readonly ClaimRow[],
+  prices: ClaimPrices | null,
+): number {
+  const latest = latestSettledDay(context.nowSeconds)
+  return claims.filter(
+    (claim) =>
+      utcDay(claim.timestamp) > latest &&
+      (prices === null || valueClaim(claim, prices) === null),
+  ).length
+}
+
 export type WalletDocuments = {
   overview: WalletOverview
   rewards: WalletRewards
   activity: WalletActivity
+  /**
+   * What `rewards.earned` sums, without prices: how many claims and their
+   * token totals. The rewards document's `etagBasis`, so counting more
+   * claims (a backfill, a closed gap) rewrites it although only its USD
+   * changes.
+   */
+  earnedBasis: string
+  /**
+   * The daily histories Earned's pending claims wait on: a history behind
+   * leaves those claims out for want of a call (the snapshot carries).
+   */
+  waitingOn: HistoryToken[]
 }
 
 export function buildWalletDocuments(
@@ -622,10 +747,38 @@ export function buildWalletDocuments(
     epoch: row.epoch ?? epochRef(epochStartOf(row.timestamp) - EPOCH_SECONDS),
     claimedAt: row.timestamp,
     rewards: row.rewards,
+    ...(row.atClaim === undefined ? {} : { atClaim: row.atClaim }),
+    ...(row.estimate === undefined ? {} : { estimate: row.estimate }),
     txHash: row.txHash,
     block: row.block ?? 0,
   }))
-  const epochNumbers = history.map((entry) => entry.epoch.number)
+  // Earned: every claim known, the document's and the stored history's.
+  const known = new Map(claims.map((row) => [row.id, row]))
+  for (const row of inputs.storedClaims ?? []) {
+    if (row.type === "claim" && !known.has(row.id)) known.set(row.id, row)
+  }
+  const allClaims = [...known.values()].flatMap((row) =>
+    row.type === "claim" ? [row] : [],
+  )
+  // Unknown this run (the prices could not be read): Earned reads $0 with
+  // every claim pending, and the snapshot carries the previous figure.
+  const whenClaimed = earnedWhenClaimed(context, allClaims) ?? {
+    usd: "0.00",
+    unpriced: 0,
+    pending: allClaims.length,
+    settling: settlingClaims(context, allClaims, null),
+    waitingOn: [],
+  }
+  const claimedTokens = mergeTokenAmounts(
+    allClaims.map((row) => row.rewards.tokens),
+  )
+    .map((amount) => `${amount.token.address.toLowerCase()}=${amount.amount}`)
+    .sort()
+  const epochNumbers = allClaims.map(
+    (row) =>
+      (row.epoch ?? epochRef(epochStartOf(row.timestamp) - EPOCH_SECONDS))
+        .number,
+  )
   const hasClaimable = claimable.tokens.length > 0
   const claimableEpoch = hasClaimable ? claimEpoch : null
   return {
@@ -662,13 +815,22 @@ export function buildWalletDocuments(
           }),
         })),
       earned: {
-        usd: sumUsd(history.map((entry) => entry.rewards.usd)),
+        usd: whenClaimed.usd,
         fromEpoch: epochNumbers.length === 0 ? null : Math.min(...epochNumbers),
         toEpoch: epochNumbers.length === 0 ? null : Math.max(...epochNumbers),
+        whenClaimed: {
+          unpriced: whenClaimed.unpriced,
+          pending: whenClaimed.pending,
+          settling: whenClaimed.settling,
+        },
       },
       history,
     },
     activity: { address: inputs.wallet, rows, nextCursor: null },
+    // The values when claimed are fixed once known, so their sum is part
+    // of the basis: a claim priced on a later run rewrites the document.
+    earnedBasis: `${allClaims.length}:${claimedTokens.join(",")}:${whenClaimed.usd}:${whenClaimed.unpriced}:${whenClaimed.pending}`,
+    waitingOn: whenClaimed.waitingOn,
   }
 }
 

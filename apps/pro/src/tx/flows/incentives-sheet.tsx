@@ -4,6 +4,7 @@ import { Glyph, shapes } from "@matchbox/ui/icons"
 import * as SegmentedControl from "@matchbox/ui/segmented-control"
 import { type ReactNode, useState } from "react"
 import { type Address, getAddress } from "viem"
+import { Incentives } from "../../components/coins"
 import {
   formatCompactVotes,
   formatDay,
@@ -88,10 +89,18 @@ export function IncentivesSheet({
   const usd = amount === null ? null : usdValue(amount, decimals, price)
   const label = amount === null ? "0" : amountLabel(amount, decimals, symbol)
   const perThousand = usd === null ? null : perThousandVotes(usd, gauge.votes)
+  // What the gauge holds, in the tile's words: "Unpriced", never "$0.00".
+  const held = (
+    <Incentives
+      usd={gauge.incentivesUsd}
+      priced={gauge.priced}
+      unpriced={gauge.unpriced}
+    />
+  )
   const rows = [
     {
       label: `Epoch ${market.epoch.number}`,
-      value: formatUsd(gauge.incentivesUsd, "cents"),
+      value: held,
     },
     ...(usd === null
       ? []
@@ -177,9 +186,7 @@ export function IncentivesSheet({
                 <p className="text-base font-semibold">
                   {formatCompactVotes(gauge.votes)} {gauge.votesUnit}
                 </p>
-                <p className="text-[14.5px] text-sec">
-                  {formatUsd(gauge.incentivesUsd, "cents")}
-                </p>
+                <p className="text-[14.5px] text-sec">{held}</p>
               </div>
             </li>
             <li>

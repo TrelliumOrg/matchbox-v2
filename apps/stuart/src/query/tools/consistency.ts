@@ -208,7 +208,18 @@ export function consistencyOutcome(input: {
       text,
       factRefs: facts.map((fact) => fact.id),
     },
-    why: null,
+    // The API's gauge-funding read model counts an epoch as funded when it
+    // has any incentive token, priced or not, and carries only the counts:
+    // say so rather than imply the epochs paid priced incentives.
+    why: {
+      templateId: "rank_gauges.consistency.why.v2",
+      items: [
+        {
+          text: "Funded epochs here count any incentive token, including unpriced ones: this gauge history does not say which tokens were priced.",
+          factRefs: [],
+        },
+      ],
+    },
     facts,
     evidence,
     blocks,

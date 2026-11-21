@@ -1,3 +1,4 @@
+import type { Gauge } from "@matchbox/contracts/market"
 import type { Prices } from "@matchbox/contracts/read-models"
 import {
   type ScanAggregateMeta,
@@ -12,9 +13,11 @@ import { z } from "zod"
 import type { ChainClock } from "../blockscout/head"
 import type { BlockscoutProxy } from "../blockscout/proxy"
 import type { ApiContext } from "../context"
+import { withinDeadline } from "../read-models/live-claimable"
 import type { CursorCodec } from "./cursor"
 import { firstOf, RowShapeError, rowKeyOf, rowsOf } from "./items"
 import { type ScanChainReaders, ScanLive } from "./live-locks"
+import { type KnownGauges, knownGauges, noGauges } from "./live-tx"
 import type { MezoIdResolver } from "./mezo-ids"
 import { maxKey, type ScanQuery, scanQueries } from "./queries"
 import { ScanResponder } from "./serve"
@@ -47,6 +50,12 @@ export type ScanRouteDeps = {
    * own. Absent: the stored rows are served as they are.
    */
   chain?: ScanChainReaders | null
+  /**
+   * This epoch's gauges from the market snapshot, for decoding a live
+   * transaction's reward claims and pool votes (live-tx.ts). Absent: those
+   * logs show undecoded until the copy has them.
+   */
+  gauges?: (() => Promise<readonly Gauge[]>) | null
   logger: Logger
   /** Epoch milliseconds. */
   now?: () => number
@@ -55,11 +64,22 @@ export type ScanRouteDeps = {
 /** How long a data version is reused in an isolate before re-reading. */
 const versionMemoMs = 5_000
 
+/** How long the snapshot's gauges are reused for decoding. */
+const gaugesMemoMs = 600_000
+/**
+ * How long a failed snapshot read is remembered: during an outage, live
+ * documents decode without gauges rather than each asking again.
+ */
+const gaugesFailedMs = 30_000
+/** One snapshot read past this counts as failed. */
+const gaugesReadMs = 2_000
+
 export class ScanContext {
   readonly responder: ScanResponder
   /** Chain reads, each remembered for its minute (live-locks.ts). */
   readonly live: ScanLive
   private run: { at: number; version: Promise<RunVersion> } | null = null
+  private gauges: { until: number; known: Promise<KnownGauges> } | null = null
 
   constructor(readonly deps: ScanRouteDeps) {
     this.responder = new ScanResponder({
@@ -77,6 +97,32 @@ export class ScanContext {
 
   nowMs(): number {
     return this.deps.now?.() ?? Date.now()
+  }
+
+  /**
+   * The reward contracts and pools of this epoch's gauges, remembered for
+   * ten minutes; none when the snapshot cannot be read in `gaugesReadMs`,
+   * remembered for `gaugesFailedMs`.
+   */
+  knownGauges(): Promise<KnownGauges> {
+    const read = this.deps.gauges
+    if (read === undefined || read === null) return Promise.resolve(noGauges)
+    const now = this.nowMs()
+    if (this.gauges === null || now >= this.gauges.until) {
+      const known = withinDeadline(read(), gaugesReadMs).then(knownGauges)
+      const entry = { until: now + gaugesMemoMs, known }
+      this.gauges = entry
+      known.catch((error: unknown) => {
+        this.deps.logger.warn({ message: "Snapshot gauges unread", error })
+        if (this.gauges === entry) {
+          this.gauges = {
+            until: this.nowMs() + gaugesFailedMs,
+            known: Promise.resolve(noGauges),
+          }
+        }
+      })
+    }
+    return this.gauges.known.catch(() => noGauges)
   }
 
   nowSeconds(): number {
@@ -272,10 +318,9 @@ export class ScanContext {
     const status = await this.readStatus()
     if (status !== null) {
       const halted = haltedTablesOf(status)
-      const stale =
-        status.consecutive_failures > 0 ||
-        status.refill_required === 1 ||
-        halted !== null
+      const delayed = status.consecutive_failures > 0 || halted !== null
+      const refillPending = status.refill_required === 1
+      const stale = delayed || refillPending
       const flags = `${stale ? 1 : 0}${status.aggregates_complete}${status.history_filled}`
       return {
         // With data_version (scan-migrations 0003) any served change
@@ -285,6 +330,8 @@ export class ScanContext {
         aggregatesComplete: status.aggregates_complete === 1,
         historyFilled: status.history_filled === 1,
         stale,
+        delayed,
+        refillPending,
         status,
         dataVersion: status.dataVersion,
         halted,
@@ -298,6 +345,8 @@ export class ScanContext {
       aggregatesComplete: null,
       historyFilled: null,
       stale: false,
+      delayed: false,
+      refillPending: false,
       status: null,
       dataVersion: null,
       halted: null,
@@ -353,7 +402,8 @@ export class ScanContext {
       asOf: run.finishedAt,
       aggregatesComplete: run.aggregatesComplete,
       historyFilled: run.historyFilled,
-      stale: run.stale,
+      stale: run.delayed,
+      refillPending: run.refillPending,
       skipped,
     }
   }
@@ -402,8 +452,15 @@ export type RunVersion = {
   /** Null when there is no status row to say. */
   aggregatesComplete: boolean | null
   historyFilled: boolean | null
-  /** Copy runs failing, or a re-fill required. */
+  /**
+   * `delayed` or `refillPending`: nothing read under it is final (sealed or
+   * kept), as data may still lag or change.
+   */
   stale: boolean
+  /** Copy runs failing, or a table halted: data lags the chain. */
+  delayed: boolean
+  /** A re-fill is required: figures may disagree until it is done. */
+  refillPending: boolean
   status: ScanStatusRow | null
   /** `scan_status.data_version`, where the column exists. */
   dataVersion: number | null

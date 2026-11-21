@@ -1121,7 +1121,14 @@ describe("re-review of PR #84", () => {
     if ("invalid" in outcome) throw new Error(outcome.invalid)
     const destinations = outcome.model.rows.map((row) => row.destination)
     expect(destinations).toContain("not moved yet")
-    expect(destinations).toContain("sent to 0xc62b…3ffc (Safe, same signers)")
+    // The destination's name in a field of its own, never in the text its
+    // address and amounts are sourced from.
+    expect(destinations).toContain("sent to 0xc62b…3ffc")
+    expect(
+      outcome.model.rows.find(
+        (row) => row.destination === "sent to 0xc62b…3ffc",
+      )?.destinationName,
+    ).toBe("Safe, same signers")
   })
 
   it("calls native BTC events without block times undated, not read back to the start", async () => {
@@ -1422,6 +1429,8 @@ describe("fourth review of PR #84", () => {
   it("says 'still held' only when every liquid reward is, in every token", () => {
     const bucket = (kind: FlowBucket["kind"]): FlowBucket => ({
       label: kind,
+      plain: kind,
+      names: [],
       where: kind,
       via: [],
       kind,

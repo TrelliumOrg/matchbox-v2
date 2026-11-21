@@ -11,4 +11,4 @@
 - [ ] `pnpm lint`, `pnpm typecheck` and the tests of every package I touched pass
 - [ ] No secrets, private addresses, home paths or personal emails (`pnpm check:secrets`, `pnpm check:trellium`)
 - [ ] UI copy follows CLAUDE.md (labels and numbers, no em or en dashes, no middle dots, no semicolons)
-- [ ] I agree my contribution is licensed under AGPL-3.0-only (CONTRIBUTING.md)
+- [ ] Every commit is signed off (`git commit -s`) under the DCO, and I agree my contribution is licensed under AGPL-3.0-only (CONTRIBUTING.md, "Sign-off")

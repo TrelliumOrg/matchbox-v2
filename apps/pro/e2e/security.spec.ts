@@ -10,6 +10,8 @@ import { expect, type Page, test } from "@playwright/test"
 const userAddress = "0x7c21095156ab25e989c3c084bcb06037c6539e0b"
 const user = `/${userAddress}`
 const gauge = "/gauges/0x4da4c05483324ea9cfc951510a5e77cc79541159"
+/** A veBTC lock with a boost gauge: its card server-renders a skeleton. */
+const boosted = "/0x6033000000000000000000000000000000000003"
 
 /** The drawer, search and Stuart's panel load their code on first use. */
 const lazy = 15_000
@@ -123,7 +125,15 @@ async function watchPolicy(page: Page): Promise<string[]> {
   return violations
 }
 
-for (const path of [user, `${user}/vote`, `${user}/rewards`, gauge]) {
+for (const path of [
+  user,
+  `${user}/vote`,
+  `${user}/rewards`,
+  `${user}/activity`,
+  boosted,
+  `${boosted}/activity`,
+  gauge,
+]) {
   test(`${path} breaks no policy`, async ({ page }) => {
     const violations = await watchPolicy(page)
     await page.goto(path)

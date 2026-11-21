@@ -190,7 +190,7 @@ function Method(): ReactNode {
       <SectionHead id="method" title="How it is measured">
         <Link
           to="/method"
-          className="rounded-md text-[15px] font-semibold text-ink underline decoration-mut underline-offset-4 outline-none hover:decoration-ink focus-visible:outline-2 focus-visible:outline-ink"
+          className="inline-flex items-center rounded-md text-[15px] font-semibold text-ink underline decoration-mut max-md:min-h-10 underline-offset-4 outline-none hover:decoration-ink focus-visible:outline-2 focus-visible:outline-ink"
         >
           Read the full method
         </Link>

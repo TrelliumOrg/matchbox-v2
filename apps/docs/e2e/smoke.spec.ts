@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test"
+import { reviewedLinks } from "../src/shell/reviewed-links"
 import { axe, watch } from "./helpers"
 
 /**
@@ -425,4 +426,158 @@ test("the live epoch clock fills in without moving anything", async ({
     () => (window as unknown as { shifts: number[] }).shifts,
   )
   expect(shifts).toEqual([])
+})
+
+test("the footer links only files of this build and reviewed addresses", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/concepts/epochs")
+  const hrefs = await page
+    .locator("footer a[href]")
+    .evaluateAll((links) => links.map((link) => link.getAttribute("href")))
+  expect(hrefs.length).toBeGreaterThan(0)
+  for (const href of hrefs) {
+    if (href === null) continue
+    if (href.startsWith("/")) {
+      expect((await request.get(href)).status()).toBe(200)
+    } else {
+      expect(Object.keys(reviewedLinks)).toContain(href)
+    }
+  }
+  // There is no Terms page to link.
+  expect(hrefs.some((href) => href?.includes("/terms"))).toBe(false)
+})
+
+/**
+ * Cloudflare's zone injects its Web Analytics beacon into every page as it
+ * is served: this adds the same tag (served locally) and reads what the
+ * page CSP lets through. The beacon loads and reports to this origin, and
+ * a script from any other host is still refused.
+ */
+test("the page CSP runs Cloudflare's beacon and nothing else from outside", async ({
+  page,
+}) => {
+  await page.route(
+    /^https:\/\/(static\.cloudflareinsights\.com|example\.com)\//,
+    (route) =>
+      route.fulfill({
+        contentType: "text/javascript",
+        headers: { "access-control-allow-origin": "*" },
+        body: "window.beaconRan = true",
+      }),
+  )
+  await page.goto("/")
+  const result = await page.evaluate(async () => {
+    const violations: string[] = []
+    document.addEventListener("securitypolicyviolation", (event) => {
+      violations.push(`${event.effectiveDirective} ${event.blockedURI}`)
+    })
+    function load(src: string): Promise<boolean> {
+      return new Promise((resolve) => {
+        const script = document.createElement("script")
+        script.type = "module"
+        script.crossOrigin = "anonymous"
+        script.src = src
+        script.onload = () => resolve(true)
+        script.onerror = () => resolve(false)
+        document.body.appendChild(script)
+      })
+    }
+    const beacon = await load(
+      "https://static.cloudflareinsights.com/beacon.min.js/v1",
+    )
+    const other = await load("https://example.com/beacon.min.js")
+    navigator.sendBeacon("/cdn-cgi/rum?", "{}")
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    return { beacon, other, violations }
+  })
+  expect(result.beacon).toBe(true)
+  expect(result.other).toBe(false)
+  expect(result.violations).toEqual([
+    "script-src-elem https://example.com/beacon.min.js",
+  ])
+})
+
+/** The `content` of each `<meta property|name="key">` in the HTML. */
+function metaTags(html: string): Map<string, string> {
+  const tags = new Map<string, string>()
+  for (const [tag] of html.matchAll(/<meta\s[^>]*>/g)) {
+    const key = /(?:property|name)="([^"]+)"/.exec(tag)?.[1]
+    const content = /content="([^"]*)"/.exec(tag)?.[1]
+    if (key !== undefined && content !== undefined) tags.set(key, content)
+  }
+  return tags
+}
+
+for (const item of pages) {
+  test(`${item.path} shares its own title on the 1200x630 card`, async ({
+    request,
+  }) => {
+    const html = await (await request.get(item.path)).text()
+    const tags = metaTags(html)
+    const title = /<title>([^<]*)<\/title>/.exec(html)?.[1]
+    expect(title).toMatch(/Matchbox Docs$/)
+    expect(tags.get("og:title")).toBe(title)
+    expect(tags.get("og:description")).toBeTruthy()
+    expect(tags.get("og:url")).toBe(`https://docs.matchbox.markets${item.path}`)
+    expect(tags.get("og:type")).toBe("website")
+    expect(tags.get("og:image")).toBe("https://docs.matchbox.markets/og.png")
+    expect(tags.get("og:image:width")).toBe("1200")
+    expect(tags.get("og:image:height")).toBe("630")
+    expect(tags.get("og:image:alt")).toBeTruthy()
+    expect(tags.get("twitter:card")).toBe("summary_large_image")
+  })
+}
+
+test("the card the pages name is in the build, 1200x630", async ({
+  request,
+}) => {
+  const served = await request.get("/og.png")
+  expect(served.status()).toBe(200)
+  expect(served.headers()["content-type"]).toBe("image/png")
+  const bytes = await served.body()
+  expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual([1200, 630])
+})
+
+test("every page has its own title, description, canonical and card text", async ({
+  request,
+}) => {
+  // Every page the sitemap lists, as prerendered (no script needed).
+  const sitemap = await (await request.get("/sitemap.xml")).text()
+  const urls = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
+    (match) => match[1] ?? "",
+  )
+  expect(urls.length).toBeGreaterThan(40)
+  const home = metaTags(await (await request.get("/")).text())
+  const titles = new Map<string, string>()
+  const descriptions = new Map<string, string>()
+  for (const url of urls) {
+    const path = new URL(url).pathname
+    const html = await (await request.get(path)).text()
+    const tags = metaTags(html)
+    const title = /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? ""
+    const description = tags.get("description") ?? ""
+    const canonical = /<link rel="canonical" href="([^"]+)"/.exec(html)?.[1]
+    expect(canonical, path).toBe(url)
+    expect(tags.get("og:url"), path).toBe(url)
+    expect(tags.get("og:title"), path).toBe(title)
+    expect(tags.get("og:description"), path).toBe(description)
+    expect(description.length, path).toBeGreaterThan(20)
+    if (path !== "/") {
+      // Not the site's own card: the page's title and description.
+      expect(title, path).not.toBe("Matchbox Docs")
+      expect(description, path).not.toBe(home.get("description"))
+    }
+    expect(
+      titles.get(title),
+      `${path} and ${titles.get(title)}`,
+    ).toBeUndefined()
+    expect(
+      descriptions.get(description),
+      `${path} and ${descriptions.get(description)}`,
+    ).toBeUndefined()
+    titles.set(title, path)
+    descriptions.set(description, path)
+  }
 })

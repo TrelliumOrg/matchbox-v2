@@ -9,7 +9,7 @@ import { Usd } from "../../components/money"
 import type { LockKind, Voter } from "../../data/view-models"
 import { formatToken, formatUsd } from "../../lib/format"
 import { gaugeName } from "../../lib/gauge-name"
-import { useViewer } from "../../lib/viewer"
+import { useViewer, useViewingOther } from "../../lib/viewer"
 import { openTx, txIntent } from "../../tx/tx-store"
 import { openWallet, walletIntent } from "../../wallet/wallet-store"
 import { KindIcon } from "../gauge/kind-icon"
@@ -74,6 +74,8 @@ export function NoLock({
   escrow: LockKind
 }): ReactNode {
   const viewer = useViewer()
+  // Someone else's wallet: only its owner can lock with it.
+  const other = useViewingOther()
   return (
     <>
       <p className="text-[15px] text-sec">Voting power</p>
@@ -99,25 +101,32 @@ export function NoLock({
           ))}
         </dl>
       )}
-      <PillButton.Root
-        size="lg"
-        className="mt-5"
-        {...(voter === null
-          ? { ...walletIntent, onClick: openWallet }
-          : {
-              ...txIntent,
-              onClick: () => openTx(viewer, { flow: "new-lock", kind: escrow }),
-            })}
-      >
-        {voter === null ? (
-          "Connect wallet"
-        ) : (
-          <>
-            <Glyph shape={shapes.plus} size={18} strokeWidth={2.4} />
-            New lock
-          </>
-        )}
-      </PillButton.Root>
+      {other ? (
+        <PillButton.Root size="lg" className="mt-5" disabled>
+          Viewing only
+        </PillButton.Root>
+      ) : (
+        <PillButton.Root
+          size="lg"
+          className="mt-5"
+          {...(voter === null
+            ? { ...walletIntent, onClick: openWallet }
+            : {
+                ...txIntent,
+                onClick: () =>
+                  openTx(viewer, { flow: "new-lock", kind: escrow }),
+              })}
+        >
+          {voter === null ? (
+            "Connect wallet"
+          ) : (
+            <>
+              <Glyph shape={shapes.plus} size={18} strokeWidth={2.4} />
+              New lock
+            </>
+          )}
+        </PillButton.Root>
+      )}
     </>
   )
 }
@@ -229,7 +238,7 @@ export function BallotRail(props: BallotPanelProps): ReactNode {
               size="lg"
               className="mt-2.5 h-[50px]"
               {...props.reviewIntent}
-              disabled={!signable(ballot)}
+              disabled={props.readOnly || !signable(ballot)}
               onClick={props.onReview}
             >
               {props.primary}

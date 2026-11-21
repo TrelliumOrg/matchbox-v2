@@ -32,7 +32,7 @@ describe("CoinGecko call budget", () => {
     expect(priceCallsPerMonth(300)).toBe(7_440)
   })
 
-  it("plans a Demo key at 8,556 calls in a 31-day month", () => {
+  it("plans a Demo key at 8,618 calls in a 31-day month", () => {
     const chains = poolDepthChains().length
     expect(chains).toBe(3)
     expect(poolCallsPerMonth(1, chains)).toBe(2_232)
@@ -48,11 +48,13 @@ describe("CoinGecko call budget", () => {
       expect(budget.keyedPoolsEveryHours).toBe(2)
       expect(budget.priceCallsPerMonth).toBe(7_440)
       expect(budget.keyedPoolCallsPerMonth).toBe(1_116)
-      expect(budget.plannedCallsPerMonth).toBe(8_556)
+      // With the daily price history's 62.
+      expect(budget.historyCallsPerMonth).toBe(62)
+      expect(budget.plannedCallsPerMonth).toBe(8_618)
       expect(budget.plannedCallsPerMonth ?? 0).toBeLessThanOrEqual(
         demoPlannedCalls,
       )
-      expect(demoMonthlyCalls - (budget.plannedCallsPerMonth ?? 0)).toBe(1_444)
+      expect(demoMonthlyCalls - (budget.plannedCallsPerMonth ?? 0)).toBe(1_382)
     }
   })
 
@@ -70,9 +72,9 @@ describe("CoinGecko call budget", () => {
       plan: "demo",
       hasKey: true,
       configuredRefreshSeconds: 300,
-      poolChains: 50,
+      poolChains: 47,
     })
-    // 50 calls a read: daily (1,550) is the only interval that fits.
+    // 47 calls a read: daily (1,457) is the only interval that fits.
     expect(crowded.keyedPoolsEveryHours).toBe(24)
     expect(crowded.plannedCallsPerMonth ?? 0).toBeLessThanOrEqual(
       demoPlannedCalls,
@@ -84,7 +86,7 @@ describe("CoinGecko call budget", () => {
       poolChains: 60,
     })
     expect(full.keyedPoolsEveryHours).toBeNull()
-    expect(full.plannedCallsPerMonth).toBe(7_440)
+    expect(full.plannedCallsPerMonth).toBe(7_502)
   })
 
   it("uses no keyed pool calls without a key, and hourly ones on a paid plan", () => {

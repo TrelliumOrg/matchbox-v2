@@ -4,7 +4,13 @@ import { Glyph, shapes } from "@matchbox/ui/icons"
 import * as ListRow from "@matchbox/ui/list-row"
 import * as PillButton from "@matchbox/ui/pill-button"
 import { lazy, type ReactNode, Suspense, useEffect, useState } from "react"
-import { ActivityRow } from "../../components/activity-row"
+import {
+  ActivityRow,
+  DownloadNotice,
+  EarlierFooter,
+  mergeEvents,
+  useEarlierPages,
+} from "../../components/activity-row"
 import type {
   ActivityEvent,
   ActivityFilter,
@@ -12,8 +18,8 @@ import type {
 } from "../../data/view-models"
 import { formatDayLong } from "../../lib/format"
 import { gaugeName } from "../../lib/gauge-name"
-import { useViewer } from "../../lib/viewer"
-import { PageTitle } from "../../shell/page"
+import { useViewer, useViewingOther } from "../../lib/viewer"
+import { PageTitle, underlineLink } from "../../shell/page"
 import { EmptyState } from "../../shell/states"
 import { openTx, txIntent } from "../../tx/tx-store"
 import { activityFilters } from "./filters"
@@ -53,26 +59,7 @@ export function groupByDay(
   return groups
 }
 
-/**
- * The first page followed by the pages loaded after it. The first page is
- * live: new rows arrive at its top and push older ones down into what a
- * later page already holds, so a row is kept once, where it first appears.
- */
-export function mergeEvents(
-  first: readonly ActivityEvent[],
-  later: readonly ActivityEvent[],
-): ActivityEvent[] {
-  const seen = new Set(first.map((event) => event.id))
-  const merged = [...first]
-  for (const event of later) {
-    if (seen.has(event.id)) continue
-    seen.add(event.id)
-    merged.push(event)
-  }
-  return merged
-}
-
-type Later = { key: string; events: ActivityEvent[]; cursor: string | null }
+export { mergeEvents }
 
 function matches(event: ActivityEvent, needle: string): boolean {
   if (needle === "") return true
@@ -113,6 +100,7 @@ export function ActivityView({
   own?: readonly ActivityEvent[]
 }): ReactNode {
   const viewer = useViewer()
+  const other = useViewingOther()
   useEffect(() => whenIdle(() => void loadSheet()), [])
   const [query, setQuery] = useState("")
   const [open, setOpen] = useState<ActivityEvent | null>(null)
@@ -124,32 +112,18 @@ export function ActivityView({
   // Filtering and search animate (data-flip-list): rows fade in and out,
   // the rest slide.
   // Pages after the first, for this wallet and filter only.
-  const key = `${data.address}:${filter}`
-  const [stored, setStored] = useState<Later | null>(null)
-  const later: Later =
-    stored !== null && stored.key === key
-      ? stored
-      : { key, events: [], cursor: data.nextCursor }
-  const [loading, setLoading] = useState<"idle" | "loading" | "failed">("idle")
-  const events = [...mine, ...mergeEvents(data.events, later.events)].filter(
-    (event) => matches(event, query.trim().toLowerCase()),
+  const earlier = useEarlierPages(
+    `${data.address}:${filter}`,
+    { cursor: data.nextCursor, pending: data.pending },
+    loadMore === undefined
+      ? undefined
+      : (cursor) =>
+          cursor === undefined ? Promise.resolve(data) : loadMore(cursor),
   )
-
-  async function more(): Promise<void> {
-    if (loadMore === undefined || later.cursor === null) return
-    setLoading("loading")
-    try {
-      const page = await loadMore(later.cursor)
-      setStored({
-        key,
-        events: mergeEvents(later.events, page.events),
-        cursor: page.nextCursor,
-      })
-      setLoading("idle")
-    } catch {
-      setLoading("failed")
-    }
-  }
+  const loaded = mergeEvents(data.events, earlier.events)
+  const events = [...mine, ...loaded].filter((event) =>
+    matches(event, query.trim().toLowerCase()),
+  )
 
   return (
     <>
@@ -188,20 +162,34 @@ export function ActivityView({
             </FilterTabs.Item>
           ))}
       </FilterTabs.Root>
+      {none ? null : (
+        <>
+          <p className="mt-4 text-[15px]">
+            {/* No `download`: a refusal comes back as a page with a
+                message, which `download` would save as the file. */}
+            <a href={`/${data.address}/activity.csv`} className={underlineLink}>
+              Download CSV
+            </a>
+          </p>
+          <DownloadNotice className="mt-1" />
+        </>
+      )}
       {none ? (
         <EmptyState
           icon={shapes.list}
           title="No activity"
           action={
-            <PillButton.Root
-              {...txIntent}
-              onClick={() =>
-                openTx(viewer, { flow: "new-lock", kind: "vemezo" })
-              }
-            >
-              <Glyph shape={shapes.plus} size={18} strokeWidth={2.4} />
-              New lock
-            </PillButton.Root>
+            other ? undefined : (
+              <PillButton.Root
+                {...txIntent}
+                onClick={() =>
+                  openTx(viewer, { flow: "new-lock", kind: "vemezo" })
+                }
+              >
+                <Glyph shape={shapes.plus} size={18} strokeWidth={2.4} />
+                New lock
+              </PillButton.Root>
+            )
           }
         />
       ) : events.length === 0 ? (
@@ -234,16 +222,15 @@ export function ActivityView({
           ))}
         </div>
       )}
-      {none || loadMore === undefined || later.cursor === null ? null : (
-        <div className="mt-8 flex justify-center">
-          <PillButton.Root
-            intent="secondary"
-            pending={loading === "loading"}
-            onClick={() => void more()}
-          >
-            {loading === "failed" ? "Try again" : "Load more"}
-          </PillButton.Root>
-        </div>
+      {none ? null : (
+        <EarlierFooter
+          events={loaded}
+          more={earlier.more}
+          pending={earlier.pending}
+          added={earlier.added}
+          state={earlier.state}
+          onMore={earlier.loadMore}
+        />
       )}
       {sheet === null ? null : (
         <Suspense fallback={null}>

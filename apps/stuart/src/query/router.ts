@@ -4,7 +4,8 @@ import type {
   VoteBranch,
 } from "@matchbox/stuart-ui/contract"
 import { parseBallotScript } from "./ballotScript"
-import { searchMezoKnowledge } from "./knowledge/mezo"
+import { isSafetyQuestion, searchMezoKnowledge } from "./knowledge/mezo"
+import { clipOutsideSecrets } from "./redact"
 import { KNOWN_ENTITIES } from "./subjects"
 import { periodOf } from "./tools/chainCommon"
 import type { ProtocolTopic } from "./tools/protocol"
@@ -178,6 +179,8 @@ export function zapDecision(slots: QuerySlots): RouterDecision {
 const METRIC = "(?:apy|apr|yield|returns?)"
 const OTHER_METRIC = "(?:boost|incentives?|bribes?|votes?|weight)"
 const NAME = String.raw`(?:the\s+)?(.+?)(?:'s)?`
+// "a scam", "legit": a question whether a named gauge can be trusted.
+const VERDICT = String.raw`(?:a\s+(?:scam|rug(?:\s*pull)?|fake)|legit(?:imate)?|safe|trustworthy|real)`
 const KIND = String.raw`(?:\s+(?:gauge|validator|pool|vault))?`
 const NOW = String.raw`(?:\s+(?:right now|now|currently|this epoch|today))?`
 
@@ -248,6 +251,20 @@ const EXPLAIN_PATTERNS: Array<{
   },
   {
     pattern: explainPattern(String.raw`^explain\s+${NAME}\??$`),
+    question: "overview",
+  },
+  // "Is gauge X legit?", "is the SNF pool a scam?": the gauge's sourced
+  // facts, not a secrets warning. "Is this pool a scam" names none.
+  {
+    pattern: explainPattern(
+      String.raw`^is\s+(?:the\s+)?(?:gauge|validator|pool|vault)\s+(?!(?:this|that|it)\b)(.+?)\s+${VERDICT}\??$`,
+    ),
+    question: "overview",
+  },
+  {
+    pattern: explainPattern(
+      String.raw`^is\s+(?:the\s+)?(?!(?:this|that|it|my|our)\b)(.+?)\s+(?:gauge|validator|pool|vault)\s+${VERDICT}\??$`,
+    ),
     question: "overview",
   },
   {
@@ -1077,6 +1094,18 @@ export function routeQuery(
     if (target) return { kind: "navigate", ...target }
   }
 
+  // A pasted or named secret, someone reaching out, a scam: the safety
+  // notes answer, never a claim or a signing step ("Here is my private key
+  // so you can claim for me" is not a request to claim).
+  if (isSafetyQuestion(query)) {
+    return {
+      kind: "tool",
+      intent: "mezo_help",
+      tool: "mezo_knowledge",
+      input: { question: query.slice(0, 300) },
+    }
+  }
+
   if (
     /\b(report (?:a |an )?(?:bug|problem|issue)|contact support|support report|file a report|send (?:a )?report)\b/.test(
       text,
@@ -1086,7 +1115,9 @@ export function routeQuery(
       kind: "tool",
       intent: "support_report",
       tool: "draft_support_report",
-      input: { problem: query.slice(0, 2_000), kind: null },
+      // Cut, never inside a key; the tool redacts it, keeping only ids this
+      // turn's tools returned.
+      input: { problem: clipOutsideSecrets(query, 2_000), kind: null },
     }
   }
 

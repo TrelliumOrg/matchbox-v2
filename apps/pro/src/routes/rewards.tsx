@@ -2,7 +2,7 @@ import { shapes } from "@matchbox/ui/icons"
 import { createFileRoute } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { fetchLive, useLiveQuery } from "../data/live-query"
-import { rewardsQuery } from "../data/queries"
+import { loadProApi, rewardsQuery } from "../data/queries"
 import type { Rewards } from "../data/view-models"
 import { RewardsView } from "../features/rewards/rewards-view"
 import { SignedOut } from "../shell/states"
@@ -17,7 +17,16 @@ export const Route = createFileRoute("/rewards")({
 
 function LiveRewards({ seed }: { seed: Rewards }): ReactNode {
   const data = useLiveQuery(rewardsQuery(seed.address), seed)
-  return <RewardsView data={data} />
+  return (
+    <RewardsView
+      data={data}
+      loadClaims={async (cursor) =>
+        (await loadProApi()).getActivity({
+          data: { address: seed.address, filter: "claims", cursor },
+        })
+      }
+    />
+  )
 }
 
 function RewardsRoute(): ReactNode {

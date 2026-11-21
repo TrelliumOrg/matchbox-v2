@@ -17,6 +17,7 @@ import { headsPath, headsRoute } from "@matchbox/live/heads-route"
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry"
 import { withCachePolicy, withDataPolicy } from "./cache-policy"
 import { cacheKey, loaderTiming, storableCopy, withNonce } from "./html-cache"
+import { withShareCard } from "./share-card"
 
 /**
  * The Matchscan Worker. `/live/heads` forwards the BlockHub WebSocket from
@@ -71,7 +72,9 @@ async function render(
   const forwarded = new Request(request, { headers })
   const response = await handler.fetch(forwarded)
   if (!isPage(request, url)) return withDataPolicy(response)
-  return withCachePolicy(withPlatform(request, response))
+  return withCachePolicy(
+    withShareCard(withPlatform(request, response), url.pathname),
+  )
 }
 
 /** The Cache API, where the runtime has one. */

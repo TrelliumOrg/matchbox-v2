@@ -254,6 +254,9 @@ export function SignInView({
       >
         {title}
       </h1>
+      <p className="mt-3 text-[16px] leading-[1.45] text-sec">
+        One sign-in for Matchbox and the apps built on it, with your wallet.
+      </p>
       {bitcoinWalletNoticeEnabled() ? <BitcoinWalletNotice /> : null}
       <ol className="mt-10">
         <Step

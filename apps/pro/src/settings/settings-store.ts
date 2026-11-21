@@ -179,6 +179,15 @@ export function useSettings(): Settings {
   )
 }
 
+/** Whether `address` is the Safe saved in Signing (Multisig mode). */
+export function isSavedSafe(signing: SigningSetting, address: string): boolean {
+  return (
+    signing.mode === "multisig" &&
+    signing.safe !== null &&
+    signing.safe.toLowerCase() === address.toLowerCase()
+  )
+}
+
 /** The RPC reads and simulations use: the custom one, or Matchbox's. */
 export function readRpc(matchbox: string): string {
   const network = getSettings().network

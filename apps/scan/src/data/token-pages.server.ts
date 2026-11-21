@@ -57,6 +57,7 @@ import { scanSchemas } from "./scan/schemas"
 import { metric } from "./scan/series"
 import { readSeries, type SeriesView } from "./scan/series.server"
 import {
+  backfillNote,
   countText,
   dayLabel,
   latestOf,
@@ -673,6 +674,11 @@ function backfillLabel(label: string, view: SeriesView): string {
   return view.endsOn === null ? label : `${label} to ${dayLabel(view.endsOn)}`
 }
 
+/** Under a backfill-only figure: it ends there by design. */
+function backfillNoteOf(view: SeriesView): { note?: string } {
+  return view.endsOn === null ? {} : { note: backfillNote }
+}
+
 function changeStats(
   view: SeriesView | null,
   periods: readonly number[],
@@ -730,6 +736,7 @@ function holderStats(
         label: backfillLabel(label, backfill),
         value: signedCount(fallback.value),
         tone: tone(fallback.value),
+        ...backfillNoteOf(backfill),
       })
       continue
     }
@@ -825,6 +832,7 @@ async function musdPage(period: Period, at: number): Promise<TokenPage> {
     supplyStats.push({
       label: backfillLabel(label, view),
       value: compactAmount(unitsToDecimal(sum.toString(), 18), "MUSD"),
+      ...backfillNoteOf(view),
     })
   }
 

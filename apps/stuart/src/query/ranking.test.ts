@@ -164,13 +164,90 @@ describe("ranking answers", () => {
   })
 })
 
+/**
+ * The default world's gauges, with votes above the APY floor of 10,000
+ * veMEZO (`@matchbox/domain/funding`), so the APY ranking has rows.
+ */
+const votedWorld: Partial<StuartProviders> = {
+  votingDomain: async () =>
+    fakeDomain(
+      fakeDomain().targets.map((target) => ({
+        ...target,
+        weight: target.weight * 100n,
+      })),
+    ),
+}
+
+describe("the APY ranking's floors, as Pro's", () => {
+  it("leaves out gauges under a dollar or a handful of votes, and says so", async () => {
+    const response = await ask("which gauge pays the most this epoch", {
+      providers: {
+        votingDomain: async () =>
+          fakeDomain([
+            fakeTarget({
+              index: 1,
+              name: "Stackbridge",
+              weight: 1_000_000n * E18,
+              mezo: 30_000n * E18,
+            }),
+            // 28 MEZO at $0.01: $0.28, the 3,690% gauge of 19 Nov 2026.
+            fakeTarget({
+              index: 2,
+              name: "Dust Pool",
+              weight: 20_000n * E18,
+              mezo: 28n * E18,
+            }),
+            fakeTarget({
+              index: 3,
+              name: "Thin Votes",
+              weight: 1_000n * E18,
+              mezo: 5_000n * E18,
+            }),
+          ]),
+      },
+    })
+    expect(response.answer.text).toBe(
+      "Boost gauges: Stackbridge pays the most per vote this epoch, APY 156% on $300.00 incentives. 3 of 3 carry incentives this epoch. 1 gauge with under $1.00 of incentives is not ranked. 1 gauge with under 10,000.00 veMEZO of votes is not ranked.",
+    )
+    const ranking = response.uiBlocks.find(
+      (block) => block.type === "gauge_ranking",
+    )
+    if (ranking?.type !== "gauge_ranking") throw new Error("no ranking")
+    expect(ranking.rows.map((row) => row.name)).toEqual(["Stackbridge"])
+    // Every number in the sentence is a fact.
+    const displays = response.facts.map((fact) => fact.display)
+    expect(displays).toEqual(
+      expect.arrayContaining(["1", "$1.00", "10,000.00 veMEZO"]),
+    )
+  })
+
+  it("says why there is no ranking when every gauge is under a floor", async () => {
+    const response = await ask("which gauge pays the most this epoch", {
+      providers: {
+        votingDomain: async () =>
+          fakeDomain([
+            fakeTarget({
+              index: 1,
+              name: "Dust Pool",
+              weight: 20_000n * E18,
+              mezo: 28n * E18,
+            }),
+          ]),
+      },
+    })
+    expect(response.answer.text).toBe(
+      "No live target has enough priced incentives and votes for an APY this epoch. 1 gauge with under $1.00 of incentives is not ranked.",
+    )
+  })
+})
+
 describe("QA fixes", () => {
   it("fills the Funded column on every ranking table", async () => {
     for (const query of [
       "which gauge pays the most this epoch",
       "top incentives this epoch",
     ]) {
-      const response = await ask(query)
+      const response = await ask(query, { providers: votedWorld })
       const ranking = response.uiBlocks.find(
         (block) => block.type === "gauge_ranking",
       )
@@ -195,6 +272,7 @@ describe("QA fixes", () => {
   it("leaves Funded as unknown, not zero, when history can't be read", async () => {
     const response = await ask("which gauge pays the most this epoch", {
       providers: {
+        ...votedWorld,
         fundedEpochs: async () => {
           throw new Error("rpc down")
         },

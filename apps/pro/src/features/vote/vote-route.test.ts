@@ -32,6 +32,19 @@ describe("Vote search params", () => {
     expect(validateVoteSearch({ pick: 7 })).toEqual({})
   })
 
+  it("sets every key, so an unknown or empty one never reaches Vote", () => {
+    for (const raw of [{ tab: "" }, { tab: "bogus" }, { sort: "" }]) {
+      const search = validateVoteSearch(raw)
+      expect(Object.keys(search).sort()).toEqual(
+        ["page", "pick", "q", "sort", "tab"].sort(),
+      )
+      // Laid over the raw query as the router does.
+      const merged = { ...raw, ...search }
+      expect(merged.tab).toBeUndefined()
+      expect(merged.sort).toBeUndefined()
+    }
+  })
+
   it("leaves the defaults out of the URL", () => {
     expect(
       validateVoteSearch({ tab: "all", sort: "incentives", page: "1" }),

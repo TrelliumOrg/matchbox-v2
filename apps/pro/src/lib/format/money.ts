@@ -106,3 +106,19 @@ export function formatPrice(usd: string): string {
   // MEZO trades under a cent: 4 decimals ($0.0042).
   return `$${formatDecimal(usd, 4)}`
 }
+
+/**
+ * A gauge's incentives in words: its dollars, "Unpriced" when only tokens
+ * without a USD value count, "$1.15 + 2 unpriced" when it holds both. The
+ * flags are the server's (`GaugeSummary`). Link previews use it; screens
+ * use `Incentives` (components/coins), which sets the unpriced part apart.
+ */
+export function formatIncentives(incentives: {
+  usd: string
+  priced: boolean
+  unpriced: number
+}): string {
+  if (incentives.unpriced === 0) return formatUsd(incentives.usd, "cents")
+  if (!incentives.priced) return "Unpriced"
+  return `${formatUsd(incentives.usd, "cents")} + ${incentives.unpriced} unpriced`
+}

@@ -16,7 +16,7 @@ const MAX_TARGETS_PER_BALLOT = 30
 
 /**
  * Identifies the optimizer's output. The closed-form optimizer replaced the
- * MCP's greedy 1% allocator under this label (see PORTING-NOTES.md).
+ * earlier greedy 1% allocator (`optimizer-live-v1`) under this label.
  */
 export const REWARD_OPTIMIZER_VERSION = "optimizer-live-v2"
 

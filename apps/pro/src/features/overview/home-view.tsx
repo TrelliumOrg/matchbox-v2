@@ -5,15 +5,10 @@ import * as ListRow from "@matchbox/ui/list-row"
 import * as PillButton from "@matchbox/ui/pill-button"
 import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
-import { CoinMarks } from "../../components/coins"
+import { CoinMarks, Incentives } from "../../components/coins"
 import { Usd } from "../../components/money"
 import type { Home } from "../../data/view-models"
-import {
-  formatApy,
-  formatCompactVotes,
-  formatUsd,
-  weiToWhole,
-} from "../../lib/format"
+import { formatApy, formatCompactVotes, weiToWhole } from "../../lib/format"
 import { gaugeName } from "../../lib/gauge-name"
 import { SectionHeading, underlineLink } from "../../shell/page"
 
@@ -59,7 +54,9 @@ export function HomeView({ data }: { data: Home }): ReactNode {
             />
           </p>
           <p className="mt-1 text-[15px] text-sec">
-            {data.gaugesFunded} of {data.gaugesTotal} gauges funded
+            {data.gaugesFunded}
+            {data.gaugesFundedMore ? "+" : ""} of {data.gaugesTotal} gauges
+            funded
           </p>
         </div>
         <div>
@@ -111,12 +108,16 @@ export function HomeView({ data }: { data: Home }): ReactNode {
                   <ListRow.Value>
                     <ListRow.Main>
                       {gauge.apyBps === null
-                        ? "No incentives"
+                        ? "n/a APY"
                         : `${formatApy(gauge.apyBps)} APY`}
                     </ListRow.Main>
                     <ListRow.Sub className="flex items-center justify-end gap-1.5">
                       <CoinMarks symbols={gauge.incentiveTokens} />
-                      {formatUsd(gauge.incentivesUsd, "cents")}
+                      <Incentives
+                        usd={gauge.incentivesUsd}
+                        priced={gauge.priced}
+                        unpriced={gauge.unpriced}
+                      />
                     </ListRow.Sub>
                   </ListRow.Value>
                 </Link>

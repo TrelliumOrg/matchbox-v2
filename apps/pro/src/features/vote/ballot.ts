@@ -146,6 +146,8 @@ export type BallotGauge = {
   /** Votes on the gauge from everyone but this lock. */
   competing: bigint
   incentivesMicro: bigint
+  /** The server's funded flag (`GaugeSummary.funded`): dust is not. */
+  funded: boolean
 }
 
 /** One lock, several (summed), or none. */
@@ -281,6 +283,7 @@ export function ballotGauges(
       id: key(gauge.address),
       competing: total > mine ? total - mine : 0n,
       incentivesMicro: usdToMicro(gauge.incentivesUsd),
+      funded: gauge.funded,
     }
   })
 }

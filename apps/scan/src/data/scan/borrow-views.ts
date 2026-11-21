@@ -1,4 +1,4 @@
-import { MORPHO_MARKETS } from "@matchbox/chain"
+import { MORPHO_MARKETS, MUSD_CONTRACTS } from "@matchbox/chain"
 import type {
   ScanBorrowTotals,
   ScanEnclaveEventItem,
@@ -1220,4 +1220,29 @@ export function debtShareOf(
   // Below a twentieth of a percent, one decimal would round to 0.0%.
   if (share < 5n * 10n ** 14n) return "<0.1% of debt"
   return `${wadPercent(share.toString())} of debt`
+}
+
+const musdAddress = MUSD_CONTRACTS.mainnet.musd.toLowerCase()
+
+/**
+ * Morpho positions that owe: in every market (the Borrow page's count),
+ * and in the markets that lend MUSD (the homepage's, beside Borrowed). A
+ * position whose market is not in `markets` counts in `all` only.
+ */
+export function morphoOpenCounts(
+  positions: readonly Pick<ScanMorphoPosition, "market_id" | "borrow_assets">[],
+  markets: ReadonlyMap<string, { loan_token: string }>,
+): { all: number; musd: number } {
+  let all = 0
+  let musd = 0
+  for (const position of positions) {
+    if (position.borrow_assets === "0") continue
+    all += 1
+    if (
+      markets.get(position.market_id)?.loan_token.toLowerCase() === musdAddress
+    ) {
+      musd += 1
+    }
+  }
+  return { all, musd }
 }

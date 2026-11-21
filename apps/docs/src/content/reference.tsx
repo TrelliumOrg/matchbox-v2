@@ -1,6 +1,6 @@
 import type { DocNode, ReferenceIndexDoc } from "@matchbox/docs/render"
 import { Glyph, shapes } from "@matchbox/ui/icons"
-import type { ReactNode } from "react"
+import { Fragment, type ReactNode } from "react"
 import { DocLink } from "./doc-link"
 import { Body } from "./render"
 
@@ -17,6 +17,25 @@ function slug(text: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
+}
+
+/**
+ * An operation's path, whole: it may break only before a slash, so on a
+ * narrow card it wraps segment by segment and never ends in an ellipsis
+ * (D2, 20 Nov 2026).
+ */
+export function PathText({ path }: { path: string }): ReactNode {
+  const segments = path.split("/")
+  return segments.map((segment, index) =>
+    index === 0 ? (
+      segment
+    ) : (
+      // biome-ignore lint/suspicious/noArrayIndexKey: a path's segments are fixed
+      <Fragment key={index}>
+        <wbr />/{segment}
+      </Fragment>
+    ),
+  )
 }
 
 /** Runs in the static page: fragments never reach a server. */
@@ -45,7 +64,7 @@ export function ReferenceBody({
         }}
       />
       <Body nodes={lead} />
-      <dl className="mt-7 flex flex-wrap items-center gap-x-10 gap-y-4 rounded-[24px] bg-soft py-[18px] pr-3 pl-6">
+      <dl className="docs-wide mt-7 flex flex-wrap items-center gap-x-10 gap-y-4 rounded-[24px] bg-soft py-[18px] pr-3 pl-6">
         <div>
           <dt className="text-[13.5px] text-sec">Base URL</dt>
           <dd className="mt-1 font-mono text-[14px] text-ink">
@@ -78,7 +97,7 @@ export function ReferenceBody({
           </dd>
         </div>
       </dl>
-      <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
+      <div className="docs-wide mt-8 grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-2">
         {reference.tags.map((tag) => (
           <section
             key={tag.name}
@@ -111,8 +130,11 @@ export function ReferenceBody({
                       <span className="block text-[15.5px] font-medium text-ink">
                         {operation.summary}
                       </span>
-                      <span className="block truncate font-mono text-[12.5px] text-sec">
-                        {operation.path}
+                      <span
+                        data-operation-path=""
+                        className="block font-mono text-[12.5px] text-sec"
+                      >
+                        <PathText path={operation.path} />
                       </span>
                     </span>
                     <Glyph

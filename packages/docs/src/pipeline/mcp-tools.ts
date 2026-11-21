@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath, pathToFileURL } from "node:url"
 import { z } from "zod"
 import type { DocNode, SchemaField, ToolDoc } from "../render-types"
-import type { GeneratedPage, GeneratedTree } from "./build-site"
+import {
+  type GeneratedPage,
+  type GeneratedTree,
+  previewText,
+  sentencesOf,
+} from "./build-site"
 import { codeLanguage, highlight } from "./highlight"
 import { inlineText } from "./markdown"
 import { docsVoice } from "./reference"
@@ -269,7 +274,8 @@ export async function generateMcpTools(
       title: doc.title,
       nav: tool.name,
       description:
-        tool.description.split(". ")[0]?.replace(/\.$/, "") ?? tool.name,
+        sentencesOf(tool.description)[0]?.replace(/\.$/, "") ?? tool.name,
+      lead: previewText(docsVoice(tool.description.split(/\n{2,}/)[0] ?? "")),
       section: "developer",
       eyebrow: "MCP tools",
       tree: "mcp",

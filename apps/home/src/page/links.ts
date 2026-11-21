@@ -21,10 +21,9 @@ export const links = {
   docs: "https://docs.matchbox.markets",
   classic: "https://app.matchbox.markets",
   /**
-   * As every other app links them. This page will answer matchbox.markets
-   * once a person moves the domain, so these two must exist by then:
-   * README, Open questions.
+   * As every other app links it: matchbox.markets sends the path on to
+   * Classic's privacy policy. There is no Terms page yet, so the footer
+   * links none: README, Open questions.
    */
   privacy: "https://matchbox.markets/privacy",
-  terms: "https://matchbox.markets/terms",
 } as const

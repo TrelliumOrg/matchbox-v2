@@ -11,7 +11,8 @@ import type { ApiContext, ApiMiddleware } from "../context"
  * The column layout lives in `@matchbox/contracts/api-request-log`
  * (`API_REQUEST_LOG_LAYOUT`): index1 environmentId|"anonymous"; blobs
  * requestId, keyId, routeTemplate, method, status, cacheStatus, colo,
- * country, environmentKind, errorCode; doubles latencyMs, statusCode.
+ * country, environmentKind, errorCode, servedFrom; doubles latencyMs,
+ * statusCode.
  * Rate-limited requests are logged like any other (status 429, error code
  * `rate_limited`), which is where usage's 429 counts come from.
  * `writeDataPoint` is non-blocking, so it runs inline.
@@ -61,6 +62,7 @@ export function buildRequestLog(
     environmentKind: identity?.environmentKind ?? null,
     latencyMs: Math.max(latencyMs, 0),
     errorCode: status >= 400 ? (c.get("errorCode") ?? null) : null,
+    servedFrom: c.get("servedFrom") ?? null,
   }
 }
 

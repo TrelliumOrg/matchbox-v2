@@ -67,16 +67,25 @@ function btcDigits(raw: bigint, decimals: number): string {
   return formatTokenAmountDigits(raw, decimals, digits)
 }
 
-export function displayToken(
+/**
+ * A token amount's digits alone ("7,770.97"), for a model row that keeps
+ * the symbol, chain text, in a field of its own.
+ */
+export function displayTokenDigits(
   amount: TokenAmount,
   fractionDigits?: number,
 ): string {
   const raw = BigInt(amount.raw)
-  const digits =
-    fractionDigits === undefined && BTC_SYMBOLS.has(amount.symbol)
-      ? btcDigits(raw, amount.decimals)
-      : formatTokenAmountDigits(raw, amount.decimals, fractionDigits ?? 2)
-  return `${digits} ${amount.symbol}`
+  return fractionDigits === undefined && BTC_SYMBOLS.has(amount.symbol)
+    ? btcDigits(raw, amount.decimals)
+    : formatTokenAmountDigits(raw, amount.decimals, fractionDigits ?? 2)
+}
+
+export function displayToken(
+  amount: TokenAmount,
+  fractionDigits?: number,
+): string {
+  return `${displayTokenDigits(amount, fractionDigits)} ${amount.symbol}`
 }
 
 /** Allocation basis points → "42%", "42.5%", "33.33%". */

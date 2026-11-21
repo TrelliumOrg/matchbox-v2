@@ -1,7 +1,9 @@
 import { useSearch } from "@tanstack/react-router"
 import type { CalcSearch } from "../boost/calc-link"
+import { isSavedSafe, useSettings } from "../settings/settings-store"
 import { useWallet } from "../wallet/wallet-store"
 import { isAddress } from "./format"
+import { useOwnWallet } from "./own-wallet"
 
 /**
  * Whose data the screens show. `?address=0x…` names the wallet; the root
@@ -65,4 +67,46 @@ export function useViewer(): Viewer {
   const search = useSearch({ from: "__root__" })
   const wallet = useWallet()
   return viewerFrom(search, wallet.account?.address ?? null)
+}
+
+/**
+ * Whether the wallet on screen is someone else's: a viewed address that
+ * is not the connected wallet, not the wallet this browser connected last
+ * (`own`, before it reconnects after a load) and not a Safe this browser
+ * signs for. Such a page only reads: it offers no claim, vote or lock.
+ */
+export function viewsOther(
+  viewer: Viewer,
+  own: string | null,
+  signsFor: (address: string) => boolean,
+): boolean {
+  if (viewer.kind !== "viewing") return false
+  if (own !== null && own.toLowerCase() === viewer.address.toLowerCase()) {
+    return false
+  }
+  return !signsFor(viewer.address)
+}
+
+/** The wallet this browser signs with, connected or about to reconnect. */
+export function useOwnAddress(): string | null {
+  const wallet = useWallet()
+  const remembered = useOwnWallet()
+  return wallet.account?.address ?? remembered
+}
+
+/**
+ * True on someone else's wallet (see `viewsOther`). The server and the
+ * hydrating page answer alike: the wallet has not reconnected yet, so both
+ * go by the own-wallet cookie. The Safe saved in Signing is yours whether
+ * or not its owner's wallet has connected: its actions go through `openTx`,
+ * which waits for the reconnect or opens Connect wallet. The settings are
+ * this browser's (the server renders the defaults, so the Safe's actions
+ * appear right after hydration), and saving the Safe on its own page
+ * brings them back at once.
+ */
+export function useViewingOther(): boolean {
+  const viewer = useViewer()
+  const own = useOwnAddress()
+  const { signing } = useSettings()
+  return viewsOther(viewer, own, (address) => isSavedSafe(signing, address))
 }

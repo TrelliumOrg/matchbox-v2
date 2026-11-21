@@ -31,6 +31,8 @@ vi.mock("@wagmi/core", () => ({
 }))
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: unknown }) => children,
+  // The review's loading skeleton reads the response's nonce from the router.
+  useRouter: () => ({ options: {} }),
 }))
 vi.mock("@matchbox/motion/haptics", () => ({
   fireHaptic: () => {},

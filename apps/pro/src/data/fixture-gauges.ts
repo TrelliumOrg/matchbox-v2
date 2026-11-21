@@ -23,6 +23,15 @@ import {
 
 const extraTokens = {
   msolvbtc: token("a10a", "mSolvBTC", "Mezo SolvBTC"),
+  // In the token registry, but not a token the API prices.
+  usdc: {
+    address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    symbol: "USDC",
+    name: "USD Coin",
+    decimals: 6,
+  },
+  // Not in the registry: a token anyone could post, named like a real one.
+  fakebtc: token("fa4e", "FAKEBTC", "Fake Bitcoin"),
 } satisfies Record<string, TokenRef>
 
 function token(prefix: string, symbol: string, name: string): TokenRef {
@@ -262,12 +271,142 @@ function validatorCard(name: string, index: number): GaugeCard {
   }
 }
 
+/**
+ * Two pool gauges as mainnet had them on 19 Nov 2026 (P6): $0.28 over
+ * a few dollars of votes, which the API rates 3,648.26% APY, and dust
+ * worth less than a cent, rated 13.00%. Pro counts the first as funded
+ * with no APY, and the second as not funded.
+ */
+function smallPoolCard(
+  name: string,
+  index: number,
+  pool: { poolType: "stable" | "cl"; tickSpacing: number | null },
+  figures: {
+    usd: string
+    apy: string | null
+    votes: string
+    tokens?: GaugeCard["incentives"]["tokens"]
+  },
+): GaugeCard {
+  const card = poolCard(
+    {
+      tokens: [extraTokens.msolvbtc, demoTokens.musd],
+      poolType: pool.poolType,
+      tickSpacing: pool.tickSpacing,
+    },
+    index,
+  )
+  return {
+    ...card,
+    gauge: { ...card.gauge, name },
+    apy: figures.apy,
+    incentives: {
+      usd: figures.usd,
+      tokens: figures.tokens ?? [
+        { token: demoTokens.musd, amount: figures.usd, usd: figures.usd },
+      ],
+    },
+    votes: figures.votes,
+  }
+}
+
+/**
+ * Gauges whose incentives Pro cannot price, by the rule Stuart shares
+ * (`@matchbox/domain/funding`): a registry token the API leaves without
+ * a USD value funds a gauge by an unknown amount, and an unregistered
+ * token never funds one. The API sums only the priced tokens.
+ */
+export const unpricedPoolGauges = {
+  /** Only a registry token without a USD value: funded, "Unpriced". */
+  unpriced: smallPoolCard(
+    "mUSDT/MUSD",
+    92,
+    { poolType: "cl", tickSpacing: 50 },
+    {
+      usd: "0.00",
+      apy: null,
+      votes: "0.8",
+      tokens: [{ token: extraTokens.usdc, amount: "250", usd: null }],
+    },
+  ),
+  /** $1.15 priced and one registry token without a USD value. */
+  mixed: smallPoolCard(
+    "MUSD/mUSDT",
+    93,
+    { poolType: "stable", tickSpacing: null },
+    {
+      usd: "1.15",
+      apy: "0.52",
+      votes: "2.5",
+      tokens: [
+        { token: demoTokens.musd, amount: "1.15", usd: "1.15" },
+        { token: extraTokens.usdc, amount: "40", usd: null },
+      ],
+    },
+  ),
+  /** Only an unregistered token: held, never funding. */
+  unregistered: smallPoolCard(
+    "FAKEBTC/MUSD",
+    94,
+    { poolType: "stable", tickSpacing: null },
+    {
+      usd: "0.00",
+      apy: null,
+      votes: "0.3",
+      tokens: [{ token: extraTokens.fakebtc, amount: "21", usd: null }],
+    },
+  ),
+} as const
+
+/**
+ * A veBTC gauge holding 2 cents of MUSD beside a token named "BTC" at an
+ * address outside the registry, which the read model values at $500,000,
+ * and the API counts in its total and its APY. The API leaves such tokens
+ * out today; Pro must not count one if it ever comes through. Unit tests
+ * only: not in the directory fixtures mode serves.
+ */
+export function spoofedPriceGauge(): GaugeCard {
+  const card = boostCard("Spoofed Price", 95)
+  const spoofed = token("b7c0", "BTC", "Bitcoin")
+  return {
+    ...card,
+    apy: "130000.00",
+    incentives: {
+      usd: "500000.02",
+      tokens: [
+        { token: demoTokens.musd, amount: "0.02", usd: "0.02" },
+        { token: spoofed, amount: "5", usd: "500000.00" },
+      ],
+    },
+    votes: "20000",
+  }
+}
+
+/** Addresses of the two small pool gauges, lower case. */
+export const smallPoolGauges = {
+  tiny: smallPoolCard(
+    "MUSD/mSolvBTC",
+    90,
+    { poolType: "cl", tickSpacing: 200 },
+    { usd: "0.28", apy: "3648.26", votes: "0.000004" },
+  ),
+  dust: smallPoolCard(
+    "mSolvBTC/MUSD",
+    91,
+    { poolType: "stable", tickSpacing: null },
+    { usd: "0.004", apy: "13.00", votes: "0.5" },
+  ),
+} as const
+
 const gauges: GaugeCard[] = [
   ...demoGaugeDirectory.gauges,
   ...Object.values(demoKindCards),
   ...boostNames.map(boostCard),
   ...validatorNames.map(validatorCard),
   ...pools.map(poolCard),
+  smallPoolGauges.tiny,
+  smallPoolGauges.dust,
+  ...Object.values(unpricedPoolGauges),
 ]
 
 /**
@@ -331,6 +470,21 @@ export const fixtureGaugeDirectory: GaugeDirectory = {
     pool: gauges.filter((card) => card.gauge.kind === "pool").length,
     mezo: gauges.filter((card) => card.gauge.kind === "mezo").length,
   },
+}
+
+/**
+ * The directory as mainnet had it in Epoch 49 (P3, 19 Nov 2026): only
+ * pool gauges funded, every other type at no incentives.
+ */
+export function poolsOnlyGaugeDirectory(): GaugeDirectory {
+  return {
+    ...fixtureGaugeDirectory,
+    gauges: fixtureGaugeDirectory.gauges.map((card) =>
+      card.gauge.kind === "pool"
+        ? card
+        : { ...card, apy: null, incentives: { usd: "0", tokens: [] } },
+    ),
+  }
 }
 
 /**

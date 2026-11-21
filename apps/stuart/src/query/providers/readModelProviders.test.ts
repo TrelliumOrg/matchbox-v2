@@ -1,4 +1,8 @@
-import type { GaugeDirectoryResponse } from "@matchbox/contracts/read-models"
+import type {
+  GaugeDirectoryResponse,
+  GaugeProfileReadModel,
+  TokenAmount,
+} from "@matchbox/contracts/read-models"
 import {
   demoBlock,
   demoEpoch,
@@ -292,8 +296,77 @@ describe("read-model providers", () => {
       profiles: new Map([[kiln, demoGaugeProfile]]),
     })
     // Epochs 46 and 45 paid incentives; epoch 47 is still open.
-    expect(funded.get(kiln)).toBe(2)
-    expect(funded.size).toBe(1)
+    expect(funded.counts.get(kiln)).toBe(2)
+    expect(funded.counts.size).toBe(1)
+    expect(funded.unpricedOnly.size).toBe(0)
+  })
+
+  it("counts an epoch funded only on priced incentives of a cent or more", async () => {
+    const domain = await boostDomain()
+    const fake = {
+      address: "0x8888888888888888888888888888888888888888",
+      symbol: "FAKEBTC",
+      name: "FAKEBTC",
+      decimals: 18,
+    }
+    const mezoToken =
+      demoGaugeProfile.incentivesHistory[0]?.incentives.tokens[0]?.token
+    if (mezoToken === undefined) throw new Error("fixture")
+    const epoch = (number: number, tokens: TokenAmount[]) => ({
+      epoch: demoEpoch(number),
+      status: "paid" as const,
+      paysAt: demoEpoch(number).end,
+      incentives: { usd: "0", tokens },
+    })
+    const profile = (
+      incentivesHistory: GaugeProfileReadModel["incentivesHistory"],
+    ): GaugeProfileReadModel => ({
+      ...demoGaugeProfile,
+      history: [],
+      incentivesHistory,
+    })
+    const funded = fundedEpochsFromProfiles({
+      domain,
+      window: 8,
+      profiles: new Map([
+        // A fake token every epoch: never funded.
+        [
+          kiln,
+          profile(
+            [46, 45, 44, 43].map((number) =>
+              epoch(number, [{ token: fake, amount: "7777", usd: "7777.00" }]),
+            ),
+          ),
+        ],
+      ]),
+    })
+    expect(funded.counts.size).toBe(0)
+    expect([...funded.unpricedOnly]).toEqual([kiln])
+
+    const dust = fundedEpochsFromProfiles({
+      domain,
+      window: 8,
+      profiles: new Map([
+        [
+          kiln,
+          profile([
+            // Dust: a real token worth less than a cent.
+            epoch(46, [
+              { token: mezoToken, amount: "0.0001", usd: "0.000018" },
+            ]),
+            // Priced, with a fake token alongside.
+            epoch(45, [
+              { token: fake, amount: "7777", usd: "7777.00" },
+              { token: mezoToken, amount: "100", usd: "18.40" },
+            ]),
+            // A real token the read model left unvalued still counts.
+            epoch(44, [{ token: mezoToken, amount: "100", usd: null }]),
+          ]),
+        ],
+      ]),
+    })
+    expect(dust.counts.get(kiln)).toBe(2)
+    expect(dust.unpricedOnly.size).toBe(0)
   })
 
   it("builds a boost gauge's recent epochs, newest first", () => {

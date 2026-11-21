@@ -147,7 +147,7 @@ function PageFoot({ page }: { page: ManifestPage }): ReactNode {
           <li>
             <a
               href={page.source}
-              className={`flex items-center gap-[7px] ${Prose.linkClass}`}
+              className={`flex items-center gap-[7px] max-md:min-h-10 ${Prose.linkClass}`}
             >
               <Glyph shape={shapes.pencil} size={16} strokeWidth={1.75} />
               Edit on GitHub
@@ -271,6 +271,21 @@ function Article({
   )
 }
 
+/**
+ * From 768 the Ctrl K bar floats 28 above the foot of the article column,
+ * and on first view it sat over whatever was there, such as the API
+ * reference's Gauge profiles rows (20 Nov 2026). This strip, the page's own
+ * background with a short fade at its top, sticks to the foot of the
+ * article column (and the samples on API pages) up to 12 over the bar, so
+ * content stops above the bar and is never under it. Its own row after
+ * the article, so at the end of a page it sits below the content, not on
+ * it. Hidden with the bar, and server rendered, so it is there on first
+ * paint. The bar paints over it (z-20). The search palette and Ask open
+ * as modal sheets over both, so neither needs hiding then.
+ */
+const kbarGutter =
+  "sticky bottom-0 z-10 hidden h-[94px] bg-linear-to-t from-bg from-87% to-transparent md:block lg:col-start-2 [@media(scripting:none)]:hidden"
+
 export function DocPage({ page }: { page: ManifestPage }): ReactNode {
   const samples = page.kind === "operation" || page.kind === "tool"
   return (
@@ -287,6 +302,7 @@ export function DocPage({ page }: { page: ManifestPage }): ReactNode {
         <Suspense fallback={null}>
           <Article page={page} samples={samples} />
         </Suspense>
+        <span aria-hidden="true" data-kbar-gutter="" className={kbarGutter} />
       </div>
       <Kbar samples={samples} />
     </div>

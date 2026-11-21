@@ -23,7 +23,7 @@ const snf: GaugeCard = {
   typeLine: "veBTC gauge, 250.1660 veBTC",
   picture: { kind: "image", url: "https://example.com/snf.png" },
   apyBps: 986,
-  incentivesUsd: "310.46",
+  incentives: "$310.46",
   incentiveTokens: ["MEZO"],
   boost: { label: "5×", atMax: true },
   band: { fill: 1, atMax: true },

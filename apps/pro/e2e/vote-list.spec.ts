@@ -381,3 +381,16 @@ test("a gauge opened directly links back to its type", async ({ page }) => {
   await page.getByRole("link", { name: /^Vote, / }).click()
   await expect(page).toHaveURL(/\/vote\/vebtc/)
 })
+
+test("an empty or unknown tab or sort in the URL shows the whole list", async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on("pageerror", (error) => errors.push(String(error)))
+  for (const query of ["?tab=", "?tab=bogus", "?sort=", "?sort=bogus&tab="]) {
+    await page.goto(`/vote/pools${query}`)
+    await expect(gaugeList(page).locator("> li").first()).toBeVisible()
+    await expect(page.getByText("Data unavailable")).toHaveCount(0)
+  }
+  expect(errors).toEqual([])
+})

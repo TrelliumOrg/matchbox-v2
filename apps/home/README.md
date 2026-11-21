@@ -207,7 +207,7 @@ Agents never deploy. In order:
    set in the Cloudflare dashboard. The homepage does not take that route:
    `env.preview` in `wrangler.jsonc` lists routes for the homepage's own
    paths (`/`, `/assets/*`, `/_serverFn/*`, `/search*`, `/live/heads`,
-   `/favicon.svg`). A more specific route wins, so those reach this Worker
+   `/favicon.svg`, `/og.png`). A more specific route wins, so those reach this Worker
    and every other path stays with Classic. A new path this app serves
    needs a route there too.
 
@@ -219,6 +219,18 @@ Agents never deploy. In order:
 
 ## Open questions
 
-- **Terms.** The footer links `matchbox.markets/terms`, which goes on to
-  `app.matchbox.markets/terms`, and Classic has no such page (404, as
-  today). Privacy is fine: `app.matchbox.markets/privacy` answers.
+- **Terms.** There is no Terms page: `matchbox.markets/terms` goes on to
+  `app.matchbox.markets/terms`, and Classic has no such page (404). The
+  footer links none until one is published.
+- **Privacy.** `matchbox.markets/privacy` goes on (308) to Classic's
+  page at `app.matchbox.markets/privacy`, which answers but loads
+  slowly and requests a font that is not found. This Worker could serve
+  its own page, but the repository holds no approved privacy text for
+  v2. Serving it needs that text (with the sections ID and Developer
+  link, `#matchbox-id` and `#matchbox-developer`), a route for
+  `/privacy` here, and the route `matchbox.markets/privacy` in
+  `env.preview` (Deploy, step 3).
+- **Footer links.** Every footer link is a route this Worker serves or an
+  address on the reviewed list in `src/page/reviewed-links.ts`; the unit
+  and e2e tests fail on any other. Check a new address by hand (it must
+  answer 200, after redirects) before adding it.

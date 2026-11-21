@@ -107,10 +107,13 @@ export const getMarket = createServerFn({ method: "GET" }).handler(
 
 export const getHome = createServerFn({ method: "GET" }).handler(
   async function getHomeHandler() {
+    // A page of funded gauges (every one, on mainnet), so Overview counts
+    // those above a cent itself: see `adapt.home`. Only the top four and
+    // the count reach the page.
     const [summary, top] = await Promise.all([
       readModel("/internal/pro/summary", summaryResponse()),
       readModel(
-        "/internal/pro/gauges?funded=true&sort=incentives&limit=4",
+        `/internal/pro/gauges?funded=true&sort=incentives&limit=${directoryPage}`,
         directoryResponse(),
       ),
     ])
@@ -277,10 +280,11 @@ export const getActivity = createServerFn({ method: "GET" })
       activityResponse(),
       true,
     )
-    return adapt.activityPage(
-      page?.data ?? { address, rows: [], nextCursor: null },
-      epochReference(),
-    )
+    const shared = page?.data ?? { address, rows: [], nextCursor: null }
+    return {
+      ...adapt.activityPage(shared, epochReference()),
+      pending: shared.pending === true,
+    }
   })
 
 export const getProtocol = createServerFn({ method: "GET" })

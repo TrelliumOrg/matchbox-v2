@@ -9,6 +9,7 @@ import { isActive, sectionFor, sections } from "./sections"
 import {
   borrowDelayNote,
   chainSeconds,
+  delayedNote,
   epochAt,
   percentToBps,
   readShell,
@@ -18,6 +19,21 @@ import { shellQuery } from "./shell-context"
 
 // The server function module reads the Worker env; tests need its shape only.
 vi.mock("./shell-fn", () => ({ getShell: vi.fn() }))
+
+describe("the delay note", () => {
+  it("names what is behind where known", () => {
+    expect(delayedNote([])).toBe(
+      "Some data is delayed: a few lists and figures are behind the chain while Matchscan's updates catch up.",
+    )
+    expect(delayedNote(["activity"])).toBe(
+      "Some data is delayed: activity is behind the chain while Matchscan's updates catch up.",
+    )
+    expect(delayedNote(["incentives"])).toContain(": incentives are behind")
+    expect(delayedNote(["activity", "votes", "loans"])).toContain(
+      ": activity, votes and loans are behind",
+    )
+  })
+})
 
 describe("shell seed", () => {
   it("formats prices for the slot without floats", () => {

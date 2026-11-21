@@ -2,13 +2,13 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
+import { liveCron, priceCron, warehouseCron } from "./crons"
 
 // Every D1 database and KV namespace bound in the deploy config
 // (wrangler.jsonc) must name a real resource: a placeholder id makes every
 // deploy of this Worker fail, including an unrelated Pro fix. A binding to a
 // resource that does not exist yet stays out of the config until a human
-// has created it (README, "SCAN_DB schema"). wrangler.scan-local.jsonc is
-// local only and not checked.
+// has created it (README, "SCAN_DB schema").
 
 const appRoot = path.join(import.meta.dirname, "..")
 
@@ -117,5 +117,22 @@ describe("deploy config (wrangler.jsonc)", () => {
         isRealD1Id(database.database_id),
       ),
     ).toBe(false)
+  })
+})
+
+describe("cron triggers (wrangler.jsonc)", () => {
+  const triggersSchema = z.looseObject({
+    triggers: z.object({ crons: z.array(z.string()) }),
+  })
+
+  it("schedules the crons src/crons.ts names", () => {
+    const raw: unknown = JSON.parse(
+      stripComments(readFileSync(path.join(appRoot, "wrangler.jsonc"), "utf8")),
+    )
+    expect(triggersSchema.parse(raw).triggers.crons).toEqual([
+      priceCron,
+      liveCron,
+      warehouseCron,
+    ])
   })
 })

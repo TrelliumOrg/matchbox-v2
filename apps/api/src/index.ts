@@ -1,5 +1,6 @@
 import { WorkerEntrypoint } from "cloudflare:workers"
 import { buildErrorBody } from "@matchbox/contracts/errors"
+import { epochStartOf } from "@matchbox/domain"
 import { logger } from "@matchbox/logger"
 import {
   createDurableRateLimitClient,
@@ -11,10 +12,12 @@ import { type ApiApp, createApp } from "./app"
 import { createHeadReader, unknownClock } from "./blockscout/head"
 import { createBlockscoutProxy } from "./blockscout/proxy"
 import {
+  createLiveMezoClient,
   createMezoClient,
   liveReadTimeoutMs,
   scanReadTimeoutMs,
 } from "./chain/client"
+import { healthProbeCron, marketCron } from "./crons"
 import { memoryModePepper, parseWorkerEnv, type WorkerEnv } from "./env"
 import { defaultHeadRpcUrls } from "./heads/poller"
 import { routeHeadsUpgrade } from "./heads/upgrade"
@@ -65,6 +68,7 @@ import {
   createViemChainReader,
 } from "./reconcile/chain-reader"
 import reconcileChainState from "./reconcile/reconcile"
+import { createLiveTxReader } from "./scan/live-tx"
 import { createMezoIdResolver } from "./scan/mezo-ids"
 import type { ApiStore } from "./store/api-store"
 import { devApiKeys } from "./store/memory-seed"
@@ -128,17 +132,17 @@ async function buildRuntime(raw: unknown): Promise<RuntimeResult> {
   // Pro's page-view reads wait 4 s at most: an endpoint gets 2 s and no
   // retry, at either level, each RPC once (the configured primary is also
   // the first public fallback), the fallbacks kept for one that refuses.
-  const mezoLive = createMezoClient(
+  // No client batching: the live readers send their own Multicall3
+  // requests side by side (createLiveMezoClient).
+  const mezoLive = createLiveMezoClient(
     [...new Set(mezoRpcUrls(env))],
     liveReadTimeoutMs,
-    0,
   )
   // Matchscan's public pages: the primary RPC only, 1.2 s, no retry, and
   // one request per step (scan/live-locks.ts).
-  const scanChain = createMezoClient(
+  const scanChain = createLiveMezoClient(
     mezoRpcUrls(env).slice(0, 1),
     scanReadTimeoutMs,
-    0,
   )
   const scanRequests = { attempts: 1 }
   const rateLimits = createDurableRateLimitClient(env.RATE_LIMITER)
@@ -178,6 +182,7 @@ async function buildRuntime(raw: unknown): Promise<RuntimeResult> {
       cache: typeof caches === "undefined" ? null : caches.default,
       heads: env.BLOCK_HUB ?? null,
       network: "mezo",
+      rateLimits,
       liveWallet: createLiveWalletReader(mezo),
       liveClaimable: createLiveClaimableReader(mezoLive),
       liveLocks: createLiveLocksReader(mezoLive),
@@ -187,6 +192,7 @@ async function buildRuntime(raw: unknown): Promise<RuntimeResult> {
         fetcher: (url, init) => fetch(url, init),
         logger: logger.child({ task: "mezo-id" }),
       }),
+      logger: logger.child({ task: "internal-pro" }),
     },
     blockscout: proxy,
     scan: {
@@ -209,7 +215,23 @@ async function buildRuntime(raw: unknown): Promise<RuntimeResult> {
         lock: createLiveLockReader(scanChain, undefined, scanRequests),
         owner: createOwnerLocksReader(scanChain, undefined, scanRequests),
         latest: createLatestLockIdsReader(scanChain, undefined, scanRequests),
+        tx: createLiveTxReader(scanChain),
       },
+      gauges:
+        market === null
+          ? null
+          : async () => {
+              const epoch = await market.latestEpoch(
+                "mezo",
+                epochStartOf(Math.floor(Date.now() / 1000)),
+              )
+              return epoch === null
+                ? []
+                : market.listGauges("mezo", epoch.epochStart, {
+                    voter: null,
+                    gauges: null,
+                  })
+            },
       logger: logger.child({ task: "scan-routes" }),
     },
     config: {
@@ -281,11 +303,6 @@ function marketReaders(
   }
   return readers
 }
-
-/** `triggers.crons` in wrangler.jsonc; each schedule runs one task. */
-export const healthProbeCron = "* * * * *"
-export const reconcileCron = "*/10 * * * *"
-export const marketCron = "*/5 * * * *"
 
 async function runHealthCheck(raw: unknown): Promise<void> {
   try {

@@ -4,6 +4,37 @@ Cron Worker that fills `READ_DB` (D1) and the `PRICES` KV namespace with the
 data Matchbox Pro reads through the API's `/internal/pro` routes. It never
 serves user traffic, and nothing on a request path reads Neon.
 
+## Run it locally
+
+The tests need no network, keys or services (Miniflare's D1 and KV, fixed
+fixtures):
+
+```sh
+pnpm --filter @matchbox/jobs test
+pnpm --filter @matchbox/jobs typecheck
+```
+
+To run the Worker itself on local D1 and KV:
+
+```sh
+cp apps/jobs/.dev.vars.example apps/jobs/.dev.vars
+pnpm --filter @matchbox/jobs db:migrate:local        # READ_DB
+pnpm --filter @matchbox/jobs db:migrate:scan:local   # SCAN_DB
+pnpm --filter @matchbox/jobs dev                     # wrangler dev --test-scheduled
+```
+
+Then trigger a cron with
+`curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"` (the prices
+job). The price, live RPC and cross-chain jobs read public endpoints (Mezo
+RPC, public Base and Ethereum RPCs, CoinGecko's keyless API) and need no
+keys. What needs credentials of your own:
+
+- **The warehouse snapshot** reads the indexer's Postgres schema
+  (`WAREHOUSE_DATABASE_URL`, a read-only role). Load the indexer
+  ([apps/indexer](../indexer)) into your own Postgres first.
+- **Optional keys** that only raise rate limits: `COINGECKO_API_KEY` and
+  the preferred RPC URLs in the table under "Bindings and secrets".
+
 ## Jobs
 
 | Trigger                                     | Job                | Writes                                                                                      |
@@ -13,7 +44,7 @@ serves user traffic, and nothing on a request path reads Neon.
 | `* * * * *`, after the prices               | MUSD market price  | `SCAN_DB`: `market_quotes`, `market_price_daily` ("Cross-chain data")                       |
 | `*/5 * * * *`                               | live RPC snapshot  | `morpho_markets`, `morpho_positions`, `troves`, `stability_pool`, `escrow_supply`           |
 | `*/5 * * * *`, hourly                       | cross-chain parts  | `SCAN_DB`: `token_supply_daily`, `pool_daily`, `bridge_*` ("Cross-chain data")              |
-| indexer service call, `3,18,33,48 * * * *`  | warehouse snapshot | `read_models`: wallet overview, rewards, activity per wallet, and protocol                  |
+| indexer service call, `3,18,33,48 * * * *`  | warehouse snapshot | `read_models` (wallet, protocol), `wallet_activity_rows`, `token_price_daily`               |
 | after the price and live runs               | scan daily writers | `SCAN_DB`: `price_daily`, closing values and once-a-day counters in `daily`                 |
 | same run, right after                       | scan copy step     | `SCAN_DB`: explorer rows, `epoch_totals`, `gauge_epoch`, copy-derived `daily`               |
 | `*/5 * * * *`, after the scan daily writers | governance         | `SCAN_DB`: `gauge_emissions`, `epoch_sources`, `lock_distribution` ("Governance summaries") |
@@ -41,17 +72,109 @@ serves user traffic, and nothing on a request path reads Neon.
   warehouse snapshot reads them for gauge names, pictures, votes and
   incentives (projected rewards and the Overview suggestion).
 - **Wallet coverage.** Each run rebuilds everyone touched since the last
-  run, up to 100 wallets the API had to serve live (`wallet_requests`,
-  cleared once built), and a rotating sweep over every wallet with on-chain
-  activity: anyone who ever owned a lock or acted in Mezo Earn, in address
-  order, about 4,000 wallets. The zero address and burn addresses are
-  excluded everywhere. The sweep size adapts to keep a run near 20 s (smaller
-  after a slow run, 25 more after a fast one, never over
-  `WAREHOUSE_SWEEP_WALLETS`), so the whole set cycles in about seven hours.
+  run, requested wallets (`wallet_requests`, cleared once built:
+  wallets the API had to serve live, and stored wallets with locks someone
+  looked at while their overview was over an hour old; a requested
+  wallet's overview is marked checked by the run even when unchanged, at
+  most one row write each), and a rotating sweep over
+  every wallet with on-chain activity: anyone who ever owned a lock or acted
+  in Mezo Earn, in address order, about 4,000 wallets. The zero address and
+  burn addresses are excluded everywhere. The sweep size adapts to keep a
+  run near 20 s (smaller after a slow run, 25 more after a fast one, never
+  over `WAREHOUSE_SWEEP_WALLETS`), so the whole set cycles in about seven
+  hours. Requested wallets take their places from the sweep's share, at
+  most `size - ceil(size / 2)` of them a run (`requestedShare`, 75 of a
+  150 sweep); the rest stay queued, oldest first, for the next runs. So
+  requested and swept wallets together never pass the sweep size, a run
+  never rebuilds more wallets because people looked at some, and the cycle
+  at most doubles while requests keep coming. Changed wallets come on top,
+  as they always have. A request for an excluded address is dropped.
   The cap is the D1 budget, not time: a run takes about 5 s for 150 wallets,
   but swept wallets whose voting power decays rewrite their overview on
   every visit, about 450 row writes a run (45,000 of the free 100,000 a
   day).
+- **Wallet history.** A wallet's `wallet-activity` document holds its
+  latest 80 wallet-facing events (`eventsPerWallet`). The read asks for 81:
+  a wallet with 80 or fewer is whole; over that, the read's oldest second
+  is left out, so every second the document holds is whole. A wallet with
+  more keeps every row in `wallet_activity_rows` (`src/warehouse/history.ts`),
+  which the API's internal activity route pages into after the document.
+  Each run adds the rows newer than what is stored from the events it read
+  anyway; a wallet that did more than one read holds since it was stored
+  has the gap read forward first, up to 200 transactions a run. A window
+  that reaches below the stored history (events lost in a re-index) stores
+  its older events too, and the backfill looks once more. Older rows
+  are read back from the warehouse for one wallet a run,
+  `WAREHOUSE_HISTORY_BACKFILL_TXS` transactions at a time, until nothing
+  older exists; unset, none are, a history only grows forward from when its
+  wallet was first stored, and the route promises no older epochs. Each run
+  records the setting in `job_cursors` (`warehouse-history-backfill`) for the
+  API.
+  - **Budget.** All of it shares one budget, `historyTxsPerRun` (300
+    transactions a run, about 330 rows written in 6 D1 batches; a batch is
+    one of the 1,000 queries a Workers Paid invocation may make, 50 on
+    Free). New rows on top of a history go first, then gaps and first
+    stores, the longest waiting first, then the backfill with what is left.
+    A wallet that does not fit waits, unchanged, for a later run that
+    rebuilds it. After a rollback or a warehouse outage the catch-up takes
+    several runs, not one run of up to 26,000 transactions.
+  - **Failures.** No history step fails a run. A failed warehouse read
+    (`warehouse_history_read_failed`) stores nothing that run and moves the
+    wallets it read for to the back of the line (their `updated_at`), so one
+    wallet whose read keeps timing out cannot hold the backfill. A failed
+    D1 read of the states (`warehouse_history_plan_failed`) or of the stored
+    claims (`warehouse_history_claims_failed`) leaves those wallets' Earned
+    as it was (their rewards document carries the previous `earned`, or is
+    not written that run when it cannot be read). So does a gap still open
+    after the run (`openGaps`: the wallet waited for a later run, its gap
+    read failed, or came back full), since its claims in the gap are in
+    neither the document nor the stored rows; the carry ends on the run
+    whose gap read comes back short.
+  - **Earned** sums every claim known, the document's and the stored
+    history's, at each claim's value when claimed (below). Claims whose day
+    has no settled price yet are counted apart (`whenClaimed.pending`), and
+    claims with a token that had no price that day too (`unpriced`, their
+    priced tokens counted). A run that cannot read the daily prices carries
+    the previous Earned. Etags leave USD values out, so the rewards
+    document's write carries an `etagBasis` (the claims counted, their
+    token totals and their values when claimed, or "carried"): more claims
+    counted, or a claim priced on a later run, still rewrites it.
+  - **Index.** One partial index over claim rows (`INDEXED BY`, since
+    production has no `sqlite_stat1`): about 1.11 rows written per stored
+    row across the busy wallets.
+- **Values when claimed** (`src/warehouse/claim-prices.ts`, migration
+  0008). Every claim row carries `atClaim`: each token at the price of the
+  claim's UTC day, 00:00 UTC, by registry address. Registry stablecoins
+  are $1 and BTC wrappers take BTC's price (the API's `token-registry.ts`);
+  a token the registry does not price or list has no price, never $0, and
+  never by its symbol. BTC and MEZO come from `token_price_daily`.
+  - **Daily prices.** Each run may make one CoinGecko call a token
+    (`/coins/{id}/market_chart/range`, `interval=daily`, `bitcoin` and
+    `mezo`), beside its warehouse reads, for the days not checked yet: in
+    practice one a token a day. CoinGecko revises a day for up to 2 days,
+    so a day is stored once it is 3 days old (`settleDays`), and never
+    rewritten. The first run asks for every day from a week before Epoch 0
+    (about 350 rows a token, one call each). A Demo or keyless key reads
+    only the past 365 days (CoinGecko docs, read 20 Nov 2026): a day older
+    than that when first asked for is checked with no price. How far each
+    token is checked is in `job_cursors` (`claim-prices-btc`,
+    `claim-prices-mezo`). A failed call (an error, a timeout, a 429, an
+    odd body) stores nothing, logs `claim_prices_history_failed` and is not
+    tried again for 6 hours. It never fails the run: claims wait, pending.
+  - **When a claim is valued.** At build, from the stored prices: a claim
+    whose day is checked gets `atClaim` in its document and stored row; a
+    day not checked yet leaves it pending (Pro shows the stored figure).
+    Values are fixed once recorded: a row that has one keeps it.
+  - **Rows stored before.** After its history writes, each run gives
+    stored claims written before their day was priced their value
+    (`fillClaimValues`): a pass over every stored claim through the claims
+    index, 500 read and at most what the run's history budget left
+    (`historyTxsPerRun` less the history rows written) rewritten a run. A
+    pass that reaches the last claim waits until more days are checked
+    (about once a day), then starts again for the claims that were
+    pending. Its place is in `job_cursors` (`claim-values-fill`). About
+    4,100 rows on first deploy, the history's 300 a run at most: within a
+    day.
 - **Locks.** Each wallet's locks come from the warehouse, corrected by
   escrow `locked(tokenId)` at the snapshot: the chain's amount, end and
   permanence win, and locks the chain says are empty are dropped. The
@@ -100,23 +223,24 @@ query. The warehouse snapshot therefore never wakes Neon on its own:
 
 ## Bindings and secrets
 
-| Name                         | Kind    | Notes                                                          |
-| ---------------------------- | ------- | -------------------------------------------------------------- |
-| `READ_DB`                    | D1      | `matchbox-read-models`, shared with the API. Schema below.     |
-| `PRICES`                     | KV      | `matchbox-prices`, read by the API.                            |
-| `WAREHOUSE_DATABASE_URL`     | secret  | Neon, role `matchbox_api_ro` (read only).                      |
-| `MEZO_RPC_URLS`              | var     | Optional, comma-separated, primary first.                      |
-| `BASE_RPC_URL`               | secret  | Optional preferred Base RPC; public Base RPCs follow it.       |
-| `COINGECKO_API_KEY`          | secret  | Optional CoinGecko key; unset calls the keyless API.           |
-| `ETHEREUM_RPC_URL`           | secret  | Optional preferred Ethereum RPC (cross-chain reads).           |
-| `BSC_RPC_URL`                | secret  | Optional preferred BNB Chain RPC (MEZO supply there).          |
-| `COINGECKO_API_PLAN`         | var     | `demo` (default) or `pro`: which host and header the key uses. |
-| `COINGECKO_REFRESH_SECONDS`  | var     | Reuse a reading this long. Default 90; Demo key 360, min 300.  |
-| `WAREHOUSE_SWEEP_WALLETS`    | var     | Most wallets swept per run (adaptive below it). 150.           |
-| `MORPHO_LOG_WINDOWS_PER_RUN` | var     | Default 20.                                                    |
-| `UPTIME_*`                   | var     | Community CometBFT nodes ("Validator uptime").                 |
-| `SCAN_DB`                    | D1      | `matchbox-scan`, Matchscan's read models. Schema below.        |
-| `API`                        | service | The API Worker's `InternalApi` entrypoint (Blockscout proxy).  |
+| Name                             | Kind    | Notes                                                                                                             |
+| -------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------- |
+| `READ_DB`                        | D1      | `matchbox-read-models`, shared with the API. Schema below.                                                        |
+| `PRICES`                         | KV      | `matchbox-prices`, read by the API.                                                                               |
+| `WAREHOUSE_DATABASE_URL`         | secret  | Neon, role `matchbox_api_ro` (read only).                                                                         |
+| `MEZO_RPC_URLS`                  | var     | Optional, comma-separated, primary first.                                                                         |
+| `BASE_RPC_URL`                   | secret  | Optional preferred Base RPC; public Base RPCs follow it.                                                          |
+| `COINGECKO_API_KEY`              | secret  | Optional CoinGecko key; unset calls the keyless API.                                                              |
+| `ETHEREUM_RPC_URL`               | secret  | Optional preferred Ethereum RPC (cross-chain reads).                                                              |
+| `BSC_RPC_URL`                    | secret  | Optional preferred BNB Chain RPC (MEZO supply there).                                                             |
+| `COINGECKO_API_PLAN`             | var     | `demo` (default) or `pro`: which host and header the key uses.                                                    |
+| `COINGECKO_REFRESH_SECONDS`      | var     | Reuse a reading this long. Default 90; Demo key 360, min 300.                                                     |
+| `WAREHOUSE_SWEEP_WALLETS`        | var     | Most wallets swept per run (adaptive below it). 150.                                                              |
+| `WAREHOUSE_HISTORY_BACKFILL_TXS` | var     | Older transactions read back into one wallet's history a run, within the run's history budget (300). Unset: none. |
+| `MORPHO_LOG_WINDOWS_PER_RUN`     | var     | Default 20.                                                                                                       |
+| `UPTIME_*`                       | var     | Community CometBFT nodes ("Validator uptime").                                                                    |
+| `SCAN_DB`                        | D1      | `matchbox-scan`, Matchscan's read models. Schema below.                                                           |
+| `API`                            | service | The API Worker's `InternalApi` entrypoint (Blockscout proxy).                                                     |
 
 ## READ_DB schema
 
@@ -124,7 +248,11 @@ Migrations in `migrations/` (the API's Workers tests apply them too):
 `read_models` (one validated JSON document per read model, keyed by
 network, kind and wallet or gauge address, or epoch number), `price_samples`,
 `morpho_markets`, `morpho_positions`, `morpho_accounts`, `troves`,
-`stability_pool`, `escrow_supply`, `morpho_known_markets`, `job_cursors` and `snapshot_runs`, plus `watch_items`
+`stability_pool`, `escrow_supply`, `morpho_known_markets`,
+`wallet_activity_rows` and `wallet_history_state` (a wallet's whole activity
+history, and how far back it is stored), `token_price_daily` (BTC's and
+MEZO's price at 00:00 UTC each day, for claims' values when claimed),
+`job_cursors` and `snapshot_runs`, plus `watch_items`
 (written by the API's watch list routes) and `wallet_requests` (written by
 the API's live wallet path, drained here). Apply new migrations with
 `pnpm exec wrangler d1 migrations apply matchbox-read-models --remote`. Amounts are TEXT:
@@ -161,8 +289,9 @@ logged.
 ### CoinGecko call budget
 
 A Demo key allows 10,000 calls a month and every call counts, errors
-included. Two jobs spend from it: the MEZO price (above) and the
-cross-chain pool depth ("Cross-chain data"). `src/coingecko-budget.ts`
+included. Three jobs spend from it: the MEZO price (above), the
+cross-chain pool depth ("Cross-chain data") and the daily price history
+for claims' values when claimed ("Wallet history"). `src/coingecko-budget.ts`
 derives both from `COINGECKO_API_PLAN`, for a 31-day month, and plans at
 most 9,000 calls. The other 1,000 are margin for MUSD's CoinGecko fallback
 (only when all three venues fail), repeats after errors, and manual runs.
@@ -182,12 +311,15 @@ most 9,000 calls. The other 1,000 are margin for MUSD's CoinGecko fallback
   to 30 pools), so 3 per read. Hourly reads would cost 744 × 3 = 2,232, and
   9,672 in total leaves under 4% margin. Reads every **2 hours** cost
   372 × 3 = **1,116**.
-- **Total: 8,556 a month**, 1,444 under the allowance (14%). In a 30-day
-  month it is 7,200 + 1,080 = 8,280.
+- **History.** One call a token (BTC, MEZO) a day: **62**. A failed call
+  waits 6 hours, so a month of failures spends at most 248, inside the
+  margin. The first run's two calls cover every day back to Epoch 0.
+- **Total: 8,618 a month**, 1,382 under the allowance (14%). In a 30-day
+  month it is 7,200 + 1,080 + 60 = 8,340.
 - **Guards.**
   - The pool interval is the shortest of 1, 2, 3, 4, 6, 8, 12 or 24 hours
-    that fits within 9,000 beside the price job. If none fits, keyed pool
-    reads are off and GeckoTerminal keyless is used.
+    that fits within 9,000 beside the price job and the history. If none
+    fits, keyed pool reads are off and GeckoTerminal keyless is used.
   - One run makes at most 3 keyed pool calls (`maxKeyedPoolCallsPerRun`).
     A run that would need more reads the rest keyless.
   - Only the first run of a pool period (its first 5 minutes) may use the
@@ -290,7 +422,7 @@ are read for.
 
 Matchscan's explorer read models live in their own D1 database,
 `matchbox-scan`, so Scan's reads and writes never share capacity with Pro's
-`READ_DB` (`docs/scan-plan.md`, efficiency rule 9). Migrations are in
+`READ_DB`. Migrations are in
 `scan-migrations/`. Mainnet only. Rows, not documents: every list is one
 indexed range scan with a keyset cursor, never an offset. Amounts, weights
 and token ids are base-unit integers as TEXT; `*_key` columns hold the same
@@ -423,8 +555,8 @@ NOT STORED`), but apply it before deploying anyway. `0004` is an index
    that `scan_status` shows `halted_tables` null, `failed_runs_24h` 0,
    `refill_required` 0 and `data_version` rising.
 
-Locally: `pnpm db:migrate:scan:local` (`wrangler.scan-local.jsonc`, a
-Miniflare D1 that is never deployed).
+Locally: `pnpm db:migrate:scan:local` (a Miniflare D1 in the API's local
+state, `apps/api/.wrangler/state`; see "Local development").
 
 D1 read replication must stay off on this database unless every reader and
 writer uses the Sessions API: the copy reads its checkpoints and dirty
@@ -585,6 +717,10 @@ address)`. Locks touched by the activity window are read by primary key
   table (under 1,000 rows); past that a row back-filled behind the
   checkpoint is copied when the sweep reaches it, so a count taken before
   then would differ with nothing lost, and the sweep does the repair.
+- **Re-fill alert.** A re-fill flag set for over 24 hours (its
+  `refill:required` cursor's `updated_at`) makes every run, skipped ones
+  included, log `SCAN RE-FILL PENDING` at error level with the reason,
+  until an operator's re-fill clears it.
 - **Bounded.** Per run at most 2,000 activity rows and 1,000 of each other
   table (500 Enclave), always completing the last block or second. A gap
   catches up over several ticks.
@@ -652,7 +788,35 @@ Deletes: the warehouse deletes projected rows only in a replay
 (`resetProjection` truncates the projection; the borrow replay deletes its
 tables). The copy never deletes, so after a replay `--replace` empties the
 copied tables, their checkpoints and the re-fill flag before the first
-chunk; readers see the tables refill over the files' application.
+chunk; readers see the tables refill over the files' application. Every
+fill's first chunk records the warehouse's decoder versions
+(`matchbox.projection_state`, `matchbox.borrow_state`) as
+`decoder:projection` and `decoder:borrow`, so the next copy run compares
+the indexer's version with the one the filled rows came from and does not
+flag the re-fill it just had. `--replace` keeps the old decoder versions
+until then: they are written at the end of the first chunk, which can span
+several files, so a copy run before that chunk's last file is applied
+still flags a re-fill.
+
+**A false re-fill flag.** `refill_required` can be set after a whole,
+current re-fill (for example by a fill that recorded an older decoder
+version). Before acting on a flag raised just after a re-fill, check all
+three:
+
+- The fill was generated after the warehouse replay finished: the
+  `fill:neon` value in `scan_cursors` (unix seconds, written with the
+  fill's last chunk) is later than the replay's end.
+- Row counts per copied table, and a per-month checksum of each table's
+  rows, match the warehouse's.
+- `decoder:projection` (and `decoder:borrow` after a borrow replay) in
+  `scan_cursors` already holds the indexer's new version.
+
+If all three hold, the flag is false: delete the single `refill:required`
+row (`DELETE FROM scan_cursors WHERE name = 'refill:required'`) and the
+next copy run writes `refill_required = 0`. Do not run a full `--replace`
+re-fill for it: that empties the copied tables first, and pages show
+missing rows until every file is applied. If any check fails, the flag is
+real: re-fill as above.
 
 ### Budget
 
@@ -725,8 +889,12 @@ not yet fully copied) have `partial = 1`.
     `validations_count` (every block it has proposed) is read once a day
     and stored as yesterday's close, `chain.blocks_proposed_total`; the
     day's `chain.blocks_proposed` is that minus the day before's read.
-    A failed read is retried after 30 minutes for the missing validators
-    only. No difference is written for a first read, a missed day (the
+    The counters are read four at a time, never more reads in a run than
+    validators: a 5xx or network error is tried once more after a
+    second, spending the read of the last validator in line, and a 429
+    stops the run's reads. Each failed read is logged with its validator,
+    status and reason (`Validator counter reads failed`). The missing
+    validators are retried after 30 minutes, those only. No difference is written for a first read, a missed day (the
     gap covers several days whose split is unknown, and spreading it
     would invent a smooth series and hide the very downtime the series
     shows; both totals stay, so a reader can take the multi-day sum) or a
@@ -1448,9 +1616,18 @@ Deploy the API and the jobs Worker after it.
 ```sh
 cp .dev.vars.example .dev.vars   # WAREHOUSE_DATABASE_URL: a Neon DEV branch only
 pnpm db:migrate:local
-pnpm dev                         # wrangler dev --test-scheduled
-curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"
+pnpm dev                         # wrangler dev --test-scheduled, :8790
+curl "http://localhost:8790/__scheduled?cron=*+*+*+*+*"
 ```
+
+`dev`, `db:migrate:local` and `db:migrate:scan:local` keep their state in
+the API's local directory (`--persist-to ../api/.wrangler/state`). Both
+configs bind the same database ids, so a local run of this Worker writes
+into the `READ_DB`, `SCAN_DB` and `PRICES` the local API reads, and
+`pnpm db:seed:local` (apps/api README, "Local read models") fills the same
+databases with fixtures. Checked on 19 Nov 2026: one `* * * * *` run wrote
+20 validator uptime rows that the API's local `SCAN_DB` then held. Port 8790
+keeps it clear of the API on 8787.
 
 `pnpm test` runs the unit tests in Node, then the Workers tests (D1 and KV
 in Miniflare). The warehouse test replays `test/fixtures/warehouse.json`,

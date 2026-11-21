@@ -4,7 +4,7 @@ import {
   Skeleton,
   SkeletonProvider,
 } from "@matchbox/motion"
-import { isDarkPreset } from "@matchbox/tokens"
+import { useRouter } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import type { LoadingProps } from "./loading"
 
@@ -38,14 +38,19 @@ export default function LoadingImpl({
   label,
   sample,
 }: LoadingProps): ReactNode {
-  const painted =
-    typeof document === "undefined"
-      ? null
-      : document.documentElement.getAttribute("data-theme")
-  const mode = isDarkPreset(painted) ? "dark" : "light"
+  // Skullet's inline boot script runs under the page's strict script-src
+  // only with this response's nonce (see routes/__root.tsx).
+  const nonce = useRouter().options.ssr?.nonce
+  // The server cannot know the theme. The provider always writes the light
+  // colours, so its style hydrates as the server sent it (a dark style in
+  // the client threw React error 418, 19 Nov 2026), and the dark presets
+  // override them in styles.css, from the first paint.
   return (
     <div ref={revealSuccessor} className="contents">
-      <SkeletonProvider mode={mode}>
+      <SkeletonProvider
+        mode="light"
+        {...(nonce === undefined ? {} : { nonce })}
+      >
         <Skeleton id={id} label={label} loading>
           {sample}
         </Skeleton>

@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
+import { healthProbeCron, marketCron, reconcileCron } from "./crons"
 
 // Every D1 database and KV namespace bound in apps/api's wrangler configs
 // must name a real resource. A placeholder id makes every deploy of the
@@ -130,5 +131,33 @@ describe("wrangler configs", () => {
         stripComments('{ "a": "x // not a comment", /* b */ "c": 1, }'),
       ),
     ).toEqual({ a: "x // not a comment", c: 1 })
+  })
+})
+
+const triggersSchema = z.looseObject({
+  triggers: z.object({ crons: z.array(z.string()) }).optional(),
+})
+
+const triggersConfigSchema = triggersSchema.extend({
+  env: z.record(z.string(), triggersSchema).optional(),
+})
+
+describe("cron triggers (wrangler.jsonc)", () => {
+  const raw: unknown = JSON.parse(
+    stripComments(readFileSync(path.join(appRoot, "wrangler.jsonc"), "utf8")),
+  )
+  const config = triggersConfigSchema.parse(raw)
+  const known = [healthProbeCron, reconcileCron, marketCron]
+
+  it("schedules the crons src/crons.ts names", () => {
+    expect(config.triggers?.crons).toEqual(known)
+  })
+
+  it("schedules no unknown cron in any environment", () => {
+    for (const [name, section] of Object.entries(config.env ?? {})) {
+      for (const cron of section.triggers?.crons ?? []) {
+        expect(known, `env.${name}: ${cron}`).toContain(cron)
+      }
+    }
   })
 })

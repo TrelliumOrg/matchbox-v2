@@ -5,6 +5,8 @@ import type {
 import { z } from "zod"
 import { canonicalJson, hmacHex, sha256Hex, timingSafeEqualHex } from "./crypto"
 import { StuartHttpError } from "./http"
+import { redactSecrets } from "./redact"
+import { hexValues } from "./secretShapes"
 import { draftTokenMessage } from "./tools/support"
 
 // Stores a report only after the user pressed "Submit report". The stored
@@ -64,12 +66,25 @@ export async function submitSupportReport(input: {
     included.some((item) => item.kind === "wallet") && body.wallet
       ? { address: body.wallet.address.toLowerCase(), mode: body.wallet.mode }
       : null
+  // 64-hex strings the signed draft kept were returned by that turn's
+  // tools (a chain read, never the user's text): the edited statement may
+  // keep those, no other.
+  const verified = new Set(
+    [
+      body.draft.problemStatement,
+      ...body.draft.included.map((item) => item.value),
+    ].flatMap((text) => hexValues(text)),
+  )
   const report = {
     draftId: body.draft.draftId,
     kind: body.draft.kind,
     title: body.draft.title,
     chainId: body.draft.chainId,
-    problemStatement: body.problemStatement,
+    // The user may paste a key into the edited statement: never stored.
+    problemStatement: redactSecrets(body.problemStatement, {
+      verified,
+      mode: "report",
+    }).text,
     included: included.map((item) => ({
       kind: item.kind,
       label: item.label,

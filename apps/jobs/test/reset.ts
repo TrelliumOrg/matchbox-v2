@@ -13,6 +13,7 @@ const tables = [
   "snapshot_runs",
   "watch_items",
   "wallet_requests",
+  "token_price_daily",
 ]
 
 /** Empties READ_DB and PRICES; Miniflare storage persists across tests. */

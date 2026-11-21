@@ -63,6 +63,8 @@ import { NetworkView, SigningView } from "./settings-views"
 export type AccountPanelProps = {
   address: string
   connected: boolean
+  /** Someone else's wallet, opened from the Viewing chip. */
+  viewing?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -112,6 +114,7 @@ const receiveIntent = {
 export default function AccountPanel({
   address,
   connected,
+  viewing = false,
   open,
   onOpenChange,
 }: AccountPanelProps): ReactNode {
@@ -164,6 +167,7 @@ export default function AccountPanel({
                 address={address}
                 mezoId={mezoId}
                 connected={connected}
+                viewing={viewing}
                 onView={go}
                 onSend={() => {
                   onOpenChange(false)
@@ -211,6 +215,7 @@ function MainView({
   address,
   mezoId,
   connected,
+  viewing,
   onView,
   onSend,
   onClose,
@@ -218,6 +223,7 @@ function MainView({
   address: string
   mezoId: string | null
   connected: boolean
+  viewing: boolean
   onView: (view: View) => void
   onSend: () => void
   onClose: () => void
@@ -407,6 +413,7 @@ function MainView({
       <AccountFooter
         address={address}
         connected={connected}
+        viewing={viewing}
         onClose={onClose}
       />
     </>
@@ -771,13 +778,20 @@ function Settings({
   )
 }
 
+/**
+ * Disconnect for your connected wallet, Stop viewing for someone else's.
+ * Your own wallet before it reconnects, or the Safe you sign for, has
+ * neither: there is nothing to stop viewing.
+ */
 function AccountFooter({
   address,
   connected,
+  viewing,
   onClose,
 }: {
   address: string
   connected: boolean
+  viewing: boolean
   onClose: () => void
 }): ReactNode {
   const wallet = useWallet()
@@ -800,6 +814,7 @@ function AccountFooter({
   const actionClass =
     "flex cursor-pointer items-center gap-2 rounded-sm text-[15.5px] font-semibold text-neg outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
 
+  if (!connected && !viewing) return null
   return (
     <footer className={footerClass}>
       {connected ? (

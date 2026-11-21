@@ -127,7 +127,8 @@ const enclaveSweepCursor = "copy:enclave-sweep"
 const enclaveModeCursor = "copy:enclave-mode"
 /** `verify:counts:<table>`: the UTC day the table's counts were last checked. */
 const countCheckCursor = (table: string) => `verify:counts:${table}`
-const decoderCursors = {
+/** The decoder version the copied rows were built with, per stream. */
+export const decoderCursors = {
   projection: "decoder:projection",
   borrow: "decoder:borrow",
 } as const
@@ -630,7 +631,12 @@ const statusReadSchema = z.object({
   failures: z.number().int().nullable(),
   last_ok_at: z.number().int().nullable(),
   failed_24h: z.number().int(),
+  /** When the re-fill flag was set (its cursor's updated_at), or null. */
+  refill_since: z.number().int().nullable(),
 })
+
+/** A re-fill flag older than this is logged at error level on every run. */
+export const refillAlertSeconds = 86_400
 
 /** The status row after a run, from the database's own counts. */
 async function writeStatus(
@@ -639,6 +645,7 @@ async function writeStatus(
     status: "ok" | "skipped" | "failed"
     error: string | null
     nowSeconds: number
+    logger: Logger
     /** Cursors after the run, `halt:` markers included. */
     cursors: ReadonlyMap<string, string>
     /** Runs found crashed (left running) when this one started. */
@@ -655,9 +662,10 @@ async function writeStatus(
            (SELECT consecutive_failures FROM scan_status WHERE id = 1) AS failures,
            (SELECT last_ok_at FROM scan_status WHERE id = 1) AS last_ok_at,
            (SELECT count(*) FROM scan_runs WHERE job = ?1 AND status = 'failed'
-              AND started_at >= ?2) AS failed_24h`,
+              AND started_at >= ?2) AS failed_24h,
+           (SELECT updated_at FROM scan_cursors WHERE name = ?3) AS refill_since`,
       )
-      .bind(scanJob, input.nowSeconds - 86_400)
+      .bind(scanJob, input.nowSeconds - 86_400, refillCursor)
       .first(),
   )
   const refill = input.cursors.get(refillCursor) ?? null
@@ -702,6 +710,19 @@ async function writeStatus(
       },
     ]),
   )
+  // Only an operator's re-fill clears the flag: one left over a day is
+  // paged like a halt.
+  if (refill !== null && row.refill_since !== null) {
+    const pending = input.nowSeconds - row.refill_since
+    if (pending > refillAlertSeconds) {
+      input.logger.error({
+        message: "SCAN RE-FILL PENDING for over 24 hours: run the re-fill",
+        reason: refill,
+        since: row.refill_since,
+        hours: Math.floor(pending / 3_600),
+      })
+    }
+  }
 }
 
 /**
@@ -922,6 +943,7 @@ function skippedRun(
         status: "skipped",
         error: null,
         nowSeconds: deps.nowSeconds,
+        logger: deps.logger,
         cursors,
         crashed,
       })
@@ -1067,6 +1089,7 @@ export async function startScanCopy(deps: ScanCopyDeps): Promise<ScanCopyRun> {
       status: "failed",
       error: message,
       nowSeconds: deps.nowSeconds,
+      logger,
       cursors: stored,
       crashed,
     }).catch(() => undefined)
@@ -1292,6 +1315,7 @@ export async function startScanCopy(deps: ScanCopyDeps): Promise<ScanCopyRun> {
         status: "ok",
         error: errors.length === 0 ? null : errors.join("; "),
         nowSeconds: deps.nowSeconds,
+        logger,
         cursors: after,
         crashed,
       })

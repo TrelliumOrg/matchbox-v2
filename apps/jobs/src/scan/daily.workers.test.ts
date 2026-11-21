@@ -8,6 +8,7 @@ import {
 } from "@matchbox/contracts/scan"
 import { createLogger } from "@matchbox/logger"
 import { beforeEach, describe, expect, it } from "vitest"
+import { z } from "zod"
 import { resetStorage } from "../../test/reset"
 import { dailyRows as dailyRowsOf, dailySpec } from "./aggregates"
 import {
@@ -316,11 +317,17 @@ function api(
     head?: number
     /** Unix time of the newest block; none sends no timestamps. */
     headTime?: number
-    /** validations_count per validator; "fail" answers 503. */
-    validations?: Record<string, string | null | "fail">
+    /**
+     * validations_count per validator; "fail" answers 503, "flaky" 503 on
+     * the first read and 7 after, "404" and "429" those statuses.
+     */
+    validations?: Record<string, string | null>
   } = {},
-): ApiBinding & { paths: string[] } {
+): ApiBinding & { paths: string[]; maxInFlight: () => number } {
   const paths: string[] = []
+  const flaked = new Set<string>()
+  let inFlight = 0
+  let maxInFlight = 0
   const miners = options.miners ?? [validatorA]
   const validations = options.validations ?? { [validatorA]: "1000" }
   const chartDays = options.chartDays ?? [
@@ -330,6 +337,7 @@ function api(
   ]
   return {
     paths,
+    maxInFlight: () => maxInFlight,
     async fetch(request) {
       const path = new URL(request.url).pathname
       paths.push(path)
@@ -359,7 +367,19 @@ function api(
       }
       const validator = /addresses\/(0x[0-9a-fA-F]{40})\/counters$/.exec(path)
       if (validator !== null) {
-        const count = validations[validator[1]?.toLowerCase() ?? ""]
+        const address = validator[1]?.toLowerCase() ?? ""
+        const count = validations[address]
+        inFlight += 1
+        maxInFlight = Math.max(maxInFlight, inFlight)
+        await Promise.resolve()
+        inFlight -= 1
+        if (count === "flaky" && !flaked.has(address)) {
+          flaked.add(address)
+          return new Response("upstream", { status: 503 })
+        }
+        if (count === "404" || count === "429") {
+          return new Response("no", { status: Number(count) })
+        }
         if (count === "fail" || count === undefined) {
           return new Response("upstream", { status: 503 })
         }
@@ -367,7 +387,7 @@ function api(
           transactions_count: "0",
           token_transfers_count: "0",
           gas_usage_count: "0",
-          validations_count: count,
+          validations_count: count === "flaky" ? "7" : count,
         })
       }
       if (path.endsWith("/stats")) {
@@ -661,6 +681,7 @@ describe("validators: blocks proposed per day", () => {
       fetcher: subgraphs(early + days * day),
       nowSeconds: early + days * day + offset,
       logger,
+      counterRetryDelayMs: 0,
     })
     return { binding, result }
   }
@@ -778,6 +799,76 @@ describe("validators: blocks proposed per day", () => {
       retry.binding.paths.filter((path) => path.endsWith("/blocks")),
     ).toEqual([])
     expect(await cursor("daily:validators")).toBe("2026-11-08")
+  })
+
+  const many = (count: number) =>
+    Array.from(
+      { length: count },
+      (_, n) => `0x${(0xd0 + n).toString(16).padStart(40, "0")}`,
+    )
+  const failedReason = (result: { sources: unknown[] }) =>
+    z
+      .array(
+        z.looseObject({
+          source: z.string(),
+          status: z.string(),
+          reason: z.string().optional(),
+        }),
+      )
+      .parse(result.sources)
+      .find((each) => each.source === "validators" && each.status === "failed")
+      ?.reason
+
+  it("reads the counters a few at a time, never more than one read each", async () => {
+    const validators = many(9)
+    const { binding } = await run(0, {
+      miners: validators,
+      validations: Object.fromEntries(validators.map((v) => [v, "10"])),
+    })
+    // Four at a time, a literal: a larger batch size fails here.
+    expect(binding.maxInFlight()).toBeLessThanOrEqual(4)
+    expect(counterReads(binding.paths)).toBe(9)
+    expect(await cursor("daily:validators")).toBe("2026-11-08")
+  })
+
+  it("retries a failed read once, leaving the last in line for the next run", async () => {
+    const validators = many(6)
+    const [flaky = "", ...rest] = validators
+    const { binding, result } = await run(0, {
+      miners: validators,
+      validations: {
+        [flaky]: "flaky",
+        ...Object.fromEntries(rest.map((v) => [v, "10"])),
+      },
+    })
+    // Six validators, six reads: the retry took the last one's read.
+    expect(counterReads(binding.paths)).toBe(6)
+    expect(
+      (await series("chain.blocks_proposed_total")).map((row) => row.dimension),
+    ).toContain(flaky)
+    expect(failedReason(result)).toBe(
+      `No counter for 1 validators: ${validators.at(-1)} (not read)`,
+    )
+    expect(await cursor("daily:validators")).toBeNull()
+  })
+
+  it("names each failed read's status, and stops reading at a 429", async () => {
+    const validators = many(6)
+    const [gone = "", limited = "", ...rest] = validators
+    const { binding, result } = await run(0, {
+      miners: validators,
+      validations: {
+        [gone]: "404",
+        [limited]: "429",
+        ...Object.fromEntries(rest.map((v) => [v, "10"])),
+      },
+    })
+    // The first batch of four only: nothing more once the proxy says 429.
+    expect(counterReads(binding.paths)).toBe(4)
+    const reason = failedReason(result)
+    expect(reason).toContain(`${gone} (404)`)
+    expect(reason).toContain(`${limited} (429)`)
+    expect(reason).toContain(`${validators.at(-1)} (not read)`)
   })
 
   it("reads validators labelled in labels too", async () => {

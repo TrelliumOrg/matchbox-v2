@@ -4,7 +4,8 @@ import { type FixtureRoute, fixtureNow, ok } from "./shared"
 /**
  * `/status`: how complete and current Scan's data is. The `delayed`
  * scenario has the copy step halt two tables and the live Borrow snapshot
- * fall behind, as the shell's two "delayed" notes show.
+ * fall behind, as the shell's two "delayed" notes show. `refill` has a
+ * re-fill due and nothing behind, as the shell's quieter note shows.
  */
 
 export const statusFixtures: FixtureRoute[] = [
@@ -24,7 +25,7 @@ export const statusFixtures: FixtureRoute[] = [
           dirtyDays: 0,
           aggregatesComplete: true,
           historyFilled: true,
-          refillRequired: false,
+          refillRequired: scenario === "refill",
           quarantinedRows: 0,
           halted,
           haltedTables: halted ? ["lock_votes", "activity"] : [],

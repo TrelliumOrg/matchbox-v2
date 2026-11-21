@@ -68,4 +68,9 @@ describe("nameWithPoolType", () => {
     )
     expect(nameWithPoolType("sMUSD", null)).toBe("sMUSD")
   })
+
+  it("adds nothing for an empty label", () => {
+    expect(nameWithPoolType("SNF", "")).toBe("SNF")
+    expect(nameWithPoolType("SNF", " ")).toBe("SNF")
+  })
 })

@@ -33,6 +33,7 @@ export function createMezoClient(
   urls: readonly string[] = defaultHeadRpcUrls,
   timeoutMs = 15_000,
   retries?: number,
+  options: { batch?: boolean } = {},
 ): PublicClient {
   return createPublicClient({
     chain: mezoMainnet,
@@ -42,8 +43,28 @@ export function createMezoClient(
       ),
       retries === undefined ? {} : { retryCount: retries },
     ),
-    batch: { multicall: { batchSize: 1024 * 16, wait: 0 } },
+    ...(options.batch === false
+      ? {}
+      : { batch: { multicall: { batchSize: 1024 * 16, wait: 0 } } }),
   })
+}
+
+/**
+ * The client for page-view reads (live claimable, live locks), no retry.
+ * Those readers build their own Multicall3 requests and send several at
+ * once (`askChain`), so the client must not batch: its multicall batching
+ * packs concurrent `eth_call`s, Multicall3 requests included, into one
+ * outer Multicall3 call. On 20 Nov 2026 a wallet voting 25 gauges asked
+ * for 165 `earned` calls in five requests; packed into one call they ran
+ * out of gas on every public RPC ("out of gas", then "Missing or invalid
+ * parameters" from the last fallback), so its claimable was never live.
+ * Sent as five requests each took 0.15 to 0.35 s.
+ */
+export function createLiveMezoClient(
+  urls: readonly string[],
+  timeoutMs: number,
+): PublicClient {
+  return createMezoClient(urls, timeoutMs, 0, { batch: false })
 }
 
 /**

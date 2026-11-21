@@ -158,6 +158,15 @@ export type WarehouseReader = {
     wallets: readonly string[],
     perWallet: number,
   ): Promise<ActivityEventRow[]>
+  /**
+   * Whole transactions of each wallet's wallet-facing events, one page per
+   * request, all in one round trip: `older` reads back from `from`, newest
+   * first; `newer` reads forward from it, oldest first, stopping before
+   * `until`. Transactions are ordered by timestamp, then hash.
+   */
+  walletHistory(
+    requests: readonly WalletHistoryRequest[],
+  ): Promise<ActivityEventRow[][]>
   protocol(input: {
     epochStart: number
     sinceEpoch: number
@@ -172,6 +181,17 @@ export type WarehouseReader = {
   gaugeVotes(sinceEpoch: number): Promise<GaugeVoteRow[]>
 }
 
+export type WalletHistoryRequest = {
+  wallet: string
+  direction: "older" | "newer"
+  /** Excluded: the page starts past this transaction. */
+  from: { ts: number; tx: string }
+  /** `newer` only, excluded: the page stops before this transaction. */
+  until?: { ts: number; tx: string }
+  /** Transactions in the page, at most. */
+  limit: number
+}
+
 const activityColumns = `
   tx_hash, log_index::text, block_number::text, timestamp::text, action_type,
   source, actor, recipient, token_id::text, amount::text, duration::text,
@@ -179,6 +199,16 @@ const activityColumns = `
   merge_source_token_id::text, merge_dest_token_id::text, token, gauge,
   weight::text, boostable_token_id::text, boost::text, epoch_start::text,
   contract_address`
+
+/** `activityColumns` read through the alias `e`, for a join. */
+const eventColumns = `
+  e.tx_hash, e.log_index::text, e.block_number::text, e.timestamp::text,
+  e.action_type, e.source, e.actor, e.recipient, e.token_id::text,
+  e.amount::text, e.duration::text, e.prev_duration::text,
+  e.post_duration::text, e.prev_is_permanent, e.post_is_permanent,
+  e.merge_source_token_id::text, e.merge_dest_token_id::text, e.token,
+  e.gauge, e.weight::text, e.boostable_token_id::text, e.boost::text,
+  e.epoch_start::text, e.contract_address`
 
 type Query = { text: string; params: unknown[] }
 
@@ -325,6 +355,47 @@ export function createWarehouseReader(run: QueryRunner): WarehouseReader {
           params: [network, [...wallets], [...walletActionTypes], perWallet],
         }),
       )
+    },
+
+    async walletHistory(requests) {
+      if (requests.length === 0) return []
+      const results = await run(
+        requests.map((request) => {
+          const params: unknown[] = [
+            network,
+            request.wallet,
+            [...walletActionTypes],
+            request.from.ts,
+            request.from.tx,
+          ]
+          const older = request.direction === "older"
+          let range = `(timestamp, tx_hash) ${older ? "<" : ">"} ($4::bigint, $5::text)`
+          if (!older && request.until !== undefined) {
+            params.push(request.until.ts, request.until.tx)
+            range += " AND (timestamp, tx_hash) < ($6::bigint, $7::text)"
+          }
+          params.push(request.limit)
+          const order = older ? "DESC" : "ASC"
+          return {
+            text: `WITH txs AS (
+                     SELECT tx_hash, timestamp FROM matchbox.activity_events
+                     WHERE network = $1 AND actor = $2
+                       AND action_type = ANY($3::text[]) AND ${range}
+                     GROUP BY timestamp, tx_hash
+                     ORDER BY timestamp ${order}, tx_hash ${order}
+                     LIMIT $${params.length}
+                   )
+                   SELECT ${eventColumns}
+                   FROM matchbox.activity_events e
+                   JOIN txs t ON t.tx_hash = e.tx_hash AND t.timestamp = e.timestamp
+                   WHERE e.network = $1 AND e.actor = $2
+                     AND e.action_type = ANY($3::text[])
+                   ORDER BY e.timestamp DESC, e.log_index DESC`,
+            params,
+          }
+        }),
+      )
+      return results.map((result) => rows(activityEventRowSchema, result))
     },
 
     async gaugeVotes(sinceEpoch) {

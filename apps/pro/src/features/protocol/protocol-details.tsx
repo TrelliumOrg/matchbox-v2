@@ -8,7 +8,7 @@ import * as PropertyIcon from "@matchbox/ui/property-icon"
 import * as SegmentedControl from "@matchbox/ui/segmented-control"
 import { Link } from "@tanstack/react-router"
 import { type ReactNode, useEffect, useRef, useState } from "react"
-import { CoinMarks } from "../../components/coins"
+import { CoinMarks, Incentives } from "../../components/coins"
 import { loadProApi } from "../../data/queries"
 import type { Protocol, ProtocolEvent } from "../../data/view-models"
 import { formatAgo, formatUsd } from "../../lib/format"
@@ -241,7 +241,7 @@ export function ProtocolDetails({
                 <GaugeCard.Picture picture={entry.picture} size={48} />
               )}
               <ListRow.Text>
-                <ListRow.Title>
+                <ListRow.Title className="line-clamp-2 whitespace-normal">
                   {entry.gauge === null ? (
                     entry.name
                   ) : (
@@ -254,20 +254,22 @@ export function ProtocolDetails({
                     </Link>
                   )}
                 </ListRow.Title>
-                <ListRow.Subline>
+                <ListRow.Subline className="flex items-center gap-1.5">
                   {entry.kind === "pool" ? (
-                    <PropertyIcon.Root
-                      name="pool-gauge"
-                      label={entry.subline}
-                      size={16}
-                    />
-                  ) : (
-                    entry.subline
-                  )}
+                    <PropertyIcon.Root name="pool-gauge" size={16} />
+                  ) : null}
+                  {entry.subline}
                 </ListRow.Subline>
               </ListRow.Text>
               <ListRow.Value>
-                <ListRow.Main>{formatUsd(entry.usd, "cents")}</ListRow.Main>
+                <ListRow.Main>
+                  <Incentives
+                    usd={entry.usd}
+                    priced={entry.priced}
+                    unpriced={entry.unpriced}
+                    stacked
+                  />
+                </ListRow.Main>
                 <ListRow.Sub className="flex items-center justify-end gap-1.5">
                   <CoinMarks symbols={entry.tokens} />
                   {entry.deposits === null

@@ -27,8 +27,9 @@ about this page" at a Stuart Worker; without it the button opens search.
    `packages/docs/dist/routes.json` (and every link it finds) from a preview of that Worker, writing
    `dist/client/<path>/index.html`. `/404` becomes `dist/client/404.html`.
 2. `scripts/postbuild.mjs` gives every page a `<meta>` CSP whose `script-src` lists the SHA-256 of each inline
-   script on it (no `unsafe-inline`, no `unsafe-eval`), strips the router from 404.html, and checks every
-   link and fragment in the built HTML.
+   script on it (no `unsafe-inline`, no `unsafe-eval`) and the host of Cloudflare's Web Analytics beacon, which
+   the zone injects into every page with no nonce, strips the router from 404.html, and checks every link and
+   fragment in the built HTML.
 3. Cloudflare serves matching assets before any Worker code runs (`run_worker_first: false`). Navigation
    misses get 404.html from the asset layer (`not_found_handling: "404-page"`). `_redirects` and `_headers`
    come from `dist/public`, which `scripts/prebuild.mjs` assembles from `public/` and `packages/docs`.

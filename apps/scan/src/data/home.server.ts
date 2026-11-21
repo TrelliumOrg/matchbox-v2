@@ -10,6 +10,7 @@ import {
   borrowedTile,
   byIncentives,
   collateralTile,
+  countedBlocks,
   type HomeGauge,
   type HomeTile,
   homeGauge,
@@ -159,12 +160,9 @@ export async function homePage(): Promise<HomePage> {
   }
 
   if (validators.status === "ok") {
-    const { available, day, day_total } = validators.data.data
     const tile = validatorsTile(
       validators.data.data.validators,
-      available && day !== null && day_total !== null
-        ? { day, total: day_total }
-        : null,
+      countedBlocks(validators.data.data),
     )
     if (tile !== null) tiles.push(tile)
   }

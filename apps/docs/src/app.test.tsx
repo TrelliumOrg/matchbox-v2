@@ -1,9 +1,12 @@
 import { readdirSync, readFileSync, statSync } from "node:fs"
 import { join } from "node:path"
+import { manifest } from "@matchbox/docs/manifest"
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import { clockAt, countdown } from "./content/epoch-clock"
+import { PathText } from "./content/reference"
 import { Body } from "./content/render"
+import pageTitle from "./shell/page-title"
 
 function files(directory: string): string[] {
   return readdirSync(directory).flatMap((name) => {
@@ -78,5 +81,42 @@ describe("the renderer", () => {
     ).toContain("Votes carry over. Body.")
     expect(screen.getByRole("columnheader", { name: "Type" })).toBeTruthy()
     expect(document.getElementById("row")).not.toBeNull()
+  })
+})
+
+describe("the API reference", () => {
+  it("keeps an operation's path whole, breaking only before a slash", () => {
+    const path = "/gauges/{network}/{gaugeAddress}/epochs"
+    const { container } = render(
+      <span>
+        <PathText path={path} />
+      </span>,
+    )
+    expect(container.textContent).toBe(path)
+    expect(container.querySelectorAll("wbr")).toHaveLength(4)
+    for (const wbr of container.querySelectorAll("wbr"))
+      expect(wbr.nextSibling?.textContent?.startsWith("/")).toBe(true)
+    const reference = readFileSync(
+      join(process.cwd(), "src/content/reference.tsx"),
+      "utf8",
+    )
+    expect(reference).not.toMatch(/truncate[^"]*font-mono/)
+  })
+})
+
+describe("page titles", () => {
+  it("are unique, naming the product where a concept shares the title", () => {
+    const pages = Object.values(manifest.pages)
+    const titles = pages.map((page) => pageTitle(page, manifest.pages))
+    expect(new Set(titles).size).toBe(titles.length)
+    const at = (path: string): string => {
+      const page = manifest.pages[path]
+      if (page === undefined) throw new Error(`${path} is not a page`)
+      return pageTitle(page, manifest.pages)
+    }
+    expect(at("/pro/locks")).toBe("Locks in Matchbox Pro, Matchbox Docs")
+    expect(at("/concepts/locks")).toBe("Locks, Matchbox Docs")
+    expect(at("/scan/borrow")).toBe("Borrow in Matchscan, Matchbox Docs")
+    expect(at("/pro/vote")).toBe("Vote, Matchbox Docs")
   })
 })

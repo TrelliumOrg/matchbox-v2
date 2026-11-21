@@ -181,12 +181,16 @@ function AddressPage(): ReactNode {
               )}
             </p>
           )}
-          <h1 className="leading-tight">
-            <HashChip.Root value={address} head={12} tail={10}>
-              <HashChip.Value className="text-[24px]! font-[650] max-md:text-[17px]! max-sm:text-[15px]!" />
+          <div className="flex items-center gap-1.5">
+            <h1 className="min-w-0 leading-tight">
+              <HashChip.Root value={address} head={12} tail={10}>
+                <HashChip.Value className="text-[24px]! font-[650] max-md:text-[17px]! max-sm:text-[15px]!" />
+              </HashChip.Root>
+            </h1>
+            <HashChip.Root value={address}>
               <HashChip.Copy />
             </HashChip.Root>
-          </h1>
+          </div>
           <p className="mt-1 flex flex-wrap gap-x-4 text-[15px] text-sec">
             {counts.transactions === null ||
             counts.transactions === undefined ? null : (

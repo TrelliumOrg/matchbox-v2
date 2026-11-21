@@ -57,6 +57,7 @@ import { scanSchemas } from "./scan/schemas"
 import { metric } from "./scan/series"
 import { readSeries, type SeriesView } from "./scan/series.server"
 import {
+  backfillNote,
   countText,
   dayLabel,
   latestOf,
@@ -196,6 +197,7 @@ function addressStats(
       stats.push({
         label: ends === null ? `New ${days}d` : `New ${days}d to ${ends}`,
         value: countFigure(sum),
+        ...(ends === null ? {} : { note: backfillNote }),
       })
     }
   }

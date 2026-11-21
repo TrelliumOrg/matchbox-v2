@@ -297,3 +297,53 @@ test("screenshots of the leaderboard", async ({ page }, testInfo) => {
     fullPage: true,
   })
 })
+
+/**
+ * Cloudflare's zone injects its Web Analytics beacon into every page as it
+ * is served: this adds the same tag (served locally) and reads what the
+ * page CSP lets through. The beacon loads and reports to this origin, and
+ * a script from any other host is still refused.
+ */
+test("the page CSP runs Cloudflare's beacon and nothing else from outside", async ({
+  page,
+}) => {
+  await page.route(
+    /^https:\/\/(static\.cloudflareinsights\.com|example\.com)\//,
+    (route) =>
+      route.fulfill({
+        contentType: "text/javascript",
+        headers: { "access-control-allow-origin": "*" },
+        body: "window.beaconRan = true",
+      }),
+  )
+  await page.goto("/")
+  const result = await page.evaluate(async () => {
+    const violations: string[] = []
+    document.addEventListener("securitypolicyviolation", (event) => {
+      violations.push(`${event.effectiveDirective} ${event.blockedURI}`)
+    })
+    function load(src: string): Promise<boolean> {
+      return new Promise((resolve) => {
+        const script = document.createElement("script")
+        script.type = "module"
+        script.crossOrigin = "anonymous"
+        script.src = src
+        script.onload = () => resolve(true)
+        script.onerror = () => resolve(false)
+        document.body.appendChild(script)
+      })
+    }
+    const beacon = await load(
+      "https://static.cloudflareinsights.com/beacon.min.js/v1",
+    )
+    const other = await load("https://example.com/beacon.min.js")
+    navigator.sendBeacon("/cdn-cgi/rum?", "{}")
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    return { beacon, other, violations }
+  })
+  expect(result.beacon).toBe(true)
+  expect(result.other).toBe(false)
+  expect(result.violations).toEqual([
+    "script-src-elem https://example.com/beacon.min.js",
+  ])
+})

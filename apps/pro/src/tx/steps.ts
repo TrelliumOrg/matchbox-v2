@@ -1,3 +1,4 @@
+import { MEZO_MAINNET } from "@matchbox/chain"
 import type { Hex } from "viem"
 
 /**
@@ -16,6 +17,17 @@ export type StepFailure = "rejected" | "check" | "chain"
 
 export const scanTxUrl = (hash: string): string =>
   `https://scan.matchbox.markets/tx/${hash}`
+
+/** The transaction on Mezo's own explorer, the secondary link. */
+export const explorerTxUrl = (hash: string): string =>
+  `${MEZO_MAINNET.blockExplorers.default.url}/tx/${hash}`
+
+export type TxLink = {
+  href: string
+  label: string
+  /** The smaller link beside it: the same transaction on Mezo Explorer. */
+  secondary: { href: string; label: string }
+}
 
 export type SigningStep = {
   id: string
@@ -155,18 +167,23 @@ export function buttonLabel(steps: readonly SigningStep[]): string {
 }
 
 /**
- * The Matchscan link under a step: a signed step's transaction, inline
- * ("Signed, view on Matchscan"), or the reverted one under a failure.
+ * The links under a step, Matchscan first and Mezo Explorer beside it: a
+ * sent step's transaction while it waits for its block ("Waiting for
+ * block, view on Matchscan"), once signed ("Signed, view on Matchscan"),
+ * or the reverted one under a failure. Matchscan opens a transaction from
+ * the moment it is sent.
  */
-export function stepLink(
-  step: SigningStep,
-): { href: string; label: string } | null {
+export function stepLink(step: SigningStep): TxLink | null {
   if (step.hash === null) return null
-  if (step.status === "done") {
-    return { href: scanTxUrl(step.hash), label: "view on Matchscan" }
+  const secondary = { href: explorerTxUrl(step.hash), label: "Mezo Explorer" }
+  if (
+    step.status === "done" ||
+    (step.status === "active" && step.phase === "confirming")
+  ) {
+    return { href: scanTxUrl(step.hash), label: "view on Matchscan", secondary }
   }
   if (step.status === "failed" && step.failure === "chain") {
-    return { href: scanTxUrl(step.hash), label: "View on Matchscan" }
+    return { href: scanTxUrl(step.hash), label: "View on Matchscan", secondary }
   }
   return null
 }

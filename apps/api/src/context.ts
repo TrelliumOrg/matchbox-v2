@@ -27,6 +27,8 @@ export type ApiVariables = {
   identity: LogIdentity | undefined
   routeTemplate: string | undefined
   cacheStatus: ApiRequestCacheStatus | undefined
+  /** Set when a response is an earlier answer (the request log's blob11). */
+  servedFrom: "last-good" | undefined
 }
 
 export type ApiEnv = { Variables: ApiVariables }

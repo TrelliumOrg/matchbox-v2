@@ -245,7 +245,8 @@ export const demoGauges = {
     },
   },
   aerodromeMezoMusd: {
-    address: address("4440", "f4b6"),
+    // The real gauge: Pro lists only the MEZO gauges the Mezo app does.
+    address: "0x4440a9b2954cb98416c0122e2ea996c46555f4b6",
     voter: "third-party",
     kind: "mezo",
     name: "Aerodrome MEZO/MUSD CL200",

@@ -241,7 +241,7 @@ function RangeLinks({ period }: { period: PeriodView }): ReactNode {
   return (
     <nav
       aria-label="Rewards period"
-      className="flex items-center gap-3 text-[14px]"
+      className="flex items-center gap-3 text-[14px] pointer-coarse:gap-7"
     >
       {rewardsRanges.map((range) => (
         <Link
@@ -257,6 +257,7 @@ function RangeLinks({ period }: { period: PeriodView }): ReactNode {
           activeOptions={{ exact: true, includeSearch: true }}
           activeProps={{}}
           aria-current={range === period.range ? "true" : undefined}
+          data-tap=""
           className="rounded-sm text-sec outline-none hover:text-ink focus-visible:outline-2 focus-visible:outline-ink [&[aria-current]]:font-semibold [&[aria-current]]:text-ink"
         >
           {range}

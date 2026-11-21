@@ -146,7 +146,12 @@ export async function recheckIgnoringLength(
   if (typeof outcomes === "string") {
     return { kind: "unverified", detail: outcomes }
   }
-  const sourced = sourcedSetFor(outcomes, wallet.address, testCase.query)
+  const sourced = sourcedSetFor(
+    outcomes,
+    wallet.address,
+    testCase.query,
+    BENCH_NOW,
+  )
   const draft = outcomeDraft(outcomes)
   const text = normalizeCopy(record.rawText)
   // Stuart's template, reused verbatim, is sourced as a whole.

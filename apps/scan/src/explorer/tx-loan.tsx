@@ -13,6 +13,14 @@ import { SectionState, TxLink } from "./parts"
  * yet, never an estimate. Its own chunk, off the first paint's budget.
  */
 
+/**
+ * A figure keeps its unit on its line ("-3,054.12 MUSD"): a row's amounts
+ * wrap between figures, never inside one and never under an ellipsis.
+ */
+function glued(text: string): string {
+  return text.replace(/(\d) (?=[A-Za-z])/g, "$1\u00a0")
+}
+
 export function WhatChanged({
   loan,
 }: {
@@ -98,11 +106,11 @@ export function PositionCard({ loan }: { loan: TxLoanView }): ReactNode {
           >
             <span className="text-[14px] text-sec">{row.day}</span>
             <span className="min-w-0">
-              <span className="block truncate text-[15px] font-semibold">
-                {row.title}
+              <span className="block text-[15px] font-semibold">
+                {glued(row.title)}
               </span>
-              <span className="block truncate text-[13.5px] text-sec">
-                {row.current ? "This transaction" : (row.subline ?? "")}
+              <span className="block text-[13.5px] text-sec">
+                {row.current ? "This transaction" : glued(row.subline ?? "")}
               </span>
             </span>
             <span className="text-right text-[13.5px] max-sm:hidden">

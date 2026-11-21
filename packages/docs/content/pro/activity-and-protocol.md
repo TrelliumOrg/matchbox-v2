@@ -1,7 +1,7 @@
 ---
 title: Activity and Protocol
 description: Your transactions in plain words, and Mezo Earn as a whole, epoch by epoch.
-updated: 2026-11-10
+updated: 2026-11-20
 ---
 
 Activity lists what a wallet did, in plain words. Protocol shows Mezo Earn as a whole, one epoch at a time.
@@ -10,7 +10,9 @@ Activity lists what a wallet did, in plain words. Protocol shows Mezo Earn as a 
 
 Activity groups a wallet's votes, claims, lock actions and incentives by day. Filter it with All, Votes, Claims, Locks and Incentives, or search by lock, gauge or transaction.
 
-Open a row for its details and status: Submitted, Confirming, Reverted or Confirmed.
+Open a row for its details and status: Submitted, Confirming, Reverted or Confirmed. A claim shows its [value when claimed](/pro/rewards#value-when-claimed).
+
+Download CSV gives the wallet's whole history as a file, one line a token. The columns are under [Download CSV](/pro/rewards#download-csv).
 
 ## Protocol {#protocol}
 

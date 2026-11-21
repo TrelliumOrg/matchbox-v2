@@ -94,6 +94,17 @@ export const blockHeightTimeMetric = "chain.block_height_time"
 /** Origin binding calls use; the InternalApi entrypoint trusts any URL. */
 const apiOrigin = "https://api.internal"
 
+/** A proxy answer that was not 2xx, with its status. */
+class BlockscoutStatusError extends Error {
+  constructor(
+    readonly status: number,
+    path: string,
+  ) {
+    super(`Blockscout proxy answered ${status} for ${path}`)
+    this.name = "BlockscoutStatusError"
+  }
+}
+
 async function blockscout<Schema extends z.ZodType>(
   api: ApiBinding,
   path: string,
@@ -104,10 +115,115 @@ async function blockscout<Schema extends z.ZodType>(
       headers: { accept: "application/json" },
     }),
   )
-  if (!response.ok) {
-    throw new Error(`Blockscout proxy answered ${response.status} for ${path}`)
-  }
+  if (!response.ok) throw new BlockscoutStatusError(response.status, path)
   return schema.parse(await response.json())
+}
+
+/** Validator counter reads in flight at once. */
+export const counterBatch = 4
+/** Milliseconds before a failed counter read is tried again. */
+export const counterRetryDelayMs = 1_000
+
+/** One validator's counter read: its count, or why there is none. */
+type CounterRead =
+  | { address: string; ok: true; count: string }
+  | {
+      address: string
+      ok: false
+      /** The proxy's status; null for a network error or a bad body. */
+      status: number | null
+      reason: string
+    }
+
+async function counterRead(
+  api: ApiBinding,
+  address: string,
+): Promise<CounterRead> {
+  try {
+    const counters = await blockscout(
+      api,
+      `addresses/${address}/counters`,
+      validatorCountersSchema,
+    )
+    if (counters.validations_count === null) {
+      return { address, ok: false, status: 200, reason: "no validations_count" }
+    }
+    return { address, ok: true, count: String(counters.validations_count) }
+  } catch (error) {
+    if (error instanceof BlockscoutStatusError) {
+      return { address, ok: false, status: error.status, reason: "status" }
+    }
+    return {
+      address,
+      ok: false,
+      status: null,
+      reason:
+        error instanceof z.ZodError
+          ? "unexpected body"
+          : error instanceof Error
+            ? `${error.name}: ${error.message}`.slice(0, 200)
+            : String(error).slice(0, 200),
+    }
+  }
+}
+
+/**
+ * Validators' counters, `counterBatch` at a time. A 5xx or a network error
+ * is tried once more after a pause; a 429 stops the reads (the proxy is
+ * out of upstream budget). Never more reads than validators: a retry
+ * spends the read of the last validator in line, which is left for the
+ * next run (`skipped`), as are those after a 429. So a run reads no more
+ * than one read per validator did before.
+ */
+export async function readValidatorCounters(
+  api: ApiBinding,
+  addresses: readonly string[],
+  retryDelayMs = counterRetryDelayMs,
+): Promise<{ reads: CounterRead[]; skipped: string[] }> {
+  // `first`: the failed read a queued retry repeats.
+  const queue: { address: string; first: CounterRead | null }[] = addresses.map(
+    (address) => ({ address, first: null }),
+  )
+  const reads: CounterRead[] = []
+  let budget = addresses.length
+  while (queue.length > 0 && budget > 0) {
+    const batch = queue.splice(0, Math.min(counterBatch, budget))
+    budget -= batch.length
+    const answers = await Promise.all(
+      batch.map((item) => counterRead(api, item.address)),
+    )
+    const again: { address: string; first: CounterRead }[] = []
+    let limited = false
+    answers.forEach((read, index) => {
+      const item = batch[index]
+      if (item === undefined) return
+      if (!read.ok && read.status === 429) limited = true
+      const retryable =
+        !read.ok &&
+        item.first === null &&
+        (read.status === null
+          ? read.reason !== "unexpected body"
+          : read.status >= 500)
+      if (retryable) again.push({ address: item.address, first: read })
+      else reads.push(read)
+    })
+    if (limited) {
+      queue.unshift(...again)
+      break
+    }
+    if (again.length > 0) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+      queue.unshift(...again)
+    }
+  }
+  // A retry left unread reports its first failure.
+  for (const item of queue) if (item.first !== null) reads.push(item.first)
+  return {
+    reads,
+    skipped: queue.flatMap((item) =>
+      item.first === null ? [item.address] : [],
+    ),
+  }
 }
 
 export type OnceDailyDeps = {
@@ -116,6 +232,8 @@ export type OnceDailyDeps = {
   fetcher: FetchLike
   nowSeconds: number
   logger: Logger
+  /** Pause before a validator counter read is retried (tests: 0). */
+  counterRetryDelayMs?: number
 }
 
 export type SourceResult =
@@ -373,14 +491,10 @@ export async function runOnceDaily(
       const before = await levels(dayBefore)
       // One read per validator per day: a retry reads only those missing.
       const pending = validators.filter((address) => !done.has(address))
-      const reads = await Promise.allSettled(
-        pending.map((address) =>
-          blockscout(
-            api,
-            `addresses/${address}/counters`,
-            validatorCountersSchema,
-          ),
-        ),
+      const counters = await readValidatorCounters(
+        api,
+        pending,
+        deps.counterRetryDelayMs,
       )
       const points: DailyPoint[] = []
       // The day's blocks, by the same rule as each validator's count: a
@@ -408,25 +522,18 @@ export async function runOnceDaily(
           })
         }
       }
-      const failures: string[] = []
-      reads.forEach((read, index) => {
-        const address = pending[index]
-        if (address === undefined) return
-        if (
-          read.status === "rejected" ||
-          read.value.validations_count === null
-        ) {
-          failures.push(address)
-          return
-        }
-        const total = BigInt(read.value.validations_count)
+      const failures = counters.reads.flatMap((read) => (read.ok ? [] : [read]))
+      for (const read of counters.reads) {
+        if (!read.ok) continue
+        const address = read.address
+        const total = BigInt(read.count)
         points.push({
           metric: proposedTotalMetric,
           dimension: address,
           value: total,
         })
         const previous = before.get(address)
-        if (previous === undefined) return
+        if (previous === undefined) continue
         if (total < previous) {
           deps.logger.warn({
             message:
@@ -435,27 +542,48 @@ export async function runOnceDaily(
             previous: previous.toString(),
             total: total.toString(),
           })
-          return
+          continue
         }
         points.push({
           metric: proposedMetric,
           dimension: address,
           value: total - previous,
         })
-      })
+      }
+      const missing = failures.length + counters.skipped.length
+      if (missing > 0) {
+        // Which reads failed and how, so a cause shows in the logs.
+        deps.logger.warn({
+          message: "Validator counter reads failed; retried next run",
+          read: counters.reads.length,
+          failed: failures.map((read) => ({
+            validator: read.address,
+            status: read.status,
+            reason: read.reason,
+          })),
+          notRead: counters.skipped,
+        })
+      }
       await commit(
         "validators",
-        failures.length === 0 ? validatorsMarker : null,
+        missing === 0 ? validatorsMarker : null,
         new Map([[yesterday, points]]),
         "blockscout",
         [],
         notes,
       )
-      if (failures.length > 0) {
+      if (missing > 0) {
+        const detail = [
+          ...failures.map(
+            (read) =>
+              `${read.address} (${read.status === null || read.status === 200 ? read.reason : read.status})`,
+          ),
+          ...counters.skipped.map((address) => `${address} (not read)`),
+        ]
         await failed(
           "validators",
           new Error(
-            `No counter for ${failures.length} validators: ${failures.join(", ")}`,
+            `No counter for ${missing} validators: ${detail.join(", ")}`,
           ),
         )
       }

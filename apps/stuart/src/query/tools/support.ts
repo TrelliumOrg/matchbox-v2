@@ -6,6 +6,7 @@ import { z } from "zod"
 import { canonicalJson, hmacHex } from "../crypto"
 import { clipName, shortAddress } from "../format"
 import { makeEvidence, type ToolOutcome, traceItem } from "../outcome"
+import { redactAndClip, redactSecrets } from "../redact"
 import {
   CLAIM_CALC_VERSION,
   LOAN_CALC_VERSION,
@@ -42,6 +43,10 @@ function guessKind(text: string): SupportReportDraft["kind"] {
   return "other"
 }
 
+/** Said in the draft when a long hex value was taken out. */
+export const HEX_REMOVED_NOTE =
+  "A long hex value was removed for safety. You can add a transaction hash in the ticket."
+
 export const draftSupportReportTool = defineTool({
   name: "draft_support_report",
   family: "support",
@@ -53,12 +58,28 @@ export const draftSupportReportTool = defineTool({
   }),
   async run(context, input) {
     const { scope, wallet } = context
+    // A key or phrase pasted into the message never reaches the stored
+    // report: the draft holds a marker in its place. A 64-hex string stays
+    // only when this turn's tools returned it (a chain read, an evidence
+    // link). Nothing the user typed is looked up anywhere: a lookup would
+    // put a key in the request logs of the API Worker and the explorer.
+    const verified = context.verified ?? new Set<string>()
+    const options = { verified, mode: "report" } as const
+    const redacted = redactSecrets(input.problem, options)
+    const problem = redacted.text
+    const message = redactSecrets(context.query, options)
+    const hexRemoved =
+      redacted.reasons.includes("hex_key") ||
+      message.reasons.includes("hex_key")
+    const statement = hexRemoved
+      ? `${problem.slice(0, 2_000 - HEX_REMOVED_NOTE.length - 2)}\n\n${HEX_REMOVED_NOTE}`
+      : problem.slice(0, 2_000)
     const items: SupportReportItem[] = [
       {
         itemId: "message",
         kind: "message",
         label: "This message",
-        value: context.query.slice(0, 400),
+        value: redactAndClip(context.query, 400, options),
         removable: true,
       },
     ]
@@ -82,9 +103,9 @@ export const draftSupportReportTool = defineTool({
       draftId: `draft_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`,
       createdAt: context.now().toISOString(),
       chainId: 31_612,
-      kind: input.kind ?? guessKind(input.problem),
-      title: clipName(input.problem, 120),
-      problemStatement: input.problem.slice(0, 2_000),
+      kind: input.kind ?? guessKind(problem),
+      title: clipName(problem, 120),
+      problemStatement: statement,
       included: items,
     }
     const draft: SupportReportDraft = {

@@ -1,4 +1,4 @@
-import { ZERO_ADDRESS } from "@matchbox/chain"
+import { getTokenPriceType, ZERO_ADDRESS } from "@matchbox/chain"
 import type {
   Escrow,
   GaugeCard,
@@ -10,6 +10,7 @@ import type {
   WalletOverview,
   WalletRewards,
 } from "@matchbox/contracts/read-models"
+import { funding } from "@matchbox/domain/funding"
 import { nameWithPoolType, poolTypeLabel } from "@matchbox/domain/pool-type"
 import { targetApyBps, type VoteTarget } from "@matchbox/domain/voteMath"
 import type { VoteBranch } from "@matchbox/stuart-ui/contract"
@@ -305,42 +306,82 @@ export function claimableFromRewards(input: {
   return { locks: result, skipped }
 }
 
-function funded(epoch: GaugeProfileReadModel["incentivesHistory"][number]) {
-  return epoch.incentives.tokens.some((token) => baseAmount(token) > 0n)
+/**
+ * Whether one epoch's incentives fund it, by the rule Pro shares
+ * (`@matchbox/domain/funding`). Only tokens Stuart prices count: registry
+ * tokens by address, as everywhere else (an unregistered "FAKEBTC" never
+ * funds an epoch, whatever its amount). They must be worth at least a
+ * cent by the read model's USD values; a registry token the read model
+ * left without a USD value still counts when its amount is above zero,
+ * since it is a real token and its size can't be judged.
+ */
+function epochFunding(
+  tokens: readonly TokenAmount[],
+): "priced" | "unpriced" | "none" {
+  const result = funding(
+    tokens
+      .filter((token) => baseAmount(token) > 0n)
+      .map((token) => {
+        const registered = getTokenPriceType(token.token.address) !== "unknown"
+        return {
+          address: token.token.address,
+          registered,
+          // Read only for registry tokens: the rule ignores the rest.
+          usdMicro:
+            !registered || token.usd === null ? null : usdToMicro(token.usd),
+        }
+      }),
+  )
+  if (result.status === "none") return "none"
+  return result.status === "funded" ? "priced" : "unpriced"
+}
+
+/**
+ * Funded completed epochs per target, and the targets left out because
+ * every epoch they were funded in paid only unpriced tokens or dust.
+ */
+export type FundedEpochs = {
+  counts: Map<string, number>
+  unpricedOnly: Set<string>
 }
 
 /** Completed epochs (of the last `window`) in which each target had
- * incentives, from each gauge profile's `incentivesHistory`. */
+ * priced incentives, from each gauge profile's `incentivesHistory`. */
 export function fundedEpochsFromProfiles(input: {
   domain: VotingDomain
   profiles: ReadonlyMap<string, GaugeProfileReadModel | null>
   window: number
-}): Map<string, number> {
+}): FundedEpochs {
   const { domain } = input
   const oldest = domain.epochStart - BigInt(input.window) * EPOCH_SECONDS
-  const result = new Map<string, number>()
+  const counts = new Map<string, number>()
+  const unpricedOnly = new Set<string>()
+  const inWindow = (start: number) => {
+    const value = BigInt(start)
+    return value < domain.epochStart && value >= oldest
+  }
   for (const target of domain.targets) {
     if (target.incentives.length === 0) continue
     const profile = input.profiles.get(target.gaugeAddress.toLowerCase())
     if (profile === null || profile === undefined) continue
     // Epochs funded in the full gauge history or the profile's recent
     // incentives, whichever has them: either alone can be shallow.
-    const starts = new Set<string>()
-    for (const epoch of profile.history ?? []) {
-      if (epoch.incentives.tokens.some((token) => baseAmount(token) > 0n)) {
-        starts.add(String(epoch.epoch.start))
-      }
+    const priced = new Set<number>()
+    let unpriced = false
+    for (const epoch of [
+      ...(profile.history ?? []),
+      ...profile.incentivesHistory,
+    ]) {
+      if (!inWindow(epoch.epoch.start)) continue
+      const funding = epochFunding(epoch.incentives.tokens)
+      if (funding === "priced") priced.add(epoch.epoch.start)
+      if (funding === "unpriced") unpriced = true
     }
-    for (const epoch of profile.incentivesHistory) {
-      if (funded(epoch)) starts.add(String(epoch.epoch.start))
-    }
-    const count = [...starts].filter((value) => {
-      const start = BigInt(value)
-      return start < domain.epochStart && start >= oldest
-    }).length
-    if (count > 0) result.set(target.targetAddress.toLowerCase(), count)
+    const key = target.targetAddress.toLowerCase()
+    if (priced.size > 0) counts.set(key, priced.size)
+    else if (unpriced) unpricedOnly.add(key)
   }
-  return result
+  return { counts, unpricedOnly }
 }
 
 type Merged = {

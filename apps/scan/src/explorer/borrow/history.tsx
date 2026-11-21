@@ -10,6 +10,14 @@ import { Coin } from "./parts"
 // -- history ------------------------------------------------------------------
 
 /** An address with no name to show, for links. */
+/**
+ * A figure keeps its unit on its line ("-3,054.12 MUSD"): a row's amounts
+ * wrap between figures, never inside one and never under an ellipsis.
+ */
+function glued(text: string): string {
+  return text.replace(/(\d) (?=[A-Za-z])/g, "$1\u00a0")
+}
+
 export function plainAddress(address: string): AddressView {
   return { address, name: null, contract: false }
 }
@@ -45,12 +53,12 @@ export function HistoryList({
             )}
           </span>
           <span className="flex min-w-0 flex-col">
-            <span className="truncate text-[16px] font-semibold tabular-nums">
-              {row.title}
+            <span className="text-[16px] font-semibold tabular-nums">
+              {glued(row.title)}
             </span>
             {row.subline === null && !showAccount ? null : (
-              <span className="truncate text-[14.5px] text-sec tabular-nums">
-                {row.subline}
+              <span className="text-[14.5px] text-sec tabular-nums">
+                {row.subline === null ? null : glued(row.subline)}
                 {showAccount && row.account !== null ? (
                   <>
                     {row.subline === null ? "" : ", "}

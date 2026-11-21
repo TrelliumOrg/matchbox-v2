@@ -79,6 +79,12 @@ const tokenCase: Readonly<Record<string, string>> = {
   musd: "MUSD",
   usdc: "USDC",
   usdt: "USDT",
+  bdusd: "bdUSD",
+}
+
+/** A token as gauge creation metadata spells it ("musd"), in its own case. */
+export function metadataToken(part: string): string {
+  return tokenCase[part] ?? part.toUpperCase()
 }
 
 function titleWord(word: string): string {
@@ -111,7 +117,7 @@ export function crossChainName(metadata: string): string {
     else if (cl !== null) tail.push(`CL${cl[1]}`)
     else if (/^[0-9]+pool$/.test(part)) tail.push(part)
     else if (tail.length === 0) {
-      tokens.push(tokenCase[part] ?? part.toUpperCase())
+      tokens.push(metadataToken(part))
     } else tail.push(part)
   }
   if (tokens.length > 0) words.push(tokens.join("/"))

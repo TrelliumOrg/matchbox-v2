@@ -40,6 +40,7 @@ import {
   marketView,
   morphoEventView,
   morphoHistoryView,
+  morphoOpenCounts,
   morphoRowView,
   type TroveRowView,
   troveEventView,
@@ -496,7 +497,10 @@ export type BorrowOverview = {
    * total is then not complete).
    */
   counts: {
+    /** Morpho positions that owe, in every market. */
     morpho: number
+    /** Of those, in markets that lend MUSD (the homepage's count). */
+    morphoMusd: number
     troves: number
     enclaves: number | null
     complete: boolean
@@ -642,6 +646,7 @@ export async function borrowOverview(
       (read) => read.status === "ok" && read.data.nextCursor === null,
     )
   const withDebt = positions.filter((each) => each.borrow_assets !== "0")
+  const morphoOpen = morphoOpenCounts(withDebt, byId)
   const troveRows = troves.status === "ok" ? troves.data.data : []
   const openTroves = troveRows.filter((each) => each.status === "active")
   const trovesComplete =
@@ -706,7 +711,8 @@ export async function borrowOverview(
       positionFailure === undefined &&
       troves.status === "ok"
         ? {
-            morpho: withDebt.length,
+            morpho: morphoOpen.all,
+            morphoMusd: morphoOpen.musd,
             troves: openTroves.length,
             enclaves: openEnclaves,
             complete:

@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test"
+import { rememberWallet } from "./own-wallet"
 
 /**
  * The phone's ballot bar over the tab bar, with an Android-sized bottom
@@ -91,6 +92,8 @@ async function expectClear(page: Page): Promise<Box> {
  * for the network to go quiet.
  */
 async function checkVote(page: Page): Promise<void> {
+  // This browser's own wallet: someone else's ballot is never signed.
+  await rememberWallet(page, user.slice(1))
   await withInset(page)
   await page.goto(`${user}/vote/vebtc`)
   const bar = page.locator("[data-ballot-bar]")

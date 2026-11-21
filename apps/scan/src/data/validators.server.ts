@@ -266,10 +266,16 @@ export type ProposedFigures = {
   total: string | null
 }
 
-function proposedOf(row: ScanValidatorRow | null): ProposedFigures {
+function proposedOf(
+  row: ScanValidatorRow | null,
+  sharesComplete: boolean,
+): ProposedFigures {
   return {
     blocks: count(row?.blocks ?? null),
-    share: row?.share_bps == null ? null : percentText(row.share_bps),
+    share:
+      !sharesComplete || row?.share_bps == null
+        ? null
+        : percentText(row.share_bps),
     total: count(row?.blocks_total?.value ?? null),
   }
 }
@@ -635,7 +641,7 @@ export function validatorTable(
     const bps =
       weight === null || ranking === null ? 0 : shareBps(weight, ranking.total)
     const row: ValidatorRow = {
-      ...proposedOf(member.row),
+      ...proposedOf(member.row, body.data.shares_complete),
       gauge: validatorGauge(member.gauge, member.name),
       operator: member.operator,
       status: member.status,
@@ -678,7 +684,7 @@ export function validatorTable(
       return left === right ? 0 : left > right ? -1 : 1
     })
     .map((row) => ({
-      ...proposedOf(row),
+      ...proposedOf(row, body.data.shares_complete),
       address: row.address.toLowerCase(),
       name: rowName(row),
       uptime: uptimeOf(row.address.toLowerCase()),
@@ -918,7 +924,10 @@ export async function validatorPage(input: {
     share,
     blocks: {
       status: "ok",
-      data: { ...proposedOf(row), day: blocksDay(validators.data) },
+      data: {
+        ...proposedOf(row, validators.data.data.shares_complete),
+        day: blocksDay(validators.data),
+      },
     },
     uptime,
     gauge,

@@ -54,6 +54,31 @@ export const scanAnonymousPolicy: RateLimitPolicy = {
   perDay: 100_000,
 }
 
+/**
+ * The rate-limit call's bound. Past it the call fails open, as it does on
+ * an error: a slow limiter must not take Matchscan's 3 s for a document.
+ */
+export const scanSpendMs = 250
+
+/**
+ * A composed document's edge lookup slower than this is a miss: the
+ * document is rendered instead (`serveComposed`).
+ */
+export const scanLookupMs = 200
+
+/**
+ * `work`, or a rejection once `ms` pass first. A late `work` that rejects
+ * is caught, so it never surfaces as an unhandled rejection.
+ */
+function within<T>(work: Promise<T>, ms: number): Promise<T> {
+  work.catch(() => undefined)
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<never>((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error("Timed out")), ms)
+  })
+  return Promise.race([work, late]).finally(() => clearTimeout(timer))
+}
+
 export function scanRateLimitKey(caller: BlockscoutCaller): string {
   const client = caller.client ?? "unknown"
   return caller.endUser === null
@@ -168,7 +193,11 @@ export class ScanResponder {
   ): Promise<Response> {
     const finalKey = keyFor(spec.finalKey.resource, spec.finalKey.version)
     const key = keyFor(spec.resource, spec.version)
-    const found = (await this.lookup(finalKey)) ?? (await this.lookup(key))
+    // Each bounded: Matchscan waits 3 s for the document, counted from the
+    // request's arrival, as its parts' deadlines are.
+    const found =
+      (await this.lookup(finalKey, scanLookupMs)) ??
+      (await this.lookup(key, scanLookupMs))
     if (found !== null) return this.answer(c, found.stored, found.source)
     await this.spend(spec.caller)
     const rendered = await spec.render()
@@ -251,8 +280,13 @@ export class ScanResponder {
     await this.store(c, keyFor(resource, ""), value, "long")
   }
 
+  /**
+   * `key`'s stored answer from memory, else the edge. With `ms`, an edge
+   * lookup that takes longer, or fails, is a miss.
+   */
   private async lookup(
     key: string,
+    ms?: number,
   ): Promise<{ stored: Stored; source: "memory" | "edge" } | null> {
     const remembered = this.memory.get(key)
     if (remembered !== undefined) {
@@ -261,14 +295,22 @@ export class ScanResponder {
       this.memory.set(key, remembered)
       return { stored: remembered.stored, source: "memory" }
     }
-    if (this.deps.cache === null) return null
-    const hit = await this.deps.cache.match(new Request(key))
-    if (hit === undefined) return null
-    const stored: Stored = {
-      body: await hit.text(),
-      etag: hit.headers.get("ETag") ?? "",
-      cacheClass: cacheClassOf(hit.headers.get("X-Scan-Class")),
+    const cache = this.deps.cache
+    if (cache === null) return null
+    const read = async (): Promise<Stored | null> => {
+      const hit = await cache.match(new Request(key))
+      if (hit === undefined) return null
+      return {
+        body: await hit.text(),
+        etag: hit.headers.get("ETag") ?? "",
+        cacheClass: cacheClassOf(hit.headers.get("X-Scan-Class")),
+      }
     }
+    const stored =
+      ms === undefined
+        ? await read()
+        : await within(read(), ms).catch(() => null)
+    if (stored === null) return null
     this.remember(key, stored)
     return { stored, source: "edge" }
   }
@@ -306,14 +348,18 @@ export class ScanResponder {
     let allowed = true
     let retryAfter = 1
     try {
-      const verdict = await this.deps.rateLimits.consume(
-        scanRateLimitKey(caller),
-        caller.endUser === null ? scanAnonymousPolicy : scanEndUserPolicy,
+      const verdict = await within(
+        this.deps.rateLimits.consume(
+          scanRateLimitKey(caller),
+          caller.endUser === null ? scanAnonymousPolicy : scanEndUserPolicy,
+        ),
+        scanSpendMs,
       )
       allowed = verdict.allowed
       retryAfter = Math.max(1, verdict.retryAfterSeconds)
     } catch {
-      // Fails open, as the rest of the API's limits do.
+      // Fails open, as the rest of the API's limits do; also when the
+      // limiter is slower than `scanSpendMs`.
     }
     if (!allowed) {
       throw new PlatformError("rate_limited", {

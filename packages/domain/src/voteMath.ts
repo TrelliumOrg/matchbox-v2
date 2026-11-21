@@ -59,7 +59,6 @@ export function priceTarget(
       amount: incentive.amount,
       decimals: incentive.decimals,
       token: incentive.token,
-      symbol: incentive.symbol,
       prices,
     })
     if (usd === null) {

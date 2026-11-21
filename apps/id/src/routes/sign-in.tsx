@@ -38,7 +38,7 @@ export const Route = createFileRoute("/sign-in")({
     }
   },
   staleTime: 0,
-  head: () => ({ meta: [{ title: "Sign in" }] }),
+  head: () => ({ meta: [{ title: "Sign in | Matchbox ID" }] }),
   component: SignInPage,
 })
 

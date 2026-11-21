@@ -1,6 +1,10 @@
 import { applyD1Migrations } from "cloudflare:test"
 import { env } from "cloudflare:workers"
-import { readReadModel } from "@matchbox/api/read-store"
+import {
+  readReadModel,
+  staleWalletSeconds,
+  wantsRebuild,
+} from "@matchbox/api/read-store"
 import { CONTRACTS } from "@matchbox/chain"
 import { epochIndexFor, epochStartOf } from "@matchbox/domain"
 import { createLogger } from "@matchbox/logger"
@@ -15,7 +19,7 @@ import { readCursor, writeCursor } from "../cursors"
 import { earnedKey, type WalletChainReader } from "./chain"
 import { createWarehouseReader, type WarehouseReader } from "./reader"
 import { recordedQueryRunner, recordingSchema } from "./recorded"
-import { runWarehouseSnapshot } from "./snapshot"
+import { runWarehouseSnapshot, sweepShare } from "./snapshot"
 
 // Replays test/fixtures/warehouse.json: real projection rows recorded from
 // the Neon dev branch by scripts/record-warehouse-fixture.ts.
@@ -237,12 +241,201 @@ describe("warehouse snapshot (recorded fixture)", () => {
     )
       .bind(wallet)
       .run()
-    const result = await runWarehouseSnapshot(deps(reader, "chained"))
+    // The whole recorded sweep, whatever share the request leaves it.
+    const pinned: WarehouseReader = {
+      ...reader,
+      async sweepWallets() {
+        return swept
+      },
+    }
+    const result = await runWarehouseSnapshot(deps(pinned, "chained"))
     expect(result).toMatchObject({ status: "ok", wallets: 4 })
     const left = await env.READ_DB.prepare(
       "SELECT count(*) AS n FROM wallet_requests",
     ).first<{ n: number }>()
     expect(left?.n).toBe(0)
+  })
+
+  it("marks a requested wallet checked when its rebuild changed nothing, so it is not asked for again", async () => {
+    const recordedReader = createWarehouseReader(recordedQueryRunner(recording))
+    const swept = await recordedReader.sweepWallets("0x", fixtureSweepWallets)
+    const [wallet, other] = swept
+    if (wallet === undefined || other === undefined) {
+      throw new Error("fixture has no wallets")
+    }
+    // A permanent lock that votes nothing: nothing in its documents moves
+    // between runs.
+    const reader: WarehouseReader = {
+      ...recordedReader,
+      async changedWallets() {
+        return []
+      },
+      async sweepWallets() {
+        return swept
+      },
+      async locksOf() {
+        return [
+          {
+            contract_address: CONTRACTS.mainnet.veBTC.toLowerCase(),
+            token_id: "848",
+            owner: wallet,
+            amount: "10000000000000000000",
+            unlock_at: null,
+            is_permanent: true,
+            created_at: null,
+          },
+        ]
+      },
+      async activeVotes() {
+        return []
+      },
+    }
+    const overviewOf = (address: string) =>
+      readReadModel(env.READ_DB, "mezo", "wallet-overview", address)
+    await runWarehouseSnapshot(deps(reader, "chained"))
+    const first = await overviewOf(wallet)
+    if (first === null) throw new Error("expected an overview")
+    const otherFirst = await overviewOf(other)
+
+    // Over an hour later someone looks at it, and the API asks for it.
+    const later = recording.nowSeconds + staleWalletSeconds + 60
+    expect(wantsRebuild(first, later)).toBe(true)
+    await env.READ_DB.prepare(
+      "INSERT INTO wallet_requests (network, wallet, requested_at) VALUES ('mezo', ?1, ?2)",
+    )
+      .bind(wallet, later)
+      .run()
+    await runWarehouseSnapshot({
+      ...deps(reader, "chained"),
+      nowSeconds: later,
+    })
+    const rebuilt = await overviewOf(wallet)
+    if (rebuilt === null) throw new Error("expected an overview")
+    // The same document, so the upsert alone would have left the row as it
+    // was, an hour old, and the next view would have asked for it again.
+    expect(rebuilt.etag).toBe(first.etag)
+    expect(rebuilt.meta.updatedAt).toBe(later)
+    expect(wantsRebuild(rebuilt, later + 60)).toBe(false)
+    // A wallet nobody asked for costs no row write when it is unchanged.
+    const otherAfter = await overviewOf(other)
+    expect(otherAfter?.etag).toBe(otherFirst?.etag)
+    expect(otherAfter?.meta.updatedAt).toBe(recording.nowSeconds)
+  })
+
+  it("gives requested wallets the sweep's places, never more wallets a run", async () => {
+    const reader = createWarehouseReader(recordedQueryRunner(recording))
+    const all = await reader.sweepWallets("0x", fixtureSweepWallets)
+    const last = all.at(-1)
+    if (last === undefined) throw new Error("fixture has no wallets")
+    const asked: number[] = []
+    // The recording answers the wallets in sweep order only.
+    const recorded = (wallets: readonly string[]) =>
+      all.filter((wallet) => wallets.includes(wallet))
+    const sliced: WarehouseReader = {
+      ...reader,
+      async changedWallets() {
+        return []
+      },
+      async sweepWallets(_after, limit) {
+        asked.push(limit)
+        return all.slice(0, limit)
+      },
+      locksOf: (wallets) => reader.locksOf(recorded(wallets)),
+      activityOf: (wallets, perWallet) =>
+        reader.activityOf(recorded(wallets), perWallet),
+    }
+    // Someone looked at the last wallet of the sweep while it was stale.
+    await env.READ_DB.prepare(
+      "INSERT INTO wallet_requests (network, wallet, requested_at) VALUES ('mezo', ?1, 1)",
+    )
+      .bind(last)
+      .run()
+    const result = await runWarehouseSnapshot(deps(sliced, "chained"))
+    // Four wallets, as without the request: the requested one and the
+    // first three of the sweep, which goes on from the third next run.
+    expect(asked).toEqual([fixtureSweepWallets - 1])
+    expect(result).toMatchObject({ status: "ok", wallets: fixtureSweepWallets })
+    expect(await readCursor(env.READ_DB, "warehouse-sweep", "mezo")).toBe(
+      all[fixtureSweepWallets - 2],
+    )
+    expect(
+      await readReadModel(env.READ_DB, "mezo", "wallet-overview", last),
+    ).not.toBeNull()
+  })
+
+  it("never builds more wallets than the sweep size, and reaches waiting requests in later runs", async () => {
+    const reader = createWarehouseReader(recordedQueryRunner(recording))
+    const all = await reader.sweepWallets("0x", fixtureSweepWallets)
+    // A sweep of eight: the recording answers its four wallets only, so the
+    // other places go to requested wallets outside it, which have nothing.
+    const size = 2 * fixtureSweepWallets
+    const recorded = (wallets: readonly string[]) =>
+      all.filter((wallet) => wallets.includes(wallet))
+    const sliced: WarehouseReader = {
+      ...reader,
+      async changedWallets() {
+        return []
+      },
+      async sweepWallets(_after, limit) {
+        return all.slice(0, limit)
+      },
+      locksOf: (wallets) => reader.locksOf(recorded(wallets)),
+      activityOf: (wallets, perWallet) =>
+        reader.activityOf(recorded(wallets), perWallet),
+    }
+    // More wallets asked for than half the sweep, in this order; and the
+    // zero address, which is never built.
+    const asked = [1, 2, 3, 4, 5].map(
+      (index) => `0x${index.toString(16).padStart(40, "a")}`,
+    )
+    const zero = `0x${"0".repeat(40)}`
+    await env.READ_DB.batch(
+      [zero, ...asked].map((wallet, index) =>
+        env.READ_DB.prepare(
+          "INSERT INTO wallet_requests (network, wallet, requested_at) VALUES ('mezo', ?1, ?2)",
+        ).bind(wallet, index),
+      ),
+    )
+    const waiting = async () =>
+      (
+        await env.READ_DB.prepare(
+          "SELECT wallet FROM wallet_requests ORDER BY requested_at",
+        ).all<{ wallet: string }>()
+      ).results.map((row) => row.wallet)
+    const built = async (wallet: string | undefined) =>
+      wallet !== undefined &&
+      (await readReadModel(env.READ_DB, "mezo", "wallet-overview", wallet)) !==
+        null
+
+    const first = await runWarehouseSnapshot({
+      ...deps(sliced, "chained"),
+      sweepWallets: size,
+    })
+    // Half the places at most: the first four asked, and four swept.
+    expect(first).toMatchObject({ status: "ok", wallets: size })
+    for (const wallet of asked.slice(0, 4)) {
+      expect(await built(wallet)).toBe(true)
+    }
+    expect(await built(asked[4])).toBe(false)
+    // The fifth waits, first in line; the zero address's request is gone.
+    expect(await waiting()).toEqual([asked[4]])
+
+    const second = await runWarehouseSnapshot({
+      ...deps(sliced, "chained"),
+      sweepWallets: size,
+      nowSeconds: recording.nowSeconds + 900,
+    })
+    // The fifth and the four the sweep has.
+    expect(second).toMatchObject({ status: "ok", wallets: 5 })
+    expect(await built(asked[4])).toBe(true)
+    expect(await waiting()).toEqual([])
+  })
+
+  it("keeps at least half the sweep however many wallets were asked for", () => {
+    expect(sweepShare(137, 0)).toBe(137)
+    expect(sweepShare(137, 40)).toBe(97)
+    expect(sweepShare(137, 100)).toBe(69)
+    expect(sweepShare(25, 100)).toBe(13)
   })
 
   it("rebuilds a wallet whose claimable could not be read, carrying the last figure", async () => {

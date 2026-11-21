@@ -110,7 +110,6 @@ export async function scanClaims(
         amount: entry.earned,
         decimals: entry.decimals,
         token: entry.token,
-        symbol: entry.symbol,
         prices,
       })
       if (usd === null) rowUnpriced += 1
@@ -385,13 +384,19 @@ export function claimsOutcome(
   const [totalFact, countFact] = facts
   const unpricedFact = facts.find((fact) => fact.id === scope.id("unpriced"))
   const signatures = proposal?.calls.length ?? 0
+  // With nothing priced there is no dollar figure to lead with: say how many
+  // unpriced rewards there are instead of "Unpriced claimable".
+  const allUnpriced = scan.totalMicro === null && unpricedFact !== undefined
+  const what = allUnpriced
+    ? `${unpricedFact.display} unpriced ${scan.unpricedCount === 1 ? "reward" : "rewards"}`
+    : `${totalFact?.display}`
   const lead = proposal
-    ? `${totalFact?.display} to claim from ${locksFact.display}. ${
+    ? `${what} to claim from ${locksFact.display}. ${
         signatures === 1 ? "One signature" : `${countFact?.display} signatures`
       }.`
-    : `${totalFact?.display} claimable from ${locksFact.display}.`
+    : `${what} claimable from ${locksFact.display}.`
   const text = `${lead}${
-    unpricedFact
+    unpricedFact && !allUnpriced
       ? ` ${unpricedFact.display} ${scan.unpricedCount === 1 ? "reward is" : "rewards are"} unpriced.`
       : ""
   }`

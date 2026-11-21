@@ -222,12 +222,15 @@ export function fakeProviders(
     },
     fundedEpochs: async (domain, window) => {
       count("fundedEpochs")
-      return new Map(
-        domain.targets.map((target, index) => [
-          target.targetAddress.toLowerCase(),
-          Math.max(0, window - index),
-        ]),
-      )
+      return {
+        counts: new Map(
+          domain.targets.map((target, index) => [
+            target.targetAddress.toLowerCase(),
+            Math.max(0, window - index),
+          ]),
+        ),
+        unpricedOnly: new Set<string>(),
+      }
     },
     claimable: async (domain) => {
       count("claimable")

@@ -32,6 +32,7 @@ export function CustomPeriod({
         aria-label={custom ? `Custom period, ${period.text}` : "Custom period"}
         aria-current={custom ? "true" : undefined}
         data-period=""
+        data-tap=""
         style={{ anchorName: anchor } as CSSProperties}
       >
         <Glyph shape={shapes.calendarDays} size={16} />

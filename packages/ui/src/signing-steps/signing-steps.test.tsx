@@ -34,7 +34,35 @@ describe("signing steps", () => {
     expect(failed?.textContent).toContain("Failed on chain, lock expired")
     const links = screen.getAllByRole("link")
     expect(links.map((link) => link.getAttribute("href"))).toEqual([href, href])
-    expect(links[1]?.parentElement?.className).toContain("block")
+    // Its own line, under the reason.
+    expect(links[1]?.parentElement?.className).toContain("flex")
+  })
+
+  it("follows a sent step's link with a smaller second explorer", () => {
+    const explorer = `https://explorer.mezo.org/tx/0x${"ab".repeat(32)}`
+    render(
+      <SigningSteps.Root>
+        <SigningSteps.Step
+          index={1}
+          label="Vote with #2207"
+          status="active"
+          detail="Confirming"
+          link={{
+            href,
+            label: "view on Matchscan",
+            secondary: { href: explorer, label: "Mezo Explorer" },
+          }}
+        />
+      </SigningSteps.Root>,
+    )
+    const [step] = screen.getAllByRole("listitem")
+    expect(step?.textContent).toContain("Confirming, view on Matchscan")
+    const primary = screen.getByRole("link", { name: "view on Matchscan" })
+    const second = screen.getByRole("link", { name: "Mezo Explorer" })
+    expect(primary.getAttribute("href")).toBe(href)
+    expect(second.getAttribute("href")).toBe(explorer)
+    expect(second.getAttribute("target")).toBe("_blank")
+    expect(second.className).toContain("text-sec")
   })
 })
 

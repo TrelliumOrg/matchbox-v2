@@ -500,7 +500,7 @@ function GaugeLayout({
                 <Coins tickers={card.incentiveTokens} size={44} />
               </div>
             )}
-            <span style={figure}>{formatUsd(card.incentivesUsd, "cents")}</span>
+            <span style={figure}>{card.incentives}</span>
           </div>
         </div>
         {card.boost === null ? null : (

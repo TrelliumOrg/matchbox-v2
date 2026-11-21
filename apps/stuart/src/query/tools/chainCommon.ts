@@ -1218,7 +1218,7 @@ export async function buildLens(
         : { kind: "bridged", via }
     }
     if (to === SAVINGS_RATE || /SavingsRate/.test(name ?? "")) {
-      return { kind: "deposited", into: "MUSD Savings" }
+      return { kind: "deposited", into: "MUSD Savings", name: null, to: null }
     }
     if (
       (label !== undefined &&
@@ -1228,6 +1228,8 @@ export async function buildLens(
       return {
         kind: "deposited",
         into: `${name ?? "a pool"} ${shortAddress(to)}`.slice(0, 60),
+        name: name ?? null,
+        to,
       }
     }
     const relation = related.get(to)

@@ -47,6 +47,7 @@ export function RangeLinks({
           }}
           resetScroll={false}
           aria-current={name === period.range ? "true" : undefined}
+          data-tap=""
           className={`rounded-full px-2.5 py-1 text-[14px] outline-none focus-visible:outline-2 focus-visible:outline-ink ${name === period.range ? "font-semibold text-ink" : "text-sec hover:text-ink"}`}
         >
           {name}

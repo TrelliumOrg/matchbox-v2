@@ -1,5 +1,6 @@
 import * as Age from "@matchbox/ui/age"
 import * as DataTable from "@matchbox/ui/data-table"
+import * as HashChip from "@matchbox/ui/hash-chip"
 import { Glyph, type GlyphShape, shapes } from "@matchbox/ui/icons"
 import * as StatusChip from "@matchbox/ui/status-chip"
 import * as SubTabs from "@matchbox/ui/sub-tabs"
@@ -7,7 +8,7 @@ import { Link } from "@tanstack/react-router"
 import type { ReactNode } from "react"
 import { type TxTab, txTabNames, txTabs } from "../../data/transaction-tabs"
 import type { TransactionsPage, TxWords } from "../../data/transactions"
-import { AddressLink, BlockLink, Pager, SectionState, TxLink } from "../parts"
+import { AddressLink, BlockLink, Pager, SectionState } from "../parts"
 import { ActivityList, Sentence } from "../sentence"
 
 /**
@@ -36,6 +37,14 @@ function iconOf(key: string): GlyphShape {
   if (key.startsWith("LOCK_")) return shapes.lock
   return icons[key] ?? shapes.box
 }
+
+/**
+ * On a phone a row is one target: its transaction link covers the row
+ * (an `::after` over it), and the row's other links sit above that. Each
+ * link was 22px tall and a row held five of them.
+ */
+const rowLink =
+  "max-xl:relative max-xl:[&_[data-row-link]]:after:absolute max-xl:[&_[data-row-link]]:after:inset-0 max-xl:[&_[data-row-link]]:after:content-[''] max-xl:[&_a:not([data-row-link])]:relative max-xl:[&_a:not([data-row-link])]:z-[1]"
 
 export function TransactionTabs({ current }: { current: TxTab }): ReactNode {
   return (
@@ -79,7 +88,7 @@ function WordsTable({
           <DataTable.Empty columns={6}>No transactions</DataTable.Empty>
         ) : (
           rows.map((row) => (
-            <DataTable.Row key={row.hash}>
+            <DataTable.Row key={row.hash} className={rowLink}>
               <DataTable.Cell phone="title">
                 <span className="flex min-w-0 items-center gap-3">
                   <span className="grid size-9 flex-none place-items-center rounded-full bg-soft text-ink">
@@ -98,7 +107,15 @@ function WordsTable({
                         </span>
                       ) : null}
                     </span>
-                    <TxLink hash={row.hash} />
+                    <HashChip.Root value={row.hash} kind="hash">
+                      <HashChip.Value asChild>
+                        <Link
+                          to="/tx/$hash"
+                          params={{ hash: row.hash }}
+                          data-row-link=""
+                        />
+                      </HashChip.Value>
+                    </HashChip.Root>
                   </span>
                 </span>
               </DataTable.Cell>

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { groupByDay } from "../features/activity/activity-view"
 import { activitySample } from "../features/samples"
-import { ActivityRow, describeEvent } from "./activity-row"
+import { ActivityRow, describeEvent, downloadNotice } from "./activity-row"
 
 const activity = activitySample.events
 
@@ -32,6 +32,92 @@ describe("activity rows", () => {
     expect(describeEvent(byKind("incentive"), "dated").title).toMatch(
       /^Incentive to /,
     )
+  })
+
+  it("shows a claim's value when claimed, and No price, never $0", () => {
+    const claim = byKind("claim")
+    if (claim.detail.kind !== "claim") throw new Error("not a claim event")
+    const valued = describeEvent(
+      {
+        ...claim,
+        detail: {
+          ...claim.detail,
+          usd: "999.00",
+          whenClaimed: {
+            usd: "12.34",
+            complete: true,
+            pricedAt: 1_773_273_600,
+            tokens: [{ token: "0x1", symbol: "MEZO", usd: "12.34" }],
+          },
+        },
+      },
+      "dated",
+    )
+    expect(valued.main).toBe("+$12.34")
+    const unpriced = describeEvent(
+      {
+        ...claim,
+        detail: {
+          ...claim.detail,
+          whenClaimed: {
+            usd: "0.00",
+            complete: false,
+            pricedAt: 1_773_273_600,
+            tokens: [{ token: "0x1", symbol: "MEZO", usd: null }],
+          },
+        },
+      },
+      "dated",
+    )
+    expect(unpriced).toMatchObject({ main: "No price", mainTone: "default" })
+  })
+
+  it("mutes and names a settling claim's estimate", () => {
+    const claim = byKind("claim")
+    if (claim.detail.kind !== "claim") throw new Error("not a claim event")
+    const estimated = describeEvent(
+      {
+        ...claim,
+        detail: {
+          ...claim.detail,
+          usd: "999.00",
+          estimate: {
+            usd: "7.50",
+            finalOn: 1_773_532_800,
+            tokens: [{ token: "0x1", usd: "7.50" }],
+          },
+        },
+      },
+      "dated",
+    )
+    expect(estimated).toMatchObject({
+      main: "+$7.50",
+      mainTone: "default",
+      muted: true,
+    })
+    expect(estimated.subline).toMatch(/^Epoch \d+, \d\d:\d\d, estimate$/)
+    // A final value wins over an estimate.
+    const final = describeEvent(
+      {
+        ...claim,
+        detail: {
+          ...claim.detail,
+          whenClaimed: {
+            usd: "8.00",
+            complete: true,
+            pricedAt: 1_773_273_600,
+            tokens: [{ token: "0x1", symbol: "MEZO", usd: "8.00" }],
+          },
+          estimate: {
+            usd: "7.50",
+            finalOn: 1_773_532_800,
+            tokens: [{ token: "0x1", usd: "7.50" }],
+          },
+        },
+      },
+      "dated",
+    )
+    expect(final).toMatchObject({ main: "+$8.00", muted: false })
   })
 
   it("reads an auto-max lock as Auto max, never as a 1970 date", () => {
@@ -81,5 +167,30 @@ describe("activity rows", () => {
     expect(groups.reduce((sum, group) => sum + group.events.length, 0)).toBe(
       activity.length,
     )
+  })
+})
+
+describe("download notices", () => {
+  it("names why a download came back, and nothing otherwise", () => {
+    expect(downloadNotice("?download=busy")).toBe(
+      "Too many downloads. Try again in a minute.",
+    )
+    expect(downloadNotice("?download=busy-day")).toBe(
+      "Too many downloads today. Try again tomorrow.",
+    )
+    expect(downloadNotice("?filter=claims&download=none")).toBe(
+      "No history to download for this wallet yet.",
+    )
+    expect(downloadNotice("download=failed")).toBe(
+      "Download failed. Try again.",
+    )
+    expect(downloadNotice("")).toBeNull()
+    expect(downloadNotice("?download=<script>")).toBeNull()
+  })
+
+  it("shows nothing for an object's own names in a crafted link", () => {
+    for (const reason of ["__proto__", "constructor", "toString", "nope"]) {
+      expect(downloadNotice(`?download=${reason}`)).toBeNull()
+    }
   })
 })

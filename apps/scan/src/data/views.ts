@@ -8,6 +8,7 @@ import type {
   BlockscoutTransactionSummary,
   NextPageParams,
 } from "@matchbox/contracts/blockscout"
+import type { ScanLiveTransaction } from "@matchbox/contracts/scan"
 import {
   formatBtcFigure,
   formatDecimal,
@@ -412,4 +413,82 @@ export function addressTransfer(
     timestamp: unixSeconds(transfer.timestamp),
     direction: sent && received ? "self" : sent ? "out" : "in",
   }
+}
+
+// -- read live from the chain ----------------------------------------------
+
+const unnamed = (address: string): AddressView => ({
+  address,
+  name: null,
+  contract: false,
+})
+
+/**
+ * A transaction the explorer does not have yet, from the API's live read
+ * (Mezo RPC): what the chain says, nothing the explorer adds (names,
+ * decoded input, transfers). Null when the RPC has not seen it.
+ */
+export function liveTxDetail(
+  hash: string,
+  live: ScanLiveTransaction,
+): TxDetail | null {
+  const tx = live.transaction
+  if (tx === null) return null
+  const receipt = live.receipt
+  const paidGasPrice = receipt?.effective_gas_price ?? tx.gas_price
+  const fee =
+    receipt === null || receipt.effective_gas_price === null
+      ? null
+      : (
+          BigInt(receipt.gas_used) * BigInt(receipt.effective_gas_price)
+        ).toString()
+  return {
+    hash,
+    block: receipt?.block_number ?? null,
+    timestamp: live.timestamp,
+    status:
+      receipt === null
+        ? "pending"
+        : receipt.status === "success"
+          ? "success"
+          : "failed",
+    method: tx.method,
+    from: unnamed(tx.from),
+    to:
+      tx.to !== null
+        ? unnamed(tx.to)
+        : receipt?.created == null
+          ? null
+          : unnamed(receipt.created),
+    value: tx.value === "0" ? null : btc(tx.value),
+    fee: btcFee(fee),
+    created: receipt?.created == null ? null : unnamed(receipt.created),
+    nonce: tx.nonce,
+    position: receipt?.position ?? null,
+    gasUsed: grouped(receipt?.gas_used ?? null),
+    gasLimit: grouped(tx.gas_limit),
+    // What it paid, once mined. A pending transaction's figure is often
+    // only its fee cap: left out rather than shown as a price.
+    gasPrice: receipt === null ? null : gweiOrNull(paidGasPrice),
+    decoded: null,
+    rawInput: tx.input,
+    revertReason: null,
+    transfers: [],
+    moreTransfers: false,
+    pending: receipt === null,
+  }
+}
+
+const gweiOrNull = (wei: string | null): string | null =>
+  wei === null ? null : formatGwei(wei)
+
+/** A live receipt's logs, raw: the explorer decodes them later. */
+export function liveLogViews(live: ScanLiveTransaction): LogView[] {
+  return (live.receipt?.logs ?? []).map((log) => ({
+    index: log.index,
+    address: unnamed(log.address),
+    decoded: null,
+    topics: log.topics,
+    data: log.data,
+  }))
 }

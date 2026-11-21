@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { type ReactNode, Suspense, useEffect } from "react"
 import { type BorrowOverview, getBorrowOverview } from "../data/borrow"
 import { trovesChartId } from "../data/borrow-input"
+import { openPositionWords } from "../data/scan/words"
 import { ChartSpace, RangeLinks } from "../explorer/borrow/chart"
 import { readCharts } from "../explorer/borrow/charts-read"
 import {
@@ -63,19 +64,6 @@ export const Route = createFileRoute("/borrow/")({
   component: BorrowPage,
 })
 
-/** "1 Enclave, 4 Morpho, 3 troves": the open positions by venue. */
-function countWords(counts: NonNullable<BorrowOverview["counts"]>): string {
-  return [
-    counts.enclaves === null
-      ? null
-      : `${counts.enclaves} Enclave${counts.enclaves === 1 ? "" : "s"}`,
-    `${counts.morpho} Morpho`,
-    `${counts.troves} trove${counts.troves === 1 ? "" : "s"}`,
-  ]
-    .filter((part): part is string => part !== null)
-    .join(", ")
-}
-
 function Tiles({ overview }: { overview: BorrowOverview }): ReactNode {
   const { borrowed, counts, stabilityPool, liquidations } = overview
   const total =
@@ -105,7 +93,7 @@ function Tiles({ overview }: { overview: BorrowOverview }): ReactNode {
             : `${total}${counts.complete ? "" : "+"}`}
         </dd>
         <dd className="text-[14px] text-sec">
-          {counts === null ? "Not available yet" : countWords(counts)}
+          {counts === null ? "Not available yet" : openPositionWords(counts)}
         </dd>
       </div>
       <div className="rounded-[24px] bg-soft p-6 max-md:p-4">

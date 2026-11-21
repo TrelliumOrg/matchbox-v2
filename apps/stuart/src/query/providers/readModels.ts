@@ -34,8 +34,9 @@ import { z } from "zod"
 
 // The API Worker's `/internal/pro/*` read models (the same documents Pro
 // renders), through the `API` service binding, validated with the
-// @matchbox/contracts schemas. Without a binding (local dev, tests) the
-// shared demo fixtures answer instead, so Stuart works end to end.
+// @matchbox/contracts schemas. Without a binding (tests, the benchmark) the
+// shared demo fixtures answer instead, so Stuart works end to end. Local
+// `wrangler dev` declares the binding, so it reads the local API instead.
 
 export type ReadModelSource = {
   kind: "api" | "fixture"

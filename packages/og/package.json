@@ -25,7 +25,8 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "cards": "node scripts/site-cards.mjs"
   },
   "dependencies": {
     "@cf-wasm/resvg": "0.4.0",

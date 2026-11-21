@@ -413,13 +413,15 @@ export function benchProviders(
         }),
       }
     },
-    fundedEpochs: async (domain, window) =>
-      new Map(
+    fundedEpochs: async (domain, window) => ({
+      counts: new Map(
         domain.targets.map((each) => [
           each.targetAddress.toLowerCase(),
           each.incentives.length > 0 ? window : 0,
         ]),
       ),
+      unpricedOnly: new Set<string>(),
+    }),
     ...overrides,
   })
 }

@@ -39,9 +39,19 @@ describe("signing steps", () => {
     steps = applyStepEvent(steps, { type: "wallet", id: "approve" })
     expect(stepDetail(nth(steps, 0))).toBe("Confirm in your wallet")
     expect(buttonLabel(steps)).toBe("Waiting for wallet")
+    expect(stepLink(nth(steps, 0))).toBeNull()
     steps = applyStepEvent(steps, { type: "submitted", id: "approve", hash })
     expect(steps[0]?.hash).toBe(hash)
     expect(buttonLabel(steps)).toBe("Waiting for block")
+    // Followable on Matchscan from the moment the wallet returns the hash.
+    expect(stepLink(nth(steps, 0))).toEqual({
+      href: `https://scan.matchbox.markets/tx/${hash}`,
+      label: "view on Matchscan",
+      secondary: {
+        href: `https://explorer.mezo.org/tx/${hash}`,
+        label: "Mezo Explorer",
+      },
+    })
     steps = applyStepEvent(steps, { type: "done", id: "approve" })
     steps = applyStepEvent(steps, { type: "wallet", id: "add" })
     expect(stepDetail(nth(steps, 0))).toBe("Signed")
@@ -95,10 +105,18 @@ describe("signing steps", () => {
     expect(stepLink(nth(steps, 2))).toEqual({
       href: `https://scan.matchbox.markets/tx/${reverted}`,
       label: "View on Matchscan",
+      secondary: {
+        href: `https://explorer.mezo.org/tx/${reverted}`,
+        label: "Mezo Explorer",
+      },
     })
     expect(stepLink(nth(steps, 0))).toEqual({
       href: `https://scan.matchbox.markets/tx/${hash}`,
       label: "view on Matchscan",
+      secondary: {
+        href: `https://explorer.mezo.org/tx/${hash}`,
+        label: "Mezo Explorer",
+      },
     })
     expect(retryLabel(steps)).toBe("Try step 3 again")
     steps = retryFrom(steps)

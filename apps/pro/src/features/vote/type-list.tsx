@@ -33,10 +33,16 @@ const listCaption = "Incentives this epoch"
 
 function TypeLink({
   kind,
+  current,
   className,
   children,
 }: {
   kind: GaugeKind
+  /**
+   * The type on screen, which `/vote` shows without its own path: marked
+   * `aria-current` (and `data-current`, for the phone row's scroll).
+   */
+  current: boolean
   className: string
   children: ReactNode
 }): ReactNode {
@@ -44,6 +50,8 @@ function TypeLink({
     <Link
       to="/vote/$type"
       params={{ type: kind }}
+      data-current={current ? "" : undefined}
+      aria-current={current ? "page" : undefined}
       resetScroll={false}
       viewTransition={false}
       activeOptions={{ includeSearch: false }}
@@ -97,6 +105,7 @@ function TypeRow({
   return (
     <TypeLink
       kind={kind}
+      current={current}
       className="relative isolate flex items-center gap-3 rounded-[16px] px-3 py-2.5 outline-none hover:bg-soft focus-visible:outline-2 focus-visible:outline-ink"
     >
       <span
@@ -139,6 +148,7 @@ function TypeCard({
   return (
     <TypeLink
       kind={kind}
+      current={current}
       className={`relative isolate flex h-full flex-col gap-2 rounded-[20px] p-3.5 outline-none focus-visible:outline-2 focus-visible:outline-ink ${current ? "" : "shadow-[inset_0_0_0_1px_var(--line)]"}`}
     >
       <span
@@ -169,12 +179,12 @@ export function TypeList({ totals, active }: TypeSelectorProps): ReactNode {
   const scrolled = useRef(false)
 
   // The active card scrolls into view on phones: at once on load, smoothly
-  // when the type changes.
+  // when the type changes. Found by `data-current`, not `aria-current`:
+  // on `/vote` no type's own path is the page, and the row stayed on veBTC
+  // gauges while Vote opened on pool gauges.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs again when the active type changes
   useEffect(() => {
-    const element = row.current?.querySelector<HTMLElement>(
-      '[aria-current="page"]',
-    )
+    const element = row.current?.querySelector<HTMLElement>("[data-current]")
     if (element === null || element === undefined) return
     const parent = row.current
     if (parent === null || parent.scrollWidth <= parent.clientWidth) return

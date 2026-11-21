@@ -1,6 +1,7 @@
 import { scanLockRowSchema } from "@matchbox/contracts/scan"
 import { z } from "zod"
 import {
+  decoderCursors,
   defaultCaps,
   fillCursor,
   planCopy,
@@ -136,6 +137,52 @@ export const countsSchema = z.object({
   contracts: z.number().int(),
 })
 
+/**
+ * The decoder versions the warehouse tables were built with. The fill
+ * records them as the copy's decoder cursors, so the copy run after a
+ * re-fill compares the indexer's version with the one the copied rows came
+ * from, not with the one before the replay.
+ */
+export const decoderVersionsQuery = {
+  text: `SELECT
+    (SELECT decoder_version FROM matchbox.projection_state WHERE network = 'mezo') AS projection,
+    (SELECT decoder_version FROM matchbox.borrow_state WHERE network = 'mezo') AS borrow`,
+  params: [],
+}
+
+const decoderVersionsSchema = z.object({
+  projection: z.number().int().nullable(),
+  borrow: z.number().int().nullable(),
+})
+
+/**
+ * The decoder cursors, from the warehouse at the fill's first chunk. A
+ * stream with no state row (never built) writes nothing: the copy then
+ * records the indexer's version on its next run without flagging.
+ */
+export async function decoderStatements(
+  run: QueryRunner,
+  nowSeconds: number,
+): Promise<SqlStatement[]> {
+  let versions: z.infer<typeof decoderVersionsSchema>
+  try {
+    const [result] = await run([decoderVersionsQuery])
+    versions = decoderVersionsSchema.parse(
+      z.array(z.unknown()).parse(result)[0],
+    )
+  } catch (error) {
+    throw new Error(
+      `Could not read the warehouse decoder versions (matchbox.projection_state, matchbox.borrow_state): ${error instanceof Error ? error.message : String(error)}`,
+    )
+  }
+  return (["projection", "borrow"] as const).flatMap((stream) => {
+    const version = versions[stream]
+    return version === null
+      ? []
+      : [cursorStatement(decoderCursors[stream], String(version), nowSeconds)]
+  })
+}
+
 export type FillStep = {
   statements: SqlStatement[]
   state: FillState
@@ -157,6 +204,10 @@ export async function fillStep(
   nowSeconds: number,
 ): Promise<FillStep> {
   if (!state.done) {
+    // Read before the rows: a replay during the fill then shows as a
+    // version change on the next copy run, which flags a re-fill.
+    const decoders =
+      state.chunks === 0 ? await decoderStatements(run, nowSeconds) : []
     const reader = createScanWarehouseReader(run)
     const rows = await reader.read({
       checkpoints: state.checkpoints,
@@ -196,7 +247,7 @@ export async function fillStep(
       Object.values(forward).reduce((total, n) => total + n, 0) +
       rows.windowCounts.enclave
     return {
-      statements: plan.statements,
+      statements: [...plan.statements, ...decoders],
       rowsRead: read,
       quarantined: plan.quarantinedBySource,
       halted: plan.halted,
@@ -295,6 +346,12 @@ export function fillMarker(nowSeconds: number): SqlStatement {
  * checkpoints and the re-fill flag) before the first chunk, so a re-fill
  * after a warehouse replay also drops rows the new decoder no longer
  * produces. Values the daily writers and backfills wrote stay.
+ *
+ * The decoder versions stay too: the end of the first chunk overwrites
+ * them with the warehouse's, and that chunk may be split over several
+ * files. Until its last file is applied the old version is still there,
+ * so a copy run in between (or a replay then) still flags a re-fill
+ * rather than finding no version and recording the new one.
  */
 export function replaceStatements(): SqlStatement[] {
   const tables = [

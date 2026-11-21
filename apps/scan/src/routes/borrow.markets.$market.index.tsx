@@ -148,7 +148,9 @@ function Figures({ market }: { market: MarketDetailView }): ReactNode {
         </div>
         <div>
           <dt className="text-[15px] text-ink2">Supply APY</dt>
-          <dd className="mt-1 text-[23px] font-[650] text-pos tabular-nums">
+          <dd
+            className={`mt-1 text-[23px] font-[650] tabular-nums ${market.supplyApy === null || !/[1-9]/.test(market.supplyApy) ? "" : "text-pos"}`}
+          >
             {market.supplyApy ?? "None"}
           </dd>
           <dd className="text-[14px] text-sec">Fee {market.fee}</dd>

@@ -20,6 +20,14 @@ import type {
 import type { LiveLock } from "../read-models/live-wallet"
 import type { Page, ScanContext } from "./context"
 import { lockItem, servedLock } from "./items"
+import {
+  type LiveTxRead,
+  type LiveTxReader,
+  liveTxCodec,
+  liveTxSeconds,
+  minedTxSeconds,
+  settled as settledTx,
+} from "./live-tx"
 import { scanQueries } from "./queries"
 
 // Matchscan's locks as the chain has them.
@@ -70,17 +78,45 @@ export const scanChainBudget: RateLimitPolicy = {
 export const scanChainBudgetKey = "scan:chain-reads"
 
 /**
+ * Live transaction reads (live-tx.ts), across every isolate: a budget of
+ * their own, so hashes, which anyone can make up, never spend what the
+ * lock and address pages read with, nor those pages what a transaction
+ * page needs.
+ *
+ * What a real visitor needs: a transaction on its way in is read about
+ * five times in its first minute (the page re-reads after 2, 3, 4 and 5 s
+ * and an answer is kept for a block), then hardly at all once two blocks
+ * deep (kept a day). Mezo sees a few hundred transactions with our activity a day,
+ * one every few minutes, so 60 a minute is about twelve visitors opening
+ * fresh transactions in the same minute, and 20,000 a day several
+ * thousand of them, with each visitor's own allowance
+ * (`scanCallerLiveAllowance`) still bounding what one of them costs.
+ *
+ * A unit is one read, not one RPC request: a read makes one request for
+ * an unknown or pending hash and up to six for a mined one, so the
+ * ceiling on the RPC is 360 requests a minute and 120,000 a day.
+ */
+export const scanTxBudget: RateLimitPolicy = {
+  perMinute: 60,
+  perDay: 20_000,
+}
+
+export const scanTxBudgetKey = "scan:chain-reads:tx"
+
+/**
  * Ids past an escrow's newest (as last read, up to a minute ago) still
  * read from the chain: locks minted since. Any id further on is not found
  * without a read.
  */
 export const newIdsAhead = 20n
 
-/** The readers Matchscan's live locks use, on their own client. */
+/** The readers Matchscan's live reads use, on their own client. */
 export type ScanChainReaders = {
   lock: LiveLockReader
   owner: OwnerLocksReader
   latest: LatestLockIdsReader
+  /** A transaction the explorer and the store lack (live-tx.ts). */
+  tx?: LiveTxReader
 }
 
 const escrowAddress: Record<Escrow, string> = {
@@ -381,7 +417,23 @@ type Payment = {
   perCaller: boolean
   /** Unreachable: serve stored rows (true) or read anyway (false). */
   failClosed: boolean
+  /** The budget shared across isolates the read is paid from. */
+  budget: SharedBudget
+  /**
+   * No limiter bound (local runs and tests): read anyway, or refuse.
+   * Transactions refuse: a deploy missing the binding must not turn every
+   * random hash into an RPC request.
+   */
+  unlimited: "read" | "refuse"
 }
+
+type SharedBudget = { key: string; policy: RateLimitPolicy }
+
+const chainBudget: SharedBudget = {
+  key: scanChainBudgetKey,
+  policy: scanChainBudget,
+}
+const txBudget: SharedBudget = { key: scanTxBudgetKey, policy: scanTxBudget }
 
 /** An answer, and whether to keep it for the minute. */
 type Outcome<T> = { value: T | null; keep: boolean }
@@ -398,6 +450,10 @@ type Outcome<T> = { value: T | null; keep: boolean }
  */
 export class ScanLive {
   private readonly memo = new Map<string, Promise<unknown>>()
+  private readonly txMemo = new Map<
+    string,
+    { until: number; value: Promise<LiveTxRead | null> }
+  >()
 
   constructor(
     private readonly deps: {
@@ -426,7 +482,12 @@ export class ScanLive {
       latestCodec,
       (deadline) => readers.latest(deadline),
       ask,
-      { perCaller: false, failClosed: false },
+      {
+        perCaller: false,
+        failClosed: false,
+        budget: chainBudget,
+        unlimited: "read",
+      },
     )
   }
 
@@ -447,7 +508,12 @@ export class ScanLive {
       lockReadCodec,
       (deadline) => readers.lock(escrow, tokenId, deadline),
       ask,
-      { perCaller: true, failClosed: false },
+      {
+        perCaller: true,
+        failClosed: false,
+        budget: chainBudget,
+        unlimited: "read",
+      },
     )
   }
 
@@ -467,8 +533,95 @@ export class ScanLive {
       ownerLocksCodec,
       (deadline) => readers.owner(address, deadline, expected),
       ask,
-      { perCaller: true, failClosed: true },
+      {
+        perCaller: true,
+        failClosed: true,
+        budget: chainBudget,
+        unlimited: "read",
+      },
     )
+  }
+
+  /**
+   * One transaction as the RPC has it (live-tx.ts). A mined one at least
+   * `settledDepth` blocks deep is kept a day, in the isolate and at the
+   * edge; a newer one, an unknown or pending answer, or a failed read, for
+   * one block. Paid from the caller's allowance, then
+   * the transaction budget (`scanTxBudget`), and not read when they cannot
+   * be asked or no limiter is bound: hashes are unbounded keys.
+   */
+  transaction(hash: string, ask: LiveAsk): Promise<LiveTxRead | null> {
+    const reader = this.deps.readers?.tx
+    if (reader === undefined) return Promise.resolve(null)
+    const now = this.deps.now()
+    const held = this.txMemo.get(hash)
+    if (held !== undefined && held.until > now) return held.value
+    const slot = Math.floor(now / (liveTxSeconds * 1000))
+    const minedKey = new Request(`https://scan.internal/live/v2/tx/${hash}`)
+    const slotKey = new Request(
+      `https://scan.internal/live/v2/tx/${hash}/s${slot}`,
+    )
+    const entry: { until: number; value: Promise<LiveTxRead | null> } = {
+      until: now + liveTxSeconds * 1000,
+      value: Promise.resolve(null),
+    }
+    entry.value = (async (): Promise<LiveTxRead | null> => {
+      for (const key of [minedKey, slotKey]) {
+        const found = await this.edge(key)
+        if (found === undefined) continue
+        if (!found.ok) return null
+        const decoded = liveTxCodec.decode(found.value)
+        if (decoded !== null) {
+          if (settledTx(decoded)) entry.until = Number.POSITIVE_INFINITY
+          return decoded
+        }
+      }
+      const result = await this.chainRead(
+        `tx/${hash}`,
+        (deadline) => reader(hash, deadline),
+        ask,
+        {
+          perCaller: true,
+          failClosed: true,
+          budget: txBudget,
+          unlimited: "refuse",
+        },
+      )
+      if (!result.keep) {
+        // Not paid for, or no time: the next request may be.
+        entry.until = 0
+        return null
+      }
+      const mined = result.value !== null && settledTx(result.value)
+      if (mined) entry.until = Number.POSITIVE_INFINITY
+      if (this.deps.cache !== null) {
+        const body = JSON.stringify(
+          result.value === null
+            ? { ok: false }
+            : { ok: true, value: liveTxCodec.encode(result.value) },
+        )
+        const seconds = mined ? minedTxSeconds : liveTxSeconds
+        const put = this.deps.cache.put(
+          mined ? minedKey : slotKey,
+          new Response(body, {
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              "Cache-Control": `public, max-age=${seconds}`,
+            },
+          }),
+        )
+        ask.waitUntil(put.catch(() => undefined))
+      }
+      return result.value
+    })()
+    this.txMemo.delete(hash)
+    this.txMemo.set(hash, entry)
+    while (this.txMemo.size > memoEntries) {
+      const oldest = this.txMemo.keys().next().value
+      if (oldest === undefined) break
+      this.txMemo.delete(oldest)
+    }
+    return entry.value
   }
 
   private remember<T>(
@@ -571,8 +724,9 @@ export class ScanLive {
   }
 
   /**
-   * The caller's allowance, then the shared budget, both asked within
-   * `budgetCallMs` together. True when the read may go ahead.
+   * The caller's allowance, then the payment's shared budget, both asked
+   * within `budgetCallMs` together. True when the read may go ahead. With
+   * no limiter bound, as the payment says (`unlimited`).
    */
   private async pay(
     id: string,
@@ -580,7 +734,7 @@ export class ScanLive {
     payment: Payment,
   ): Promise<boolean> {
     const limits = this.deps.rateLimits
-    if (limits === null) return true
+    if (limits === null) return payment.unlimited === "read"
     const start = this.deps.now()
     const until = start + Math.min(budgetCallMs, ask.deadline - start)
     const consume = (key: string, policy: RateLimitPolicy) =>
@@ -601,9 +755,13 @@ export class ScanLive {
           return false
         }
       }
-      const shared = await consume(scanChainBudgetKey, scanChainBudget)
+      const shared = await consume(payment.budget.key, payment.budget.policy)
       if (!shared.allowed) {
-        this.deps.logger.warn({ message: "Scan chain budget spent", read: id })
+        this.deps.logger.warn({
+          message: "Scan chain budget spent",
+          read: id,
+          budget: payment.budget.key,
+        })
       }
       return shared.allowed
     } catch (error) {
@@ -618,7 +776,7 @@ export class ScanLive {
   }
 }
 
-/** Hands a task to the request's lifetime (awaited nowhere in tests). */
+/** Hands a task to the request's lifetime. */
 export function waitUntilOf(c: {
   executionCtx: { waitUntil(task: Promise<unknown>): void }
 }): WaitUntil {

@@ -99,6 +99,23 @@ export function MoreLink({
 
 // -- markets ------------------------------------------------------------------
 
+/** No supply and no debt: a market created but never used. */
+function isEmptyMarket(market: MarketDetailView): boolean {
+  return [market.supplied, market.borrowed].every(
+    (amount) => amount === null || !/[1-9]/.test(amount),
+  )
+}
+
+/** Markets in use first, in the order read; empty ones after, muted. */
+export function marketOrder(
+  markets: readonly MarketDetailView[],
+): MarketDetailView[] {
+  return [
+    ...markets.filter((market) => !isEmptyMarket(market)),
+    ...markets.filter(isEmptyMarket),
+  ]
+}
+
 export function MarketsTable({
   markets,
 }: {
@@ -120,8 +137,11 @@ export function MarketsTable({
         {markets.length === 0 ? (
           <DataTable.Empty columns={6}>No markets</DataTable.Empty>
         ) : (
-          markets.map((market) => (
-            <DataTable.Row key={market.id}>
+          marketOrder(markets).map((market) => (
+            <DataTable.Row
+              key={market.id}
+              className={isEmptyMarket(market) ? "text-sec" : undefined}
+            >
               <DataTable.Cell phone="title">
                 <span className="flex min-w-0 items-center gap-3">
                   <CoinPair
@@ -484,6 +504,14 @@ function LiquidatedLoan({ row }: { row: LiquidationView }): ReactNode {
   )
 }
 
+/**
+ * A figure keeps its unit on its line ("-3,054.12 MUSD"): a row's amounts
+ * wrap between figures, never inside one and never under an ellipsis.
+ */
+function glued(text: string): string {
+  return text.replace(/(\d) (?=[A-Za-z])/g, "$1\u00a0")
+}
+
 export function LiquidationList({
   rows,
   label,
@@ -513,8 +541,8 @@ export function LiquidationList({
             />
             <span className="flex min-w-0 flex-1 flex-col">
               <LiquidatedLoan row={row} />
-              <span className="truncate text-[14px] text-sec tabular-nums">
-                {loan}, {row.detail ?? "No amount"}
+              <span className="text-[14px] text-sec tabular-nums">
+                {glued(`${loan}, ${row.detail ?? "No amount"}`)}
               </span>
             </span>
             <span className="flex flex-col items-end text-right">

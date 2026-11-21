@@ -586,6 +586,17 @@ describe("the calculator sheet", () => {
     expect(screen.getByText("Edited")).toBeTruthy()
   })
 
+  it("links the totals' block on Matchscan in a new tab", async () => {
+    mockRpc(() => false)
+    render(await calculator({ calc: 1, vebtc: "1", vemezo: "100000" }))
+    const block = await screen.findByRole("link", { name: /^Block 13,172,075/ })
+    expect(block.getAttribute("href")).toBe(
+      "https://scan.matchbox.markets/block/13172075",
+    )
+    expect(block.getAttribute("target")).toBe("_blank")
+    expect(block.getAttribute("rel")).toBe("noreferrer noopener")
+  })
+
   it("keeps the last good totals, named by block, when a later read fails", async () => {
     let failing = false
     mockRpc(() => failing)

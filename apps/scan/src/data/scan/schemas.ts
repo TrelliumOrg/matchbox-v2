@@ -76,6 +76,17 @@ const epochItemSchema = scanEpochItemSchema.extend({
 const live = { snapshot: scanLiveSnapshotSchema.optional() }
 
 /**
+ * The part of a series' `meta` (the API's aggregate meta) that says
+ * whether its data is current: `asOf`, the last ok copy run, and `stale`,
+ * copy runs failing or a table halted. Each is undefined when the API did
+ * not send it or sent something unreadable: unknown, never "current".
+ */
+const seriesMetaSchema = z.object({
+  asOf: z.number().int().nonnegative().nullable().optional().catch(undefined),
+  stale: z.boolean().optional().catch(undefined),
+})
+
+/**
  * The response body of each /internal/scan route Scan reads, from the
  * route contracts in `@matchbox/contracts/scan` (and Pro's gauge documents
  * from `@matchbox/contracts/read-models`). Server-only: zod stays out of
@@ -107,7 +118,9 @@ export const scanSchemas = {
   mezoId: scanDocumentSchema(scanMezoIdLookupSchema),
   mezoIdNames: scanDocumentSchema(scanMezoIdNamesSchema),
   labels: scanDocumentSchema(scanLabelMapSchema),
-  series: scanDocumentSchema(scanSeriesSchema),
+  series: scanDocumentSchema(scanSeriesSchema).extend({
+    meta: seriesMetaSchema.optional().catch(undefined),
+  }),
   seriesSplit: scanDocumentSchema(scanSeriesSplitSchema),
   dexMarkets: scanDocumentSchema(scanMarketsSchema),
   prices: scanDocumentSchema(scanPriceSeriesSchema),

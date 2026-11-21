@@ -56,3 +56,34 @@ export function CoinMarks({
     />
   )
 }
+
+/**
+ * A gauge's incentives on screen (`formatIncentives` in words): the
+ * dollars, "Unpriced", or the dollars with "+ 1 unpriced" in smaller
+ * secondary text that wraps as one piece, beside the dollars or under
+ * them (`stacked`, for a row's narrow value column).
+ */
+export function Incentives({
+  usd,
+  priced,
+  unpriced,
+  stacked = false,
+}: {
+  usd: string
+  priced: boolean
+  unpriced: number
+  stacked?: boolean
+}): ReactNode {
+  if (unpriced === 0) return formatUsd(usd, "cents")
+  if (!priced) return "Unpriced"
+  return (
+    <span>
+      {formatUsd(usd, "cents")}{" "}
+      <span
+        className={`${stacked ? "block " : ""}text-[0.8em] font-medium whitespace-nowrap text-sec`}
+      >
+        + {unpriced} unpriced
+      </span>
+    </span>
+  )
+}

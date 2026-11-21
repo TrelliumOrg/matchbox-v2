@@ -94,7 +94,11 @@ test("the overview leads with MUSD borrowed and lists Enclaves", async ({
   await page.goto("/borrow")
   await expect(page.getByText("723,361 MUSD")).toBeVisible()
   await expect(page.getByText("3.5% in Enclaves")).toBeVisible()
-  await expect(page.getByText("1 Enclave, 4 Morpho, 3 troves")).toBeVisible()
+  // Every market's debt positions, naming the MUSD markets' share (the
+  // homepage's count) so the two pages agree.
+  await expect(
+    page.getByText("1 Enclave, 4 Morpho (2 MUSD), 3 troves"),
+  ).toBeVisible()
   await expect(page.getByText("57,360.75 MUSD")).toBeVisible()
   const enclaves = page.getByRole("table", { name: "Enclave positions" })
   await enclaves.getByRole("link", { name: "0x00000000…7c1a7e01" }).click()

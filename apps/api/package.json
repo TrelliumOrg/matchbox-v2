@@ -21,6 +21,14 @@
       "types": "./src/read-models/prices-kv.ts",
       "default": "./src/read-models/prices-kv.ts"
     },
+    "./read-models/claim-prices": {
+      "types": "./src/read-models/claim-prices.ts",
+      "default": "./src/read-models/claim-prices.ts"
+    },
+    "./read-models/wallet-history": {
+      "types": "./src/read-models/wallet-history.ts",
+      "default": "./src/read-models/wallet-history.ts"
+    },
     "./read-models/publish": {
       "types": "./src/read-models/publish.ts",
       "default": "./src/read-models/publish.ts"
@@ -68,12 +76,14 @@
     "dev:memory": "wrangler dev --var PLATFORM_STORE:memory --var ENVIRONMENT:development --var GAUGE_PROFILE_API_ENABLED:true",
     "dev:seed-keys": "tsx scripts/print-dev-keys.ts",
     "test": "vitest run --config vitest.config.ts && vitest run --config vitest.workers.config.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:seed:local": "tsx scripts/seed-local.ts"
   },
   "dependencies": {
     "@matchbox/chain": "workspace:*",
     "@matchbox/contracts": "workspace:*",
     "@matchbox/domain": "workspace:*",
+    "@matchbox/indexer": "workspace:*",
     "@matchbox/logger": "workspace:*",
     "@matchbox/server": "workspace:*",
     "@matchbox/tokens": "workspace:*",

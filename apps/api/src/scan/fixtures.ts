@@ -8,7 +8,8 @@ import { currentKey, writeReadModels } from "../read-models/store"
 
 // Fixture rows for the /internal/scan tests, in both databases, with the
 // shapes the jobs Worker writes (apps/jobs/scan-migrations,
-// apps/jobs/migrations). Test-only; never imported by the Worker.
+// apps/jobs/migrations). Used by the tests and the local seed
+// (src/local-seed); never imported by the Worker.
 
 /** "Now" for every scan test: two days into an epoch. */
 export const scanNow = epochStartOf(1_794_000_000) + 2 * 86_400

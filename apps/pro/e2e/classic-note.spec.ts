@@ -1,4 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test"
+import openDialog from "./dialog"
+import { rememberWallet } from "./own-wallet"
 
 /**
  * The Classic note (Doop page "Pro, Classic banner"): offered to visitors
@@ -112,11 +114,12 @@ test("never shows where a wallet connected before", async ({ page }) => {
 
 test("is out of sight while a sheet is open", async ({ page }) => {
   await arrive(page)
-  await page
-    .getByRole("button", { name: /^Connect/ })
-    .first()
-    .click()
-  await expect(page.getByRole("dialog")).toBeVisible()
+  await openDialog(page, () =>
+    page
+      .getByRole("button", { name: /^Connect/ })
+      .first()
+      .click(),
+  )
   await expect(note(page)).toHaveCount(0)
   await page.keyboard.press("Escape")
   await expect(page.getByRole("dialog")).toHaveCount(0)
@@ -171,10 +174,13 @@ test.describe("rail widths", () => {
 })
 
 test("the Account panel always has the way back", async ({ page }) => {
+  // Your own wallet's panel: someone else's opens from Viewing.
+  await rememberWallet(page, user.slice(1))
   await page.goto(user)
-  await page.getByRole("button", { name: /^Account/ }).click()
+  await openDialog(page, () =>
+    page.getByRole("button", { name: /^Account/ }).click(),
+  )
   const panel = page.getByRole("dialog")
-  await expect(panel).toBeVisible()
   const row = panel.getByRole("link", { name: "Matchbox Classic" })
   await expect(row).toBeVisible()
   await expect(row).toHaveAttribute("href", classic)
@@ -185,12 +191,13 @@ test("the Connect wallet sheet has the way back for someone signed out", async (
   page,
 }) => {
   await page.goto("/")
-  await page
-    .getByRole("button", { name: /^Connect/ })
-    .first()
-    .click()
+  await openDialog(page, () =>
+    page
+      .getByRole("button", { name: /^Connect/ })
+      .first()
+      .click(),
+  )
   const sheet = page.getByRole("dialog")
-  await expect(sheet).toBeVisible()
   const row = sheet.getByRole("link", { name: "Matchbox Classic" })
   await expect(row).toBeVisible()
   await expect(row).toHaveAttribute("href", classic)

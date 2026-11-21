@@ -53,6 +53,28 @@ describe("the site", () => {
     expect(output.problems).toEqual([])
   })
 
+  it("gives every page its own meta description, whole sentences or cut at a word", () => {
+    const seen = new Map<string, string>()
+    for (const [path, page] of output.pages) {
+      const text = page.description
+      expect(text.length, path).toBeGreaterThanOrEqual(30)
+      expect(text.length, path).toBeLessThanOrEqual(160)
+      expect(text, path).toMatch(/[.!?…]$/)
+      expect(text, path).not.toMatch(/\b(e\.g|i\.e)$|`/)
+      expect(
+        seen.get(text),
+        `${path} repeats ${seen.get(text)}`,
+      ).toBeUndefined()
+      seen.set(text, path)
+    }
+    expect(
+      output.pages.get("/developer/api/gauges/list-gauges")?.description,
+    ).toMatch(/^GET \/v1\/gauges in the Matchbox API\. Every gauge/)
+    expect(
+      output.pages.get("/developer/mcp/tools/prepare-vote")?.description,
+    ).toMatch(/^A ballot the user specified as a list \(e\.g\. '30% to Boar/)
+  })
+
   it("keeps stubs out of every tree and the search index", () => {
     const stubs = new Set(output.stubs.map((stub) => stub.path))
     for (const tree of Object.values(output.manifest.trees)) {

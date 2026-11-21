@@ -530,7 +530,8 @@ export function registerScanLookups(
                 // Names only: the reasons stay in the jobs Worker's logs.
                 halted: status === null ? null : run.halted !== null,
                 haltedTables: status === null ? null : (run.halted ?? []),
-                stale: run.stale,
+                // Lag only: a pending re-fill is refillRequired.
+                stale: run.delayed,
                 liveSnapshot,
               },
             },
